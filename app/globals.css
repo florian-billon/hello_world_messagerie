@@ -1,0 +1,219 @@
+/* =========================
+   RESET
+========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+  color: white;
+  overflow: hidden;
+}
+
+/* =========================
+   VARIABLES
+========================= */
+:root {
+  --cyan: #4fdfff;
+  --panel-bg: rgba(0, 0, 0, 0.45);
+}
+
+/* =========================
+   APP
+========================= */
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* =========================
+   BACKGROUND
+========================= */
+.background {
+  position: fixed;
+  inset: 0;
+  background-image: url("/background.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(0.7) contrast(1.1);
+  z-index: 0;
+}
+
+/* Tout le contenu au-dessus du fond */
+.app > *:not(.background) {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================
+   LAYOUT GLOBAL
+========================= */
+.main-layout {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+}
+
+/* =========================
+   SIDEBARS
+========================= */
+.sidebar {
+  width: 260px;
+  padding: 20px;
+  background: var(--panel-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Séparations */
+.sidebar.left {
+  border-right: 2px solid var(--cyan);
+}
+
+.sidebar.right {
+  border-left: 2px solid var(--cyan);
+}
+
+/* Logo */
+.sidebar img {
+  max-width: 100%;
+  margin-bottom: 20px;
+}
+
+/* Titres */
+.sidebar h3,
+.sidebar h4 {
+  font-size: 12px;
+  letter-spacing: 1px;
+  opacity: 0.75;
+  margin: 15px 0 6px;
+}
+
+/* Listes */
+.sidebar ul {
+  list-style: none;
+}
+
+.sidebar li {
+  font-size: 14px;
+  margin: 6px 0;
+}
+
+/* =========================
+   SIDEBAR STRUCTURE
+========================= */
+.sidebar-top {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar-bottom {
+  margin-top: auto; /* 🔥 pousse en bas */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* =========================
+   BOUTONS
+========================= */
+.action {
+  padding: 10px;
+  background: #a00000;
+  border: 2px solid var(--cyan);
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.action:hover {
+  background: #c00000;
+  box-shadow: 0 0 8px rgba(79, 223, 255, 0.6);
+}
+
+/* =========================
+   CHAT WRAPPER (CENTRAGE)
+========================= */
+.chat-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 40px 0;
+}
+
+/* =========================
+   CHAT CONTAINER
+========================= */
+.chat {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* =========================
+   CHAT HEADER
+========================= */
+.chat-header {
+  padding: 20px;
+  border-bottom: 2px solid var(--cyan);
+  font-size: 16px;
+}
+
+.chat-header span {
+  color: #ff3b3b;
+  font-weight: bold;
+}
+
+/* =========================
+   CONVERSATION
+========================= */
+.messages {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 3px;
+  opacity: 0.6;
+}
+
+/* =========================
+   INPUT
+========================= */
+.chat-input {
+  padding: 15px;
+  border-top: 2px solid var(--cyan);
+}
+
+.chat-input input {
+  width: 100%;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid var(--cyan);
+  color: white;
+  outline: none;
+}
+
+/* =========================
+   SCROLLBAR CYBER
+========================= */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cyan);
+}
