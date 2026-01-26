@@ -2,16 +2,10 @@ import { Sidebar, Chat, MembersSidebar } from "./components";
 
 export default function Home() {
   return (
-    <main className="relative w-screen h-screen">
-      {/* Main flex layout */}
-      <div className="flex w-full h-screen">
-        {/* Left Sidebar */}
+    <main className="min-h-screen w-full">
+      <div className="flex min-h-screen w-full">
         <Sidebar />
-
-        {/* Center Chat */}
         <Chat />
-
-        {/* Right Sidebar */}
         <MembersSidebar />
       </div>
     </main>
