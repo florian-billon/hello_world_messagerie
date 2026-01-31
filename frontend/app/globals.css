@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
-/* =========================
-   CSS Variables
-========================= */
+/* Variables CSS minimales - utilisées par Tailwind */
 :root {
   --cyan: #4fdfff;
   --panel-bg: rgba(0, 0, 0, 0.45);
@@ -10,9 +8,7 @@
   --red-hover: #c00000;
 }
 
-/* =========================
-   Custom scrollbar
-========================= */
+/* Custom scrollbar uniquement */
 ::-webkit-scrollbar {
   width: 6px;
 }
