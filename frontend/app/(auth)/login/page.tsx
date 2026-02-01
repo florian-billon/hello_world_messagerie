@@ -31,7 +31,6 @@ export default function LoginPage() {
       }
 
       const data = await res.json();
-      // TODO: Stocker le token JWT
       localStorage.setItem("token", data.token);
       router.push("/");
     } catch (err) {
