@@ -1,23 +1,48 @@
-# Documentation du Projet
+# 📚 Documentation - Hello World RTC
 
-## UML - Modèle de données
+Application de messagerie instantanée en temps réel (type Discord).
 
-Le fichier `UML/classes.puml` contient le diagramme de classes PlantUML définissant la structure de données de l'application RTC (Real Time Chat).
+## 📁 Structure de la documentation
 
-### Entités principales
+```
+docs/
+├── README.md                    # Ce fichier
+├── specifications/              # Spécifications du projet
+│   ├── requirements.md          # Cahier des charges complet
+│   ├── grading-criteria.md      # Critères de notation
+│   └── moscow.md                # Priorisation MoSCoW
+├── architecture/                # Architecture technique
+│   ├── overview.md              # Vue d'ensemble
+│   ├── database.md              # Modèle de données
+│   └── folder-structure.md      # Structure des dossiers
+└── uml/                         # Diagrammes UML
+    ├── classes.puml             # Diagramme de classes
+    ├── database-schema.puml     # Schéma de base de données
+    └── entities.md              # Description des entités
+```
 
-- **User** : Utilisateur de l'application avec authentification
-- **Server** : Serveur/Communauté créé par un utilisateur
-- **ServerMember** : Relation entre User et Server avec rôle (Owner/Admin/Member)
-- **Channel** : Canal de communication dans un serveur
-- **ChannelMessage** : Message envoyé dans un canal
-- **Invite** : Code d'invitation pour rejoindre un serveur
+## 🛠️ Stack Technique
 
-### Relations
+| Composant | Technologie |
+|-----------|-------------|
+| **Frontend** | Next.js 16 + React 19 + TypeScript |
+| **Backend** | Rust + Axum + Tokio |
+| **Base de données** | PostgreSQL (relationnel) + MongoDB (messages) |
+| **Temps réel** | WebSockets |
+| **Styling** | Tailwind CSS 4 |
 
-- Un User peut être propriétaire de plusieurs Servers
-- Un User peut être membre de plusieurs Servers (via ServerMember)
-- Un Server contient plusieurs Channels
-- Un Channel contient plusieurs ChannelMessages
-- Un Server peut avoir plusieurs Invites
+## 🎯 Fonctionnalités principales
 
+- **Authentification** : Inscription/Connexion JWT
+- **Serveurs** : Création, rejoindre via code d'invitation
+- **Canaux** : Canaux textuels par serveur
+- **Messages** : Temps réel via WebSocket
+- **Rôles** : Owner / Admin / Member (RBAC)
+- **Présence** : Utilisateurs connectés, indicateur de frappe
+
+## 📖 Liens rapides
+
+- [Spécifications complètes](./specifications/requirements.md)
+- [Architecture technique](./architecture/overview.md)
+- [Schéma de base de données](./architecture/database.md)
+- [Diagramme de classes](./uml/classes.puml)

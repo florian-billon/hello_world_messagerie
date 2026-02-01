@@ -1,7 +1,25 @@
 @startuml RTC_Classes
+title Diagramme de Classes - Hello World RTC
+
 skinparam classAttributeIconSize 0
+skinparam backgroundColor #1a1a1a
+skinparam class {
+  BackgroundColor #2d2d2d
+  BorderColor #4FDFFF
+  FontColor #ffffff
+  AttributeFontColor #cccccc
+}
+skinparam enum {
+  BackgroundColor #3d3d3d
+  BorderColor #FF3333
+  FontColor #ffffff
+}
+skinparam arrow {
+  Color #4FDFFF
+}
 hide empty methods
 
+' ====== ENUMERATIONS ======
 enum UserStatus {
   ONLINE
   OFFLINE
@@ -15,6 +33,7 @@ enum MemberRole {
   MEMBER
 }
 
+' ====== CLASSES ======
 class User {
   - id: UUID
   - email: String
@@ -60,7 +79,8 @@ class Invite {
   - created_at: DateTime
 }
 
-class ChannelMessage {
+class ChannelMessage <<MongoDB>> {
+  - _id: ObjectId
   - message_id: UUID
   - server_id: UUID
   - channel_id: UUID
@@ -72,19 +92,53 @@ class ChannelMessage {
   - deleted_by: UUID?
 }
 
+class PrivateConversation {
+  - id: UUID
+  - user1_id: UUID
+  - user2_id: UUID
+  - created_at: DateTime
+}
+
+class DmMessage <<MongoDB>> {
+  - _id: ObjectId
+  - message_id: UUID
+  - dm_id: UUID
+  - author_id: UUID
+  - content: String
+  - created_at: DateTime
+  - edited_at: DateTime?
+  - deleted_at: DateTime?
+  - deleted_by: UUID?
+}
+
+class Contact {
+  - user_id: UUID
+  - contact_id: UUID
+  - status: ContactStatus
+  - created_at: DateTime
+}
+
+enum ContactStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
 ' ====== RELATIONS ======
 User "1" <-- "0..*" Server : owner_id
-
 User "1" <-- "0..*" ServerMember
 Server "1" <-- "0..*" ServerMember
-
 Server "1" <-- "0..*" Channel
-
 Server "1" <-- "0..*" Invite
 User "1" <-- "0..*" Invite : created_by
-
 Channel "1" <-- "0..*" ChannelMessage
 Server "1" <-- "0..*" ChannelMessage
 User "1" <-- "0..*" ChannelMessage : author_id
+User "1" <-- "0..*" PrivateConversation : user1/user2
+PrivateConversation "1" <-- "0..*" DmMessage
+User "1" <-- "0..*" DmMessage : author_id
+User "1" <-- "0..*" Contact : user_id
+User "1" <-- "0..*" Contact : contact_id
 
 @enduml
+
