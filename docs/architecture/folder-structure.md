@@ -1,4 +1,4 @@
-# 📁 Structure des dossiers - Hello World RTC
+# Structure des dossiers - Hello World RTC
 
 ## Vue d'ensemble
 

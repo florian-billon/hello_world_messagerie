@@ -1,160 +1,98 @@
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
     routing::{get, post},
-    Json, Router,
+    Router,
 };
-use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgPoolOptions;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use uuid::Uuid;
 
-// ============== Endpoint 1 - Health Check ==============
+mod handlers;
+mod models;
+mod services;
 
-#[derive(Serialize)]
-struct HealthResponse {
-    status: String,
-}
+use handlers::{auth, servers};
 
-async fn health() -> Json<HealthResponse> {
-    Json(HealthResponse {
-        status: "ok".to_string(),
-    })
-}
-
-// ============== Endpoint 2 - Server Model ==============
-
-#[derive(Clone, Serialize, Deserialize)]
-struct Server {
-    id: Uuid,
-    name: String,
-    description: String,
-}
-
-#[derive(Deserialize)]
-struct CreateServerPayload {
-    name: String,
-    description: String,
-}
-
-#[derive(Deserialize)]
-struct UpdateServerPayload {
-    name: Option<String>,
-    description: Option<String>,
-}
-
-// In-memory storage
-type SharedServers = Arc<Mutex<HashMap<Uuid, Server>>>;
-
+/// État partagé de l'application
 #[derive(Clone)]
-struct AppState {
-    servers: SharedServers,
+pub struct AppState {
+    pub db: sqlx::PgPool,
+    pub jwt_secret: String,
+    pub servers: Arc<Mutex<HashMap<Uuid, servers::Server>>>, // Temporaire
 }
 
-// ============== Endpoint 3 - Create Server ==============
-
-async fn create_server(
-    State(state): State<AppState>,
-    Json(payload): Json<CreateServerPayload>,
-) -> Json<Server> {
-    let server = Server {
-        id: Uuid::new_v4(),
-        name: payload.name,
-        description: payload.description,
-    };
-
-    let mut servers = state.servers.lock().await;
-    servers.insert(server.id, server.clone());
-
-    Json(server)
+/// Health check
+async fn health() -> &'static str {
+    "OK"
 }
-
-// ============== Endpoint 4 - List Servers ==============
-
-async fn list_servers(State(state): State<AppState>) -> Json<Vec<Server>> {
-    let servers = state.servers.lock().await;
-    let server_list: Vec<Server> = servers.values().cloned().collect();
-
-    Json(server_list)
-}
-
-// ============== Endpoint 5 - Get Server by ID ==============
-
-async fn get_server(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<Server>, StatusCode> {
-    let servers = state.servers.lock().await;
-    servers
-        .get(&id)
-        .cloned()
-        .map(Json)
-        .ok_or(StatusCode::NOT_FOUND)
-}
-
-// ============== Endpoint 6 - Update Server ==============
-
-async fn update_server(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-    Json(payload): Json<UpdateServerPayload>,
-) -> Result<Json<Server>, StatusCode> {
-    let mut servers = state.servers.lock().await;
-
-    let server = servers.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-
-    if let Some(name) = payload.name {
-        server.name = name;
-    }
-    if let Some(description) = payload.description {
-        server.description = description;
-    }
-
-    Ok(Json(server.clone()))
-}
-
-// ============== Endpoint 7 - Delete Server ==============
-
-async fn delete_server(State(state): State<AppState>, Path(id): Path<Uuid>) -> StatusCode {
-    let mut servers = state.servers.lock().await;
-
-    match servers.remove(&id) {
-        Some(_) => StatusCode::NO_CONTENT,
-        None => StatusCode::NOT_FOUND,
-    }
-}
-
-// ============== Main ==============
 
 #[tokio::main]
 async fn main() {
+    // Charger les variables d'environnement
+    dotenvy::dotenv().ok();
+
+    // Configuration
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/helloworld".to_string());
+    let jwt_secret = std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "super_secret_jwt_key_change_in_production".to_string());
+
+    // Connexion à PostgreSQL
+    let pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&database_url)
+        .await
+        .expect("Failed to connect to PostgreSQL");
+
+    println!("Connected to PostgreSQL");
+
+    // État de l'application
     let state = AppState {
+        db: pool,
+        jwt_secret,
         servers: Arc::new(Mutex::new(HashMap::new())),
     };
 
-    // CORS pour permettre les requêtes du frontend
+    // CORS pour le frontend
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
+    // Routes
     let app = Router::new()
+        // Health
         .route("/health", get(health))
-        .route("/servers", post(create_server).get(list_servers))
+        // Auth
+        .route("/auth/signup", post(auth::signup))
+        .route("/auth/login", post(auth::login))
+        .route("/auth/logout", post(auth::logout))
+        .route("/me", get(auth::me))
+        // Servers (temporaire - in-memory)
+        .route("/servers", post(servers::create_server).get(servers::list_servers))
         .route(
             "/servers/{id}",
-            get(get_server).put(update_server).delete(delete_server),
+            get(servers::get_server)
+                .put(servers::update_server)
+                .delete(servers::delete_server),
         )
         .layer(cors)
         .with_state(state);
 
+    // Démarrage du serveur
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3001")
         .await
-        .expect("Failed to bind to address 0.0.0.0:3001");
-    
-    println!("🚀 Backend running on http://localhost:3001");
+        .expect("Failed to bind to port 3001");
+
+    println!("Backend running on http://localhost:3001");
+    println!("Endpoints:");
+    println!("   POST /auth/signup  - Create account");
+    println!("   POST /auth/login   - Login");
+    println!("   POST /auth/logout  - Logout");
+    println!("   GET  /me           - Get current user");
+    println!("   GET  /health       - Health check");
 
     axum::serve(listener, app)
         .await

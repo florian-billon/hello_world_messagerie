@@ -1,0 +1,89 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use uuid::Uuid;
+
+/// Statut de présence utilisateur
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
+#[sqlx(type_name = "user_status", rename_all = "lowercase")]
+pub enum UserStatus {
+    Online,
+    Offline,
+    Dnd,
+    Invisible,
+}
+
+impl Default for UserStatus {
+    fn default() -> Self {
+        Self::Offline
+    }
+}
+
+/// Modèle User (PostgreSQL)
+#[derive(Debug, Clone, Serialize, FromRow)]
+pub struct User {
+    pub id: Uuid,
+    pub email: String,
+    #[serde(skip_serializing)] // Ne jamais exposer le hash
+    pub password_hash: String,
+    pub username: String,
+    pub avatar_url: Option<String>,
+    pub status: UserStatus,
+    pub created_at: DateTime<Utc>,
+}
+
+/// User sans le password_hash (pour les réponses API)
+#[derive(Debug, Clone, Serialize)]
+pub struct UserResponse {
+    pub id: Uuid,
+    pub email: String,
+    pub username: String,
+    pub avatar_url: Option<String>,
+    pub status: UserStatus,
+    pub created_at: DateTime<Utc>,
+}
+
+impl From<User> for UserResponse {
+    fn from(user: User) -> Self {
+        Self {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            avatar_url: user.avatar_url,
+            status: user.status,
+            created_at: user.created_at,
+        }
+    }
+}
+
+/// Payload pour l'inscription
+#[derive(Debug, Deserialize)]
+pub struct SignupPayload {
+    pub email: String,
+    pub username: String,
+    pub password: String,
+}
+
+/// Payload pour la connexion
+#[derive(Debug, Deserialize)]
+pub struct LoginPayload {
+    pub email: String,
+    pub password: String,
+}
+
+/// Réponse d'authentification avec token
+#[derive(Debug, Serialize)]
+pub struct AuthResponse {
+    pub user: UserResponse,
+    pub token: String,
+}
+
+/// Claims JWT
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: Uuid,        // user_id
+    pub email: String,
+    pub exp: usize,       // expiration timestamp
+    pub iat: usize,       // issued at
+}
+

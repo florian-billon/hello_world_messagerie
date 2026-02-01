@@ -1,4 +1,4 @@
-# 🏗️ Architecture technique - Hello World RTC
+# Architecture technique - Hello World RTC
 
 ## 1. Vue d'ensemble
 

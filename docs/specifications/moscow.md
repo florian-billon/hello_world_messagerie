@@ -1,4 +1,4 @@
-# 🎯 Priorisation MoSCoW - Hello World RTC
+# Priorisation MoSCoW - Hello World RTC
 
 Application de messagerie instantanée Discord-like.
 
@@ -17,17 +17,17 @@ Hello World est une application de messagerie instantanée permettant :
 ### 2.1 MVP (Must Have)
 
 #### Gestion des utilisateurs
-- ✅ Inscription et authentification (email/mot de passe) en JWT
-- ✅ Gestion du profil utilisateur :
+- Inscription et authentification (email/mot de passe) en JWT
+- Gestion du profil utilisateur :
   - Pseudonyme
   - Avatar
   - Statut (Online/Offline/DND/Invisible)
 
 #### Gestion des serveurs et canaux
-- ✅ Création, modification et suppression de serveurs
-- ✅ Rejoindre un serveur via code d'invitation
-- ✅ Quitter un serveur (sauf Owner)
-- ✅ Création, modification et suppression de canaux textuels
+- Creation, modification et suppression de serveurs
+- Rejoindre un serveur via code d'invitation
+- Quitter un serveur (sauf Owner)
+- Creation, modification et suppression de canaux textuels
 
 #### Rôles et permissions (RBAC)
 
@@ -40,15 +40,15 @@ Hello World est une application de messagerie instantanée permettant :
 **Contrainte** : Un seul Owner par serveur.
 
 #### Messagerie et temps réel
-- ✅ Messages en temps réel dans les canaux
-- ✅ Historique persistant avec pagination (infinite scroll)
-- ✅ Indicateurs temps réel :
+- Messages en temps reel dans les canaux
+- Historique persistant avec pagination (infinite scroll)
+- Indicateurs temps reel :
   - Utilisateurs connectés par serveur
   - Typing indicator dans un canal
   - Statut online/offline
 
 #### Administration
-- ✅ Modération basique : suppression de messages (Admin)
+- Moderation basique : suppression de messages (Admin)
 - ⚡ Gestion des membres : expulsion (kick) - *bonus*
 
 ### 2.2 V2 (Should Have / Could Have)
@@ -56,7 +56,7 @@ Hello World est une application de messagerie instantanée permettant :
 - 📞 Appels vocaux/vidéo (WebRTC)
 - 🔐 OAuth (Google/GitHub)
 - 🔍 Recherche dans l'historique des messages
-- 💬 Mentions et réactions emoji
+- Mentions et reactions emoji
 
 ---
 
@@ -116,8 +116,8 @@ Hello World est une application de messagerie instantanée permettant :
 
 | Priorité | Description |
 |----------|-------------|
-| ✅ **Must Have** | Indispensable pour le MVP |
+| **Must Have** | Indispensable pour le MVP |
 | ⚡ **Should Have** | Important mais pas bloquant |
 | 📎 **Could Have** | Souhaitable si temps disponible |
-| ❌ **Won't Have** | Hors périmètre pour cette version |
+| **Won't Have** | Hors perimetre pour cette version |
 

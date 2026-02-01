@@ -1,8 +1,8 @@
-# 📚 Documentation - Hello World RTC
+# Documentation - Hello World RTC
 
 Application de messagerie instantanée en temps réel (type Discord).
 
-## 📁 Structure de la documentation
+## Structure de la documentation
 
 ```
 docs/
@@ -21,7 +21,7 @@ docs/
     └── entities.md              # Description des entités
 ```
 
-## 🛠️ Stack Technique
+## Stack Technique
 
 | Composant | Technologie |
 |-----------|-------------|
@@ -31,7 +31,7 @@ docs/
 | **Temps réel** | WebSockets |
 | **Styling** | Tailwind CSS 4 |
 
-## 🎯 Fonctionnalités principales
+## Fonctionnalites principales
 
 - **Authentification** : Inscription/Connexion JWT
 - **Serveurs** : Création, rejoindre via code d'invitation

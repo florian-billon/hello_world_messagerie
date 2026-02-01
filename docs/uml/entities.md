@@ -1,4 +1,4 @@
-# 📋 Description des entités - Hello World RTC
+# Description des entites - Hello World RTC
 
 ## Énumérations
 
@@ -60,7 +60,7 @@ Représente un serveur (communauté).
 | `created_at` | DateTime | Date de création |
 | `updated_at` | DateTime | Date de modification |
 
-**🔒 Contrainte métier** : Un seul Owner par serveur.
+**Contrainte metier** : Un seul Owner par serveur.
 
 ---
 
@@ -76,7 +76,7 @@ Table de liaison entre `User` et `Server`.
 
 **Clé primaire composée** : `(server_id, user_id)`
 
-**🔒 Contrainte** : Un utilisateur ne peut pas être deux fois dans le même serveur.
+**Contrainte** : Un utilisateur ne peut pas etre deux fois dans le meme serveur.
 
 ---
 
@@ -152,9 +152,9 @@ Message envoyé dans un canal.
 | `deleted_at` | DateTime? | Date de suppression logique |
 | `deleted_by` | UUID? | Utilisateur ayant supprimé |
 
-**🔒 Soft delete** : Le message n'est jamais supprimé physiquement.
+**Soft delete** : Le message n'est jamais supprime physiquement.
 
-**📊 Index** : `(channel_id, created_at)` pour les requêtes paginées.
+**Index** : `(channel_id, created_at)` pour les requetes paginees.
 
 ---
 

@@ -1,4 +1,4 @@
-# 📋 Spécifications - RTC (Real Time Chat)
+# Specifications - RTC (Real Time Chat)
 
 ## 1. Exigences globales
 

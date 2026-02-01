@@ -1,4 +1,4 @@
-# 📊 Critères de notation
+# Criteres de notation
 
 ## Fonctionnalités techniques
 
