@@ -35,7 +35,7 @@ async fn main() {
 
     // Configuration
     let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/helloworld".to_string());
+        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5433/helloworld".to_string());
     let jwt_secret = std::env::var("JWT_SECRET")
         .unwrap_or_else(|_| "super_secret_jwt_key_change_in_production".to_string());
 
