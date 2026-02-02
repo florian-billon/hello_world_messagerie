@@ -47,13 +47,22 @@ Le frontend sera accessible sur `http://localhost:3000`
 
 ## Variables d'environnement
 
-### Backend (.env)
+### Backend (.env) - Optionnel
 
+Le backend fonctionne **sans fichier `.env`** grâce aux valeurs par défaut. Pour personnaliser :
+
+1. Copier `env.example` en `.env` :
+```bash
+cp env.example .env
+```
+
+2. Ajuster les valeurs si nécessaire :
 ```bash
 DATABASE_URL=postgres://postgres:postgres@localhost:5433/helloworld
 JWT_SECRET=super_secret_jwt_key_change_in_production
-PORT=3001
 ```
+
+**Note** : Le port du backend est fixé à `3001` (hardcodé dans `main.rs`).
 
 ### Frontend (.env.local)
 
@@ -121,11 +130,3 @@ docker-compose up -d
 ## Documentation
 
 Voir [docs/README.md](./docs/README.md) pour la documentation complete.
-
----
-
-## Equipe
-
-- **Romeo** - Backend Rust
-- **Bilel** - Frontend
-- **Florian** - Frontend/Design
