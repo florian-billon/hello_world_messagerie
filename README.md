@@ -1,101 +1,36 @@
-# Hello World - Real Time Messaging Platform
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Une plateforme de messagerie en temps reel construite avec **Next.js 16** (frontend) et **Rust/Axum** (backend).
+## Getting Started
 
-## Architecture
-
-```
-hello-world/
-├── backend/              # API Rust avec Axum
-│   ├── src/
-│   │   ├── main.rs       # Entry point + router
-│   │   ├── handlers/     # HTTP handlers
-│   │   ├── models/       # Data structures
-│   │   └── services/     # Business logic
-│   ├── migrations/       # SQL migrations
-│   └── Cargo.toml
-├── frontend/             # Application Next.js
-│   ├── app/
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── public/
-│   └── package.json
-├── docs/                 # Documentation
-│   ├── specifications/
-│   ├── architecture/
-│   └── uml/
-└── README.md
-```
-
-## Demarrage rapide
-
-### Prerequis
-
-- **Rust** (derniere version stable)
-- **Node.js** 18+ et **npm**
-- **PostgreSQL** 14+
-- **MongoDB** 6+
-
-### Backend (Rust)
+First, run the development server:
 
 ```bash
-cd backend
-cargo run
-```
-
-Le serveur demarre sur `http://localhost:3001`
-
-### Frontend (Next.js)
-
-```bash
-cd frontend
-npm install
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-L'application demarre sur `http://localhost:3000`
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## API Endpoints
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-### Authentication
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| POST | `/auth/signup` | Creer un compte |
-| POST | `/auth/login` | Se connecter |
-| POST | `/auth/logout` | Se deconnecter |
-| GET | `/me` | Utilisateur courant |
+## Learn More
 
-### Servers
+To learn more about Next.js, take a look at the following resources:
 
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/health` | Health check |
-| GET | `/servers` | Liste tous les serveurs |
-| POST | `/servers` | Cree un serveur |
-| GET | `/servers/{id}` | Recupere un serveur |
-| PUT | `/servers/{id}` | Modifie un serveur |
-| DELETE | `/servers/{id}` | Supprime un serveur |
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## Stack technique
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-### Frontend
-- **Next.js 16** - Framework React
-- **React 19** - UI Library
-- **TypeScript** - Typage statique
-- **Tailwind CSS 4** - Styling utility-first
+## Deploy on Vercel
 
-### Backend
-- **Rust** - Langage systeme performant
-- **Axum** - Framework web async
-- **Tokio** - Runtime async
-- **SQLx** - PostgreSQL driver
-- **JWT** - Authentication
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-### Databases
-- **PostgreSQL** - Users, Servers, Channels, Roles
-- **MongoDB** - Message history
-
-## License
-
-MIT
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
