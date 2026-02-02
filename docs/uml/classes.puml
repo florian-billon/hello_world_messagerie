@@ -1,144 +1,91 @@
 @startuml RTC_Classes
-title Diagramme de Classes - Hello World RTC
 
-skinparam classAttributeIconSize 0
-skinparam backgroundColor #1a1a1a
-skinparam class {
-  BackgroundColor #2d2d2d
-  BorderColor #4FDFFF
-  FontColor #ffffff
-  AttributeFontColor #cccccc
-}
-skinparam enum {
-  BackgroundColor #3d3d3d
-  BorderColor #FF3333
-  FontColor #ffffff
-}
-skinparam arrow {
-  Color #4FDFFF
-}
-hide empty methods
+package "PostgreSQL" {
+  enum UserStatus {
+    ONLINE
+    OFFLINE
+    DND
+    INVISIBLE
+  }
 
-' ====== ENUMERATIONS ======
-enum UserStatus {
-  ONLINE
-  OFFLINE
-  DND
-  INVISIBLE
-}
+  enum MemberRole {
+    OWNER
+    ADMIN
+    MEMBER
+  }
 
-enum MemberRole {
-  OWNER
-  ADMIN
-  MEMBER
-}
+  class User {
+    -id: UUID
+    -email: String
+    -password_hash: String
+    -username: String
+    -avatar_url: String?
+    -status: UserStatus
+    -created_at: DateTime
+  }
 
-' ====== CLASSES ======
-class User {
-  - id: UUID
-  - email: String
-  - password_hash: String
-  - username: String
-  - avatar_url: String?
-  - status: UserStatus
-  - created_at: DateTime
-}
+  class Server {
+    -id: UUID
+    -name: String
+    -owner_id: UUID
+    -created_at: DateTime
+    -updated_at: DateTime
+  }
 
-class Server {
-  - id: UUID
-  - name: String
-  - owner_id: UUID
-  - created_at: DateTime
-  - updated_at: DateTime
-}
+  class ServerMember {
+    -server_id: UUID
+    -user_id: UUID
+    -role: MemberRole
+    -joined_at: DateTime
+  }
 
-class ServerMember {
-  - server_id: UUID
-  - user_id: UUID
-  - role: MemberRole
-  - joined_at: DateTime
-}
+  class Channel {
+    -id: UUID
+    -server_id: UUID
+    -name: String
+    -position: Int
+    -created_at: DateTime
+    -updated_at: DateTime
+  }
 
-class Channel {
-  - id: UUID
-  - server_id: UUID
-  - name: String
-  - position: Int
-  - created_at: DateTime
-  - updated_at: DateTime
+  class Invite {
+    -id: UUID
+    -server_id: UUID
+    -code: String
+    -created_by: UUID
+    -expires_at: DateTime?
+    -max_uses: Int?
+    -uses_count: Int
+    -created_at: DateTime
+  }
 }
 
-class Invite {
-  - id: UUID
-  - server_id: UUID
-  - code: String
-  - created_by: UUID
-  - expires_at: DateTime?
-  - max_uses: Int?
-  - uses_count: Int
-  - created_at: DateTime
+package "MongoDB" {
+  class ChannelMessage {
+    -message_id: UUID
+    -server_id: UUID
+    -channel_id: UUID
+    -author_id: UUID
+    -content: String
+    -created_at: DateTime
+    -edited_at: DateTime?
+    -deleted_at: DateTime?
+    -deleted_by: UUID?
+  }
 }
 
-class ChannelMessage <<MongoDB>> {
-  - _id: ObjectId
-  - message_id: UUID
-  - server_id: UUID
-  - channel_id: UUID
-  - author_id: UUID
-  - content: String
-  - created_at: DateTime
-  - edited_at: DateTime?
-  - deleted_at: DateTime?
-  - deleted_by: UUID?
-}
-
-class PrivateConversation {
-  - id: UUID
-  - user1_id: UUID
-  - user2_id: UUID
-  - created_at: DateTime
-}
-
-class DmMessage <<MongoDB>> {
-  - _id: ObjectId
-  - message_id: UUID
-  - dm_id: UUID
-  - author_id: UUID
-  - content: String
-  - created_at: DateTime
-  - edited_at: DateTime?
-  - deleted_at: DateTime?
-  - deleted_by: UUID?
-}
-
-class Contact {
-  - user_id: UUID
-  - contact_id: UUID
-  - status: ContactStatus
-  - created_at: DateTime
-}
-
-enum ContactStatus {
-  PENDING
-  ACCEPTED
-  BLOCKED
-}
-
-' ====== RELATIONS ======
 User "1" <-- "0..*" Server : owner_id
+
 User "1" <-- "0..*" ServerMember
 Server "1" <-- "0..*" ServerMember
+
 Server "1" <-- "0..*" Channel
+
 Server "1" <-- "0..*" Invite
 User "1" <-- "0..*" Invite : created_by
+
 Channel "1" <-- "0..*" ChannelMessage
 Server "1" <-- "0..*" ChannelMessage
 User "1" <-- "0..*" ChannelMessage : author_id
-User "1" <-- "0..*" PrivateConversation : user1/user2
-PrivateConversation "1" <-- "0..*" DmMessage
-User "1" <-- "0..*" DmMessage : author_id
-User "1" <-- "0..*" Contact : user_id
-User "1" <-- "0..*" Contact : contact_id
 
 @enduml
-
