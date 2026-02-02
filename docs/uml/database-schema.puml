@@ -1,5 +1,5 @@
 @startuml RTC_Database_Schema
-title Schéma de Base de Données - Hello World RTC
+title Schema de Base de Donnees - Hello World RTC
 
 hide circle
 skinparam linetype ortho
@@ -59,14 +59,6 @@ package "PostgreSQL (Source of Truth)" {
     updated_at : TIMESTAMP
   }
 
-  entity "private_conversations" as dm {
-    + id : UUID <<PK>>
-    --
-    # user1_id : UUID <<FK>>
-    # user2_id : UUID <<FK>>
-    created_at : TIMESTAMP
-  }
-
   entity "invites" as invites {
     + id : UUID <<PK>>
     --
@@ -79,14 +71,6 @@ package "PostgreSQL (Source of Truth)" {
     created_at : TIMESTAMP
   }
 
-  entity "contacts" as contacts {
-    + user_id : UUID <<PK, FK>>
-    + contact_id : UUID <<PK, FK>>
-    --
-    status : ENUM(PENDING, ACCEPTED, BLOCKED)
-    created_at : TIMESTAMP
-  }
-
   ' ---- PostgreSQL Relations ----
   users   ||--o{ servers  : owns
   servers ||--o{ members  : has
@@ -94,9 +78,6 @@ package "PostgreSQL (Source of Truth)" {
   servers ||--o{ channels : contains
   servers ||--o{ invites  : has
   users   ||--o{ invites  : creates
-  users ||--o{ dm : participates
-  users ||--o{ contacts : "user_id"
-  users ||--o{ contacts : "contact_id"
 }
 
 ' ================== MONGODB ==================
@@ -115,27 +96,11 @@ package "MongoDB (Message History)" #553333 {
     deleted_at : TIMESTAMP?
     deleted_by : UUID?
   }
-
-  entity "dm_messages" as dm_msg {
-    + _id : ObjectId
-    --
-    message_id : UUID <<UNIQUE>>
-    dm_id : UUID
-    author_id : UUID
-    content : TEXT
-    created_at : TIMESTAMP
-    edited_at : TIMESTAMP?
-    deleted_at : TIMESTAMP?
-    deleted_by : UUID?
-  }
 }
 
 ' ================== CROSS-DB LINKS ==================
 channels ..> ch_msg : channel_id (logical)
 servers  ..> ch_msg : server_id (logical)
 users    ..> ch_msg : author_id (logical)
-dm       ..> dm_msg : dm_id (logical)
-users    ..> dm_msg : author_id (logical)
 
 @enduml
-

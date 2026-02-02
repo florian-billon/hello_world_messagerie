@@ -1,63 +1,54 @@
 # Description des entites - Hello World RTC
 
-## Énumérations
+## Enumerations
 
 ### `UserStatus`
-Statut de présence d'un utilisateur :
+Statut de presence d'un utilisateur :
 
 | Valeur | Description |
 |--------|-------------|
-| `ONLINE` | Connecté et disponible |
-| `OFFLINE` | Déconnecté |
-| `DND` | Ne pas déranger |
+| `ONLINE` | Connecte et disponible |
+| `OFFLINE` | Deconnecte |
+| `DND` | Ne pas deranger |
 | `INVISIBLE` | Invisible pour les autres |
 
 ### `MemberRole`
-Rôle d'un utilisateur dans un serveur :
+Role d'un utilisateur dans un serveur :
 
 | Valeur | Description | Permissions |
 |--------|-------------|-------------|
-| `OWNER` | Propriétaire du serveur | Toutes + transfert propriété |
-| `ADMIN` | Administrateur | Gestion canaux, invitations, modération |
+| `OWNER` | Proprietaire du serveur | Toutes + transfert propriete |
+| `ADMIN` | Administrateur | Gestion canaux, invitations, moderation |
 | `MEMBER` | Membre standard | Lecture/envoi messages |
-
-### `ContactStatus`
-État d'une relation de contact :
-
-| Valeur | Description |
-|--------|-------------|
-| `PENDING` | Demande en attente |
-| `ACCEPTED` | Contact accepté |
-| `BLOCKED` | Contact bloqué |
 
 ---
 
-## Entités PostgreSQL
+## Entites PostgreSQL
 
 ### `User`
-Représente un compte utilisateur.
+Represente un compte utilisateur.
 
 | Attribut | Type | Description |
 |----------|------|-------------|
 | `id` | UUID | Identifiant unique |
 | `email` | String | Email de connexion (unique) |
-| `password_hash` | String | Mot de passe chiffré (bcrypt) |
-| `username` | String | Pseudonyme affiché |
+| `password_hash` | String | Mot de passe chiffre (bcrypt) |
+| `username` | String | Pseudonyme affiche |
 | `avatar_url` | String? | URL de l'avatar (optionnel) |
-| `status` | UserStatus | Statut de présence |
-| `created_at` | DateTime | Date de création du compte |
+| `status` | UserStatus | Statut de presence |
+| `created_at` | DateTime | Date de creation du compte |
 
 ---
 
 ### `Server`
-Représente un serveur (communauté).
+Represente un serveur (communaute).
 
 | Attribut | Type | Description |
 |----------|------|-------------|
 | `id` | UUID | Identifiant unique |
 | `name` | String | Nom du serveur |
-| `owner_id` | UUID | FK → User propriétaire |
-| `created_at` | DateTime | Date de création |
+| `owner_id` | UUID | FK → User proprietaire |
+| `created_at` | DateTime | Date de creation |
 | `updated_at` | DateTime | Date de modification |
 
 **Contrainte metier** : Un seul Owner par serveur.
@@ -71,17 +62,17 @@ Table de liaison entre `User` et `Server`.
 |----------|------|-------------|
 | `server_id` | UUID | FK → Server |
 | `user_id` | UUID | FK → User |
-| `role` | MemberRole | Rôle dans le serveur |
-| `joined_at` | DateTime | Date d'adhésion |
+| `role` | MemberRole | Role dans le serveur |
+| `joined_at` | DateTime | Date d'adhesion |
 
-**Clé primaire composée** : `(server_id, user_id)`
+**Cle primaire composee** : `(server_id, user_id)`
 
 **Contrainte** : Un utilisateur ne peut pas etre deux fois dans le meme serveur.
 
 ---
 
 ### `Channel`
-Canal textuel appartenant à un serveur.
+Canal textuel appartenant a un serveur.
 
 | Attribut | Type | Description |
 |----------|------|-------------|
@@ -89,7 +80,7 @@ Canal textuel appartenant à un serveur.
 | `server_id` | UUID | FK → Server parent |
 | `name` | String | Nom du canal |
 | `position` | Int | Ordre d'affichage |
-| `created_at` | DateTime | Date de création |
+| `created_at` | DateTime | Date de creation |
 | `updated_at` | DateTime | Date de modification |
 
 ---
@@ -100,78 +91,37 @@ Invitation pour rejoindre un serveur.
 | Attribut | Type | Description |
 |----------|------|-------------|
 | `id` | UUID | Identifiant unique |
-| `server_id` | UUID | FK → Server concerné |
+| `server_id` | UUID | FK → Server concerne |
 | `code` | String | Code d'invitation unique |
-| `created_by` | UUID | FK → User créateur |
+| `created_by` | UUID | FK → User createur |
 | `expires_at` | DateTime? | Date d'expiration (optionnel) |
 | `max_uses` | Int? | Nombre max d'utilisations (optionnel) |
 | `uses_count` | Int | Compteur d'utilisations |
-| `created_at` | DateTime | Date de création |
+| `created_at` | DateTime | Date de creation |
 
 ---
 
-### `PrivateConversation`
-Conversation privée entre deux utilisateurs (DM).
-
-| Attribut | Type | Description |
-|----------|------|-------------|
-| `id` | UUID | Identifiant unique |
-| `user1_id` | UUID | FK → Premier utilisateur |
-| `user2_id` | UUID | FK → Deuxième utilisateur |
-| `created_at` | DateTime | Date de création |
-
----
-
-### `Contact`
-Relation de contact entre utilisateurs.
-
-| Attribut | Type | Description |
-|----------|------|-------------|
-| `user_id` | UUID | FK → Utilisateur source |
-| `contact_id` | UUID | FK → Utilisateur cible |
-| `status` | ContactStatus | État de la relation |
-| `created_at` | DateTime | Date de création |
-
----
-
-## Entités MongoDB
+## Entites MongoDB
 
 ### `ChannelMessage`
-Message envoyé dans un canal.
+Message envoye dans un canal.
 
 | Attribut | Type | Description |
 |----------|------|-------------|
 | `_id` | ObjectId | ID MongoDB interne |
-| `message_id` | UUID | ID unique (référence cross-DB) |
-| `server_id` | UUID | Référence serveur |
-| `channel_id` | UUID | Référence canal |
-| `author_id` | UUID | Référence auteur |
+| `message_id` | UUID | ID unique (reference cross-DB) |
+| `server_id` | UUID | Reference serveur |
+| `channel_id` | UUID | Reference canal |
+| `author_id` | UUID | Reference auteur |
 | `content` | String | Contenu du message |
 | `created_at` | DateTime | Date d'envoi |
-| `edited_at` | DateTime? | Date d'édition (optionnel) |
+| `edited_at` | DateTime? | Date d'edition (optionnel) |
 | `deleted_at` | DateTime? | Date de suppression logique |
-| `deleted_by` | UUID? | Utilisateur ayant supprimé |
+| `deleted_by` | UUID? | Utilisateur ayant supprime |
 
 **Soft delete** : Le message n'est jamais supprime physiquement.
 
 **Index** : `(channel_id, created_at)` pour les requetes paginees.
-
----
-
-### `DmMessage`
-Message envoyé dans une conversation privée.
-
-| Attribut | Type | Description |
-|----------|------|-------------|
-| `_id` | ObjectId | ID MongoDB interne |
-| `message_id` | UUID | ID unique (référence cross-DB) |
-| `dm_id` | UUID | Référence conversation |
-| `author_id` | UUID | Référence auteur |
-| `content` | String | Contenu du message |
-| `created_at` | DateTime | Date d'envoi |
-| `edited_at` | DateTime? | Date d'édition (optionnel) |
-| `deleted_at` | DateTime? | Date de suppression logique |
-| `deleted_by` | UUID? | Utilisateur ayant supprimé |
 
 ---
 
@@ -192,13 +142,10 @@ User ──────┬──────────────────
         Invite
 ```
 
-### Résumé
-- Un `User` peut être **propriétaire** de plusieurs `Server`
-- Un `User` peut **appartenir** à plusieurs `Server` via `ServerMember`
+### Resume
+- Un `User` peut etre **proprietaire** de plusieurs `Server`
+- Un `User` peut **appartenir** a plusieurs `Server` via `ServerMember`
 - Un `Server` **contient** plusieurs `Channel`
 - Un `Server` peut avoir plusieurs `Invite`
 - Un `Channel` **contient** plusieurs `ChannelMessage`
-- Un `User` peut **écrire** plusieurs `ChannelMessage`
-- Un `User` peut avoir plusieurs `Contact`
-- Deux `User` peuvent avoir une `PrivateConversation`
-
+- Un `User` peut **ecrire** plusieurs `ChannelMessage`
