@@ -43,24 +43,22 @@ export default function LoginPage() {
       <div className="fixed inset-0 bg-[url('/background.png')] bg-cover bg-center bg-no-repeat brightness-[0.7] contrast-[1.1] z-0" />
 
       {/* MAIN LAYOUT */}
-      <div className="relative z-10 flex w-full h-full">
+      <div className="relative z-10 flex w-full h-full items-center justify-center">
         
-        {/* LEFT SIDEBAR */}
-        <aside className="w-[260px] p-5 bg-white/20 border-r-2 border-[#4fdfff] flex flex-col shrink-0">
+        {/* CENTER CONTENT */}
+        <div className="flex flex-col items-center justify-center p-6">
+          
+          {/* Logo */}
           <Image
             src="/logo.png"
             alt="Hello World logo"
-            width={150}
-            height={150}
-            className="mb-5"
+            width={120}
+            height={120}
+            className="mb-6"
           />
-        </aside>
-        
-        {/* CENTER CONTENT */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 overflow-x-hidden overflow-y-auto">
-          
+
           {/* Header Message */}
-          <header className="mb-10 text-center">
+          <header className="mb-8 text-center">
             <h1 className="text-white text-xl font-bold">
               Welcome to <span className="text-[#ff3b3b]">HELLO WORLD</span> messaging platform
             </h1>
@@ -122,9 +120,6 @@ export default function LoginPage() {
           </section>
 
         </div>
-
-        {/* RIGHT SIDEBAR */}
-        <aside className="w-[260px] p-5 bg-white/20 border-l-2 border-[#4fdfff] shrink-0" />
       </div>
     </main>
   );
