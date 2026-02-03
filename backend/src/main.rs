@@ -1,98 +1,112 @@
+//! Real-time chat application backend
+
+pub use self::error::{Error, Result};
+
 use axum::{
+    middleware,
     routing::{get, post},
     Router,
 };
+use mongodb::{Client as MongoClient, Database as MongoDatabase};
 use sqlx::postgres::PgPoolOptions;
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
-use uuid::Uuid;
 
+mod ctx;
+mod error;
 mod handlers;
 mod models;
+mod repositories;
+mod routes;
 mod services;
+mod web;
+use repositories::{ChannelRepository, MessageRepository, ServerRepository, UserRepository};
 
-use handlers::{auth, servers};
-
-/// État partagé de l'application
 #[derive(Clone)]
 pub struct AppState {
     pub db: sqlx::PgPool,
+    pub mongo: MongoDatabase,
     pub jwt_secret: String,
-    pub servers: Arc<Mutex<HashMap<Uuid, servers::Server>>>, // Temporaire
+    pub user_repo: UserRepository,
+    pub server_repo: ServerRepository,
+    pub channel_repo: ChannelRepository,
+    pub message_repo: MessageRepository,
 }
 
-/// Health check
 async fn health() -> &'static str {
     "OK"
 }
 
 #[tokio::main]
 async fn main() {
-    // Charger les variables d'environnement
     dotenvy::dotenv().ok();
 
-    // Configuration
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5433/helloworld".to_string());
     let jwt_secret = std::env::var("JWT_SECRET")
         .unwrap_or_else(|_| "super_secret_jwt_key_change_in_production".to_string());
 
-    // Connexion à PostgreSQL
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&database_url)
         .await
         .expect("Failed to connect to PostgreSQL");
 
-    println!("Connected to PostgreSQL");
+    let mongodb_url = std::env::var("MONGODB_URL")
+        .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
+    let mongo_client = MongoClient::with_uri_str(&mongodb_url)
+        .await
+        .expect("Failed to connect to MongoDB");
+    let mongo_db = mongo_client.database("helloworld");
 
-    // État de l'application
+    let user_repo = UserRepository::new(pool.clone());
+    let server_repo = ServerRepository::new(pool.clone());
+    let channel_repo = ChannelRepository::new(pool.clone());
+    let message_repo = MessageRepository::new(mongo_db.clone());
+
     let state = AppState {
         db: pool,
+        mongo: mongo_db,
         jwt_secret,
-        servers: Arc::new(Mutex::new(HashMap::new())),
+        user_repo,
+        server_repo,
+        channel_repo,
+        message_repo,
     };
 
-    // CORS pour le frontend
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
-    // Routes
-    let app = Router::new()
-        // Health
+    let routes_protected = routes::create_router()
+        .route("/me", get(handlers::auth::me))
+        .route("/auth/logout", post(handlers::auth::logout))
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            web::mw_require_auth,
+        ));
+
+    let routes_public = Router::new()
         .route("/health", get(health))
-        // Auth
-        .route("/auth/signup", post(auth::signup))
-        .route("/auth/login", post(auth::login))
-        .route("/auth/logout", post(auth::logout))
-        .route("/me", get(auth::me))
-        // Servers (temporaire - in-memory)
-        .route("/servers", post(servers::create_server).get(servers::list_servers))
-        .route(
-            "/servers/{id}",
-            get(servers::get_server)
-                .put(servers::update_server)
-                .delete(servers::delete_server),
-        )
+        .merge(routes::auth::routes());
+
+    let app = Router::new()
+        .merge(routes_public)
+        .merge(routes_protected)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            web::mw_ctx_resolver,
+        ))
         .layer(cors)
         .with_state(state);
 
-    // Démarrage du serveur
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001")
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3001".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+    let listener = tokio::net::TcpListener::bind(&addr)
         .await
-        .expect("Failed to bind to port 3001");
+        .unwrap_or_else(|_| panic!("Failed to bind to port {}", port));
 
-    println!("Backend running on http://localhost:3001");
-    println!("Endpoints:");
-    println!("   POST /auth/signup  - Create account");
-    println!("   POST /auth/login   - Login");
-    println!("   POST /auth/logout  - Logout");
-    println!("   GET  /me           - Get current user");
-    println!("   GET  /health       - Health check");
+    println!("Server running on http://localhost:{}", port);
 
     axum::serve(listener, app)
         .await

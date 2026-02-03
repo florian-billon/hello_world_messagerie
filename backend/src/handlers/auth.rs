@@ -8,7 +8,7 @@ use axum_extra::TypedHeader;
 use headers::{authorization::Bearer, Authorization};
 
 use crate::models::{AuthResponse, LoginPayload, SignupPayload, UserResponse};
-use crate::services::{self, verify_token, AuthError};
+use crate::services::{self, auth::AuthError, verify_token};
 use crate::AppState;
 
 /// Convertit AuthError en réponse HTTP

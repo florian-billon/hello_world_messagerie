@@ -3,96 +3,92 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::ctx::Ctx;
+use crate::error::Result;
+use crate::models::{CreateServerPayload, Server, ServerMember, UpdateServerPayload};
+use crate::services;
 use crate::AppState;
 
-/// Modèle Server (temporaire - sera remplacé par PostgreSQL)
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Server {
-    pub id: Uuid,
-    pub name: String,
-    pub description: String,
-}
-
-#[derive(Deserialize)]
-pub struct CreateServerPayload {
-    pub name: String,
-    pub description: String,
-}
-
-#[derive(Deserialize)]
-pub struct UpdateServerPayload {
-    pub name: Option<String>,
-    pub description: Option<String>,
-}
-
-/// POST /servers - Créer un serveur
 pub async fn create_server(
     State(state): State<AppState>,
+    ctx: Ctx,
     Json(payload): Json<CreateServerPayload>,
-) -> Json<Server> {
-    let server = Server {
-        id: Uuid::new_v4(),
-        name: payload.name,
-        description: payload.description,
-    };
-
-    let mut servers = state.servers.lock().await;
-    servers.insert(server.id, server.clone());
-
-    Json(server)
+) -> Result<Json<Server>> {
+    let server = services::create_server(&state.server_repo, &state.user_repo, ctx.user_id(), payload).await?;
+    Ok(Json(server))
 }
 
-/// GET /servers - Lister les serveurs
-pub async fn list_servers(State(state): State<AppState>) -> Json<Vec<Server>> {
-    let servers = state.servers.lock().await;
-    let server_list: Vec<Server> = servers.values().cloned().collect();
-
-    Json(server_list)
+pub async fn list_servers(
+    State(state): State<AppState>,
+    ctx: Ctx,
+) -> Result<Json<Vec<Server>>> {
+    let servers = services::list_user_servers(&state.server_repo, ctx.user_id()).await?;
+    Ok(Json(servers))
 }
 
-/// GET /servers/{id} - Obtenir un serveur
 pub async fn get_server(
     State(state): State<AppState>,
+    ctx: Ctx,
     Path(id): Path<Uuid>,
-) -> Result<Json<Server>, StatusCode> {
-    let servers = state.servers.lock().await;
-    servers
-        .get(&id)
-        .cloned()
-        .map(Json)
-        .ok_or(StatusCode::NOT_FOUND)
+) -> Result<Json<Server>> {
+    let member = services::get_member(&state.server_repo, id, ctx.user_id()).await?;
+    if member.is_none() {
+        return Err(crate::Error::ServerForbidden);
+    }
+
+    let server = services::get_server(&state.server_repo, id).await?;
+    Ok(Json(server))
 }
 
-/// PUT /servers/{id} - Mettre à jour un serveur
 pub async fn update_server(
     State(state): State<AppState>,
+    ctx: Ctx,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateServerPayload>,
-) -> Result<Json<Server>, StatusCode> {
-    let mut servers = state.servers.lock().await;
-
-    let server = servers.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-
-    if let Some(name) = payload.name {
-        server.name = name;
-    }
-    if let Some(description) = payload.description {
-        server.description = description;
-    }
-
-    Ok(Json(server.clone()))
+) -> Result<Json<Server>> {
+    let server = services::update_server(&state.server_repo, id, ctx.user_id(), payload).await?;
+    Ok(Json(server))
 }
 
-/// DELETE /servers/{id} - Supprimer un serveur
-pub async fn delete_server(State(state): State<AppState>, Path(id): Path<Uuid>) -> StatusCode {
-    let mut servers = state.servers.lock().await;
-
-    match servers.remove(&id) {
-        Some(_) => StatusCode::NO_CONTENT,
-        None => StatusCode::NOT_FOUND,
-    }
+pub async fn delete_server(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode> {
+    services::delete_server(&state.server_repo, id, ctx.user_id()).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
+pub async fn join_server(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ServerMember>> {
+    let member = services::join_server(&state.server_repo, id, ctx.user_id()).await?;
+    Ok(Json(member))
+}
+
+pub async fn leave_server(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode> {
+    services::leave_server(&state.server_repo, id, ctx.user_id()).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn list_members(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Vec<ServerMember>>> {
+    let member = services::get_member(&state.server_repo, id, ctx.user_id()).await?;
+    if member.is_none() {
+        return Err(crate::Error::ServerForbidden);
+    }
+
+    let members = services::list_members(&state.server_repo, id).await?;
+    Ok(Json(members))
+}
