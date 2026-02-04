@@ -56,6 +56,12 @@ impl From<User> for UserResponse {
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UpdateMePayload {
+    pub username: Option<String>,
+    pub avatar_url: Option<String>,
+    pub status: Option<UserStatus>,
+}
 /// Payload pour l'inscription
 #[derive(Debug, Deserialize)]
 pub struct SignupPayload {
@@ -86,4 +92,3 @@ pub struct Claims {
     pub exp: usize,       // expiration timestamp
     pub iat: usize,       // issued at
 }
-

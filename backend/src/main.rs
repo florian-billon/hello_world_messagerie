@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //! Real-time chat application backend
 
 pub use self::error::{Error, Result};
@@ -8,6 +9,9 @@ use axum::{
     Router,
 };
 use mongodb::{Client as MongoClient, Database as MongoDatabase};
+=======
+use axum::routing::get;
+>>>>>>> 4f1952a (arch backend)
 use sqlx::postgres::PgPoolOptions;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -18,9 +22,18 @@ mod models;
 mod repositories;
 mod routes;
 mod services;
+<<<<<<< HEAD
 mod web;
 use repositories::{ChannelRepository, MessageRepository, ServerRepository, UserRepository};
 
+=======
+mod repositories;
+mod routes;
+
+use handlers::servers;
+
+/// État partagé de l'application
+>>>>>>> 4f1952a (arch backend)
 #[derive(Clone)]
 pub struct AppState {
     pub db: sqlx::PgPool,
@@ -78,6 +91,7 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
+<<<<<<< HEAD
     let routes_protected = routes::create_router()
         .route("/me", get(handlers::auth::me))
         .route("/auth/logout", post(handlers::auth::logout))
@@ -103,10 +117,22 @@ async fn main() {
     let port = std::env::var("PORT").unwrap_or_else(|_| "3001".to_string());
     let addr = format!("0.0.0.0:{}", port);
     let listener = tokio::net::TcpListener::bind(&addr)
+=======
+    let app = routes::app_routes()
+        .route("/health", get(health))
+        .layer(cors)
+        .with_state(state);
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001")
+>>>>>>> 4f1952a (arch backend)
         .await
         .unwrap_or_else(|_| panic!("Failed to bind to port {}", port));
 
+<<<<<<< HEAD
     println!("Server running on http://localhost:{}", port);
+=======
+    println!("Backend running on http://localhost:3001");
+>>>>>>> 4f1952a (arch backend)
 
     axum::serve(listener, app)
         .await
