@@ -1,6 +1,0 @@
-#!/bin/bash
-# Wrapper pour tree qui filtre automatiquement les fichiers Zone.Identifier
-# Usage: ./tree-clean [options de tree]
-
-tree -I 'node_modules|target|.next|*.Zone.Identifier' "$@" 2>/dev/null | grep -v "Zone.Identifier"
-
