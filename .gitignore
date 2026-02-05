@@ -56,5 +56,5 @@ node_modules/
 
 # Env
 backend/.env
-backend/Cargo.toml
-backend/Cargo.lock
+frontend/.env
+frontend/.env.local

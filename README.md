@@ -124,6 +124,8 @@ The application will be available at `http://localhost:3000`.
 
 ## Configuration
 
+> **📖 For detailed setup instructions with NeonDB and MongoDB Atlas, see [docs/SETUP.md](./docs/SETUP.md)**
+
 ### Backend Environment Variables
 
 | Variable | Description | Default |
