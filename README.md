@@ -10,7 +10,26 @@ Application de messagerie instantanée en temps réel inspirée de Discord.
 - Rust 1.75+ (pour le backend)
 - Node.js 20+ (pour le frontend)
 
-### 1. Lancer PostgreSQL et MongoDB
+### Installation des dépendances
+
+#### Sur NixOS (recommandé)
+
+Le projet inclut un `shell.nix` pour gérer automatiquement les dépendances :
+
+```bash
+# Entrer dans l'environnement de développement
+nix-shell
+
+# Ou utiliser direnv (recommandé pour un workflow fluide)
+echo "use nix" > .envrc
+direnv allow
+```
+
+#### Sur autres systèmes
+
+Installez Rust via [rustup](https://rustup.rs/) et Node.js via [nvm](https://github.com/nvm-sh/nvm) ou votre gestionnaire de paquets.
+
+### 1. Lancer PostgreSQL
 
 ```bash
 docker-compose up -d
