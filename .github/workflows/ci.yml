@@ -57,7 +57,6 @@ jobs:
       
       - name: Setup PostgreSQL
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE helloworld;"
           PGPASSWORD=postgres psql -h localhost -U postgres -d helloworld -f backend/migrations/init.sql
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/helloworld
