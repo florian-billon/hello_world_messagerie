@@ -1,81 +1,107 @@
-use sqlx::{PgPool, query_as, query_scalar}; // On utilise les fonctions, pas les macros
+use bson::{doc, Binary, Uuid as BsonUuid};
+use chrono::Utc;
+use futures::TryStreamExt;
+use mongodb::Database;
 use uuid::Uuid;
+
 use crate::models::ChannelMessage;
-use chrono::{DateTime, Utc};
+
+const COLLECTION_NAME: &str = "channel_messages";
 
 #[derive(Clone)]
 pub struct MessageRepository {
-    pool: PgPool,
+    db: Database,
 }
+
 impl MessageRepository {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(db: Database) -> Self {
+        Self { db }
     }
 
-    pub async fn create(&self, channel_id: Uuid, user_id: Uuid, username: &str, content: &str) -> sqlx::Result<ChannelMessage> {
-        query_as::<_, ChannelMessage>(
-            r#"
-            INSERT INTO messages (id, content, channel_id, user_id, username, created_at)
-            VALUES ($1, $2, $3, $4, $5, NOW())
-            RETURNING id, content, channel_id, user_id, username, created_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(content)
-        .bind(channel_id)
-        .bind(user_id)
-        .bind(username)
-        .fetch_one(&self.pool)
-        .await
+    fn collection(&self) -> mongodb::Collection<ChannelMessage> {
+        self.db.collection(COLLECTION_NAME)
     }
-    pub async fn find_by_id(&self, id: Uuid) -> sqlx::Result<Option<ChannelMessage>> {
-        query_as::<_, ChannelMessage>("SELECT id, channel_id, user_id, content, created_at FROM messages WHERE id = $1")
-            .bind(id)
-            .fetch_optional(&self.pool)
+
+    pub async fn create(&self, message: &ChannelMessage) -> mongodb::error::Result<()> {
+        self.collection().insert_one(message).await?;
+        Ok(())
+    }
+
+    pub async fn find_by_id(&self, message_id: Uuid) -> mongodb::error::Result<Option<ChannelMessage>> {
+        self.collection()
+            .find_one(doc! { "message_id": BsonUuid::from(message_id) })
             .await
     }
-pub async fn list_by_channel(&self, channel_id: Uuid, limit: i64, before: Option<Uuid>) -> sqlx::Result<Vec<ChannelMessage>> {
-    let mut before_ts: Option<DateTime<Utc>> = None;
 
-    if let Some(bid) = before {
-        // On récupère la date du message pivot
-        before_ts = query_scalar::<_, DateTime<Utc>>("SELECT created_at FROM messages WHERE id = $1")
-            .bind(bid)
-            .fetch_optional(&self.pool)
-            .await?;
+    pub async fn list_by_channel(
+        &self,
+        channel_id: Uuid,
+        limit: i64,
+        before: Option<Uuid>,
+    ) -> mongodb::error::Result<Vec<ChannelMessage>> {
+        let collection = self.collection();
+
+        let uuid_bytes = channel_id.as_bytes();
+        let binary = Binary {
+            bytes: uuid_bytes.to_vec(),
+            subtype: bson::spec::BinarySubtype::Generic,
+        };
+        
+        let mut filter = doc! {
+            "channel_id": binary,
+            "deleted_at": null,
+        };
+
+        if let Some(before_id) = before {
+            if let Some(before_msg) = collection
+                .find_one(doc! { "message_id": BsonUuid::from(before_id) })
+                .await?
+            {
+                filter.insert("created_at", doc! { "$lt": before_msg.created_at });
+            }
+        }
+
+        let options = mongodb::options::FindOptions::builder()
+            .sort(doc! { "created_at": -1 })
+            .limit(limit)
+            .build();
+
+        let cursor = collection.find(filter).with_options(options).await?;
+        cursor.try_collect().await
     }
 
-    query_as::<_, ChannelMessage>(
-        r#"
-        SELECT id, content, channel_id, user_id, username, created_at 
-        FROM messages
-        WHERE channel_id = $1 
-          AND ($3::TIMESTAMPTZ IS NULL OR created_at < $3)
-        ORDER BY created_at DESC
-        LIMIT $2
-        "#
-    )
-    .bind(channel_id)
-    .bind(limit)
-    .bind(before_ts)
-    .fetch_all(&self.pool)
-    .await
-}
-
-    pub async fn update_content(&self, id: Uuid, content: &str) -> sqlx::Result<()> {
-        sqlx::query("UPDATE messages SET content = $1 WHERE id = $2")
-            .bind(content)
-            .bind(id)
-            .execute(&self.pool)
+    pub async fn update_content(
+        &self,
+        message_id: Uuid,
+        content: &str,
+    ) -> mongodb::error::Result<()> {
+        self.collection()
+            .update_one(
+                doc! { "message_id": BsonUuid::from(message_id) },
+                doc! {
+                    "$set": {
+                        "content": content,
+                        "edited_at": Utc::now(),
+                    }
+                },
+            )
             .await?;
         Ok(())
     }
 
-    pub async fn soft_delete(&self, id: Uuid) -> sqlx::Result<()> {
-        sqlx::query("DELETE FROM messages WHERE id = $1")
-            .bind(id)
-            .execute(&self.pool)
+    pub async fn soft_delete(&self, message_id: Uuid, deleted_by: Uuid) -> mongodb::error::Result<()> {
+        self.collection()
+            .update_one(
+                doc! { "message_id": BsonUuid::from(message_id) },
+                doc! {
+                    "$set": {
+                        "deleted_at": Utc::now(),
+                        "deleted_by": BsonUuid::from(deleted_by),
+                    }
+                },
+            )
             .await?;
         Ok(())
     }
 }
+

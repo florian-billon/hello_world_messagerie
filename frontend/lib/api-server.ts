@@ -97,15 +97,9 @@ export async function listServers(): Promise<Server[]> {
 export async function createServer(name: string): Promise<Server> {
   return fetchApi<Server>("/servers", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ name }), // ✅ CORRECT
+    body: JSON.stringify({ name }),
   });
 }
-
-
-
 
 export async function listChannels(serverId: string): Promise<Channel[]> {
   return fetchApi<Channel[]>(`/servers/${serverId}/channels`);
@@ -133,15 +127,3 @@ export async function sendMessage(channelId: string, content: string): Promise<M
   });
 }
 
-// Add this to your existing interface list
-export interface User {
-  id: string;
-  username: string;
-  email?: string;
-  created_at: string;
-}
-
-// Add this to your existing functions
-export async function getMe(): Promise<User> {
-  return fetchApi<User>("/me");
-}

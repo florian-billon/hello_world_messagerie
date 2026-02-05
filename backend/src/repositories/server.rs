@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::{Server, ServerMember};
+use crate::models::{MemberRole, Server, ServerMember};
 
 #[derive(Clone)]
 pub struct ServerRepository {
@@ -80,47 +80,39 @@ impl ServerRepository {
         Ok(())
     }
 
-   pub async fn find_member(
-    &self,
-    server_id: Uuid,
-    user_id: Uuid,
-) -> sqlx::Result<Option<ServerMember>> {
-    let row = sqlx::query_as::<_, ServerMember>
-(
-        "SELECT server_id, user_id, role, joined_at
-         FROM server_members
-         WHERE server_id = $1 AND user_id = $2"
-    )
-    .bind(server_id)
-    .bind(user_id)
-    .fetch_optional(&self.pool)
-    .await?;
+    pub async fn find_member(
+        &self,
+        server_id: Uuid,
+        user_id: Uuid,
+    ) -> sqlx::Result<Option<ServerMember>> {
+        sqlx::query_as::<_, ServerMember>(
+            "SELECT server_id, user_id, role, joined_at FROM server_members WHERE server_id = $1 AND user_id = $2",
+        )
+        .bind(server_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await
+    }
 
-    Ok(row.map(Into::into))
-}
-
-pub async fn add_member(
-    &self,
-    server_id: Uuid,
-    user_id: Uuid,
-    role: &str,
-) -> sqlx::Result<ServerMember> {
-    sqlx::query_as::<_, ServerMember>(
-        r#"
-        INSERT INTO server_members (server_id, user_id, role, joined_at)
-        VALUES ($1, $2, $3, NOW())
-        RETURNING server_id, user_id, role, joined_at
-        "#,
-    )
-    .bind(server_id)
-    .bind(user_id)
-    .bind(role)
-    .fetch_one(&self.pool)
-    .await
-}
-
-
-
+    pub async fn add_member(
+        &self,
+        server_id: Uuid,
+        user_id: Uuid,
+        role: MemberRole,
+    ) -> sqlx::Result<ServerMember> {
+        sqlx::query_as::<_, ServerMember>(
+            r#"
+            INSERT INTO server_members (server_id, user_id, role, joined_at)
+            VALUES ($1, $2, $3::member_role, NOW())
+            RETURNING server_id, user_id, role, joined_at
+            "#,
+        )
+        .bind(server_id)
+        .bind(user_id)
+        .bind(role)
+        .fetch_one(&self.pool)
+        .await
+    }
 
     pub async fn remove_member(&self, server_id: Uuid, user_id: Uuid) -> sqlx::Result<()> {
         sqlx::query("DELETE FROM server_members WHERE server_id = $1 AND user_id = $2")
@@ -131,23 +123,13 @@ pub async fn add_member(
         Ok(())
     }
 
-    pub async fn list_members(
-    &self,
-    server_id: Uuid,
-) -> sqlx::Result<Vec<ServerMember>> {
-    let rows = sqlx::query_as::<_, ServerMember>
-(
-        "SELECT server_id, user_id, role, joined_at
-         FROM server_members
-         WHERE server_id = $1
-         ORDER BY joined_at"
-    )
-    .bind(server_id)
-    .fetch_all(&self.pool)
-    .await?;
-
-    Ok(rows.into_iter().map(Into::into).collect())
-}
-
+    pub async fn list_members(&self, server_id: Uuid) -> sqlx::Result<Vec<ServerMember>> {
+        sqlx::query_as::<_, ServerMember>(
+            "SELECT server_id, user_id, role, joined_at FROM server_members WHERE server_id = $1 ORDER BY joined_at",
+        )
+        .bind(server_id)
+        .fetch_all(&self.pool)
+        .await
+    }
 }
 

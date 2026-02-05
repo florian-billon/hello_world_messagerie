@@ -11,10 +11,16 @@ use crate::services::verify_token;
 use crate::AppState;
 
 pub async fn mw_require_auth(
-    ctx: Result<Ctx>,
+    State(_state): State<AppState>,
     req: Request<Body>,
     next: Next,
 ) -> Result<Response> {
+    let ctx = req
+        .extensions()
+        .get::<Result<Ctx>>()
+        .ok_or(Error::AuthFailNoAuthHeader)?
+        .clone();
+    
     ctx?;
 
     Ok(next.run(req).await)

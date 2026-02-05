@@ -34,7 +34,8 @@ export function useMembers(serverId: string | null) {
     } else {
       setMembers([]);
     }
-  }, [serverId, loadMembers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverId]);
 
   const refresh = useCallback(() => {
     if (serverId) {

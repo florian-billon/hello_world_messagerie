@@ -37,4 +37,4 @@ export { useServers } from "./useServers";
 export { useChannels } from "./useChannels";
 export { useMessages } from "./useMessages";
 export { useMembers } from "./useMembers";
-export * from './useAuth';
+

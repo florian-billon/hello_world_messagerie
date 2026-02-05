@@ -46,7 +46,8 @@ export function useChannels(serverId: string | null) {
       setChannels([]);
       setSelectedChannel(null);
     }
-  }, [serverId, loadChannels]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverId]);
 
   const selectChannel = useCallback((channel: Channel | null) => {
     setSelectedChannel(channel);

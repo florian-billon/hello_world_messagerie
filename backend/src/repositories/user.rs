@@ -1,8 +1,7 @@
-use crate::models::{User, UserStatus};
 use sqlx::PgPool;
 use uuid::Uuid;
-use std::collections::HashMap;
 
+use crate::models::{User, UserStatus};
 
 #[derive(Clone)]
 pub struct UserRepository {
@@ -16,8 +15,7 @@ impl UserRepository {
 
     pub async fn find_by_id(&self, user_id: Uuid) -> sqlx::Result<Option<User>> {
         sqlx::query_as::<_, User>(
-            "SELECT id, email, password_hash, username, avatar_url, status, created_at
-             FROM users WHERE id = $1",
+            "SELECT id, email, password_hash, username, avatar_url, status, created_at FROM users WHERE id = $1",
         )
         .bind(user_id)
         .fetch_optional(&self.pool)
@@ -26,8 +24,7 @@ impl UserRepository {
 
     pub async fn find_by_email(&self, email: &str) -> sqlx::Result<Option<User>> {
         sqlx::query_as::<_, User>(
-            "SELECT id, email, password_hash, username, avatar_url, status, created_at
-             FROM users WHERE email = $1",
+            "SELECT id, email, password_hash, username, avatar_url, status, created_at FROM users WHERE email = $1",
         )
         .bind(email)
         .fetch_optional(&self.pool)
@@ -35,73 +32,54 @@ impl UserRepository {
     }
 
     pub async fn email_exists(&self, email: &str) -> sqlx::Result<bool> {
-        let count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE email = $1")
-                .bind(email)
-                .fetch_one(&self.pool)
-                .await?;
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE email = $1")
+            .bind(email)
+            .fetch_one(&self.pool)
+            .await?;
 
         Ok(count > 0)
     }
 
-pub async fn create(
-    &self,
-    id: Uuid,
-    email: &str,
-    password_hash: &str,
-    username: &str,
-) -> sqlx::Result<User>{
-    sqlx::query_as::<_, User>(
-        r#"
-        INSERT INTO users (id, email, password_hash, username, status, created_at)
-        VALUES ($1, $2, $3, $4, $5, NOW())
-        RETURNING id, email, password_hash, username, avatar_url, status, created_at
-        "#
-    )
-    .bind(id)
-    .bind(email)
-    .bind(password_hash)
-    .bind(username)
-    .bind("offline") // Ajoute explicitement le statut ici
-    .fetch_one(&self.pool)
-    .await
-}
-
-    pub async fn update_status(
+    pub async fn create(
         &self,
-        user_id: Uuid,
+        id: Uuid,
+        email: &str,
+        password_hash: &str,
+        username: &str,
         status: UserStatus,
-    ) -> sqlx::Result<()> {
-        sqlx::query("UPDATE users SET status = $2 WHERE id = $1")
-            .bind(user_id)
+    ) -> sqlx::Result<User> {
+        sqlx::query_as::<_, User>(
+            r#"
+            INSERT INTO users (id, email, password_hash, username, status, created_at)
+            VALUES ($1, $2, $3, $4, $5, NOW())
+            RETURNING id, email, password_hash, username, avatar_url, status, created_at
+            "#,
+        )
+        .bind(id)
+        .bind(email)
+        .bind(password_hash)
+        .bind(username)
+        .bind(status)
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub async fn update_status(&self, user_id: Uuid, status: UserStatus) -> sqlx::Result<()> {
+        sqlx::query("UPDATE users SET status = $1 WHERE id = $2")
             .bind(status)
+            .bind(user_id)
             .execute(&self.pool)
             .await?;
 
         Ok(())
     }
 
-    // -----------------------------------------------------
-    // 🔥 Fonction utilisée par messages.rs
-    // -----------------------------------------------------
-    pub async fn get_username(&self, user_id: Uuid) -> sqlx::Result<Option<String>> {
-        sqlx::query_scalar::<_, String>(
-            "SELECT username FROM users WHERE id = $1"
-        )
-        .bind(user_id)
-        .fetch_optional(&self.pool)
-        .await
-    }
-
-    // -----------------------------------------------------
-    // 🔥 Fonction utilisée par messages.rs (batch)
-    // -----------------------------------------------------
     pub async fn get_usernames_batch(
         &self,
         user_ids: &[Uuid],
-    ) -> sqlx::Result<HashMap<Uuid, String>> {
+    ) -> sqlx::Result<std::collections::HashMap<Uuid, String>> {
         if user_ids.is_empty() {
-            return Ok(HashMap::new());
+            return Ok(std::collections::HashMap::new());
         }
 
         let rows: Vec<(Uuid, String)> = sqlx::query_as(
@@ -112,5 +90,14 @@ pub async fn create(
         .await?;
 
         Ok(rows.into_iter().collect())
+    }
+
+    pub async fn get_username(&self, user_id: Uuid) -> sqlx::Result<Option<String>> {
+        let username: Option<String> = sqlx::query_scalar("SELECT username FROM users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(username)
+    }
 }
-}
+

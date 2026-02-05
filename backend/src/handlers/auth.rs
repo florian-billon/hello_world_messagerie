@@ -1,46 +1,72 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::State,
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
+use axum_extra::TypedHeader;
+use headers::{authorization::Bearer, Authorization};
 
-use crate::ctx::Ctx;
-use crate::error::Result;
 use crate::models::{AuthResponse, LoginPayload, SignupPayload, UserResponse};
-use crate::services;
+use crate::services::{self, auth::AuthError, verify_token};
 use crate::AppState;
 
+/// Convertit AuthError en réponse HTTP
+impl IntoResponse for AuthError {
+    fn into_response(self) -> axum::response::Response {
+        let (status, message) = match self {
+            AuthError::EmailExists => (StatusCode::CONFLICT, "Email already exists"),
+            AuthError::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
+            AuthError::UserNotFound => (StatusCode::NOT_FOUND, "User not found"),
+            AuthError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Database error"),
+            AuthError::PasswordHash(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Password error"),
+            AuthError::Jwt(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Token error"),
+        };
+
+        let body = serde_json::json!({ "error": message });
+        (status, Json(body)).into_response()
+    }
+}
+
+/// POST /auth/signup - Créer un compte
 pub async fn signup(
     State(state): State<AppState>,
     Json(payload): Json<SignupPayload>,
-) -> Result<Json<AuthResponse>> { // <-- Changé UserResponse en AuthResponse
-    // On passe &state.jwt_secret comme 3ème argument
-    let res = services::signup(&state.user_repo, payload, &state.jwt_secret)
-        .await
-        .map_err(|e| {
-            println!("DEBUG ERROR SIGNUP: {:?}", e);
-            e
-        })?;
-
-    Ok(Json(res))
-}
-
-pub async fn login(
-    State(state): State<AppState>,
-    Json(payload): Json<LoginPayload>,
-) -> Result<Json<AuthResponse>> {
-    let response = services::login(&state.user_repo, payload, &state.jwt_secret).await?;
+) -> Result<Json<AuthResponse>, AuthError> {
+    let response = services::signup(&state.db, payload, &state.jwt_secret).await?;
     Ok(Json(response))
 }
 
+/// POST /auth/login - Se connecter
+pub async fn login(
+    State(state): State<AppState>,
+    Json(payload): Json<LoginPayload>,
+) -> Result<Json<AuthResponse>, AuthError> {
+    let response = services::login(&state.db, payload, &state.jwt_secret).await?;
+    Ok(Json(response))
+}
+
+/// POST /auth/logout - Se déconnecter
 pub async fn logout(
     State(state): State<AppState>,
-    ctx: Ctx,
-) -> Result<StatusCode> {
-    services::logout(&state.user_repo, ctx.user_id()).await?;
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+) -> Result<StatusCode, AuthError> {
+    let claims = verify_token(auth.token(), &state.jwt_secret)
+        .map_err(|_| AuthError::InvalidCredentials)?;
+
+    services::logout(&state.db, claims.sub).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// GET /me - Obtenir les infos de l'utilisateur connecté
 pub async fn me(
     State(state): State<AppState>,
-    ctx: Ctx,
-) -> Result<Json<UserResponse>> {
-    let user = services::get_user_by_id(&state.user_repo, ctx.user_id()).await?;
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+) -> Result<Json<UserResponse>, AuthError> {
+    let claims = verify_token(auth.token(), &state.jwt_secret)
+        .map_err(|_| AuthError::InvalidCredentials)?;
+
+    let user = services::get_user_by_id(&state.db, claims.sub).await?;
     Ok(Json(user))
 }
+

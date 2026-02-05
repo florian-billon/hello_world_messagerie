@@ -1,21 +1,15 @@
-use axum::{
-    routing::{get, post, delete, put},
-    Router,
-};
+#[allow(unused_imports)]
+use axum::{routing::delete, routing::get, routing::post, routing::put, Router};
 
 use crate::handlers::channels;
 use crate::AppState;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        // -------- CHANNELS PAR SERVEUR --------
         .route(
-            "/servers/{id}/channels",
-            get(channels::list_channels)
-                .post(channels::create_channel),
+            "/servers/{server_id}/channels",
+            post(channels::create_channel).get(channels::list_channels),
         )
-
-        // -------- CHANNEL UNIQUE --------
         .route(
             "/channels/{id}",
             get(channels::get_channel)
@@ -23,3 +17,4 @@ pub fn routes() -> Router<AppState> {
                 .delete(channels::delete_channel),
         )
 }
+

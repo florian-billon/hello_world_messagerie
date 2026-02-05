@@ -24,7 +24,6 @@ pub enum Error {
     MessageForbidden,
     DatabaseError { message: String },
     InternalError { message: String },
-    Database,
 }
 
 impl core::fmt::Display for Error {
@@ -58,30 +57,6 @@ impl From<jsonwebtoken::errors::Error> for Error {
         }
     }
 }
-impl Error {
-    pub fn client_status_and_error(&self) -> (StatusCode, &'static str) {
-        match self {
-            // Cas spécifiques
-            Self::Database => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "DATABASE_ERROR",
-            ),
-            Self::EmailAlreadyExists => (
-                StatusCode::BAD_REQUEST,
-                "EMAIL_ALREADY_EXISTS",
-            ),
-            Self::InvalidCredentials => (
-                StatusCode::UNAUTHORIZED,
-                "INVALID_CREDENTIALS",
-            ),
-            // Pour tous les autres cas (AuthFail, InternalError, etc.)
-            _ => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "INTERNAL_SERVER_ERROR",
-            ),
-        }
-    }
-}
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
@@ -94,3 +69,27 @@ impl IntoResponse for Error {
         (status, Json(body)).into_response()
     }
 }
+
+impl Error {
+    pub fn client_status_and_error(&self) -> (StatusCode, &'static str) {
+        match self {
+            Self::AuthFailNoAuthHeader => (StatusCode::UNAUTHORIZED, "Missing authorization header"),
+            Self::AuthFailInvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token"),
+            Self::AuthFailTokenExpired => (StatusCode::UNAUTHORIZED, "Token expired"),
+            Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
+            Self::EmailAlreadyExists => (StatusCode::CONFLICT, "Email already exists"),
+            Self::UserNotFound => (StatusCode::NOT_FOUND, "User not found"),
+            Self::ServerNotFound => (StatusCode::NOT_FOUND, "Server not found"),
+            Self::ServerForbidden => (StatusCode::FORBIDDEN, "Server access forbidden"),
+            Self::ServerOwnerCannotLeave => (StatusCode::BAD_REQUEST, "Owner cannot leave server"),
+            Self::ServerAlreadyMember => (StatusCode::CONFLICT, "Already a member"),
+            Self::ChannelNotFound => (StatusCode::NOT_FOUND, "Channel not found"),
+            Self::ChannelForbidden => (StatusCode::FORBIDDEN, "Channel access forbidden"),
+            Self::MessageNotFound => (StatusCode::NOT_FOUND, "Message not found"),
+            Self::MessageForbidden => (StatusCode::FORBIDDEN, "Message access forbidden"),
+            Self::DatabaseError { .. } => (StatusCode::INTERNAL_SERVER_ERROR, "Database error"),
+            Self::InternalError { .. } => (StatusCode::INTERNAL_SERVER_ERROR, "Internal error"),
+        }
+    }
+}
+

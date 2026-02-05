@@ -19,13 +19,12 @@ export async function login(email: string, password: string) {
 
   const data = await res.json();
 
-  // Stocker le token dans un cookie accessible au client
   const cookieStore = await cookies();
   cookieStore.set("token", data.token, {
-    httpOnly: false, // Accessible au client pour les appels API
+    httpOnly: false,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24, // 24 heures
+    maxAge: 60 * 60 * 24,
     path: "/",
   });
 
@@ -46,11 +45,6 @@ export async function signup(username: string, email: string, password: string) 
 
   const data = await res.json();
 
-  if (!data.token) {
-    return { error: "No token received from server" };
-  }
-
-  // Stocker le token dans un cookie accessible au client
   const cookieStore = await cookies();
   cookieStore.set("token", data.token, {
     httpOnly: false,
@@ -60,7 +54,7 @@ export async function signup(username: string, email: string, password: string) 
     path: "/",
   });
 
-  return { user: data.user, token: data.token };
+  return { user: data.user };
 }
 
 export async function logout() {
@@ -68,7 +62,6 @@ export async function logout() {
   const token = cookieStore.get("token")?.value;
 
   if (token) {
-    // Appeler le backend pour logout
     await fetch(`${API_URL}/auth/logout`, {
       method: "POST",
       headers: {
@@ -78,7 +71,6 @@ export async function logout() {
     }).catch(() => {});
   }
 
-  // Supprimer le cookie
   cookieStore.delete("token");
   redirect("/login");
 }
@@ -96,10 +88,5 @@ export async function getUser() {
   if (!res.ok) return null;
 
   return res.json();
-}
-
-export async function clearToken() {
-  const cookieStore = await cookies();
-  cookieStore.delete("token");
 }
 

@@ -37,7 +37,8 @@ export function useServers() {
 
   useEffect(() => {
     loadServers();
-  }, [loadServers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectServer = useCallback((server: Server | null) => {
     setSelectedServer(server);

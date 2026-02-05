@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use crate::error::{Error, Result};
-use crate::models::{Channel, CreateChannelPayload, UpdateChannelPayload};
+use crate::models::{Channel, CreateChannelPayload, MemberRole, UpdateChannelPayload};
 use crate::repositories::{ChannelRepository, ServerRepository};
 
 pub async fn create_channel(
@@ -16,7 +16,7 @@ pub async fn create_channel(
         .await?
         .ok_or(Error::ChannelForbidden)?;
 
-    if member.role == "member" {
+    if member.role == MemberRole::Member {
         return Err(Error::ChannelForbidden);
     }
 
@@ -87,7 +87,7 @@ pub async fn update_channel(
         .await?
         .ok_or(Error::ChannelForbidden)?;
 
-    if member.role == "member" {
+    if member.role == MemberRole::Member {
         return Err(Error::ChannelForbidden);
     }
 
@@ -115,7 +115,7 @@ pub async fn delete_channel(
         .await?
         .ok_or(Error::ChannelForbidden)?;
 
-    if member.role == "member" {
+    if member.role == MemberRole::Member {
         return Err(Error::ChannelForbidden);
     }
 

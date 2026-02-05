@@ -3,44 +3,14 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-//
-// ===== USER STATUS (ENUM MAPPÉ SUR DU TEXT EN DB) =====
-//
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+/// Statut de présence utilisateur
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
+#[sqlx(type_name = "user_status", rename_all = "lowercase")]
 pub enum UserStatus {
-    #[serde(rename = "online")]
     Online,
-    #[serde(rename = "offline")]
     Offline,
-}
-
-// Implémentation manuelle de Type pour forcer SQLx à traiter l'enum comme du TEXT
-impl sqlx::Type<sqlx::Postgres> for UserStatus {
-    fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("text")
-    }
-}
-
-// Conversion du TEXT venant de la DB vers l'Enum Rust
-impl<'r> sqlx::Decode<'r, sqlx::Postgres> for UserStatus {
-    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
-        let s = <&str as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
-        match s {
-            "online" => Ok(UserStatus::Online),
-            _ => Ok(UserStatus::Offline),
-        }
-    }
-}
-
-// Conversion de l'Enum Rust vers le TEXT pour la DB
-impl<'q> sqlx::Encode<'q, sqlx::Postgres> for UserStatus {
-    fn encode_by_ref(&self, buf: &mut sqlx::postgres::PgArgumentBuffer) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
-        let s = match self {
-            UserStatus::Online => "online",
-            UserStatus::Offline => "offline",
-        };
-        <&str as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&s, buf)
-    }
+    Dnd,
+    Invisible,
 }
 
 impl Default for UserStatus {
@@ -49,14 +19,12 @@ impl Default for UserStatus {
     }
 }
 
-//
-// ===== USER (MODÈLE DE BASE DE DONNÉES) =====
-//
+/// Modèle User (PostgreSQL)
 #[derive(Debug, Clone, Serialize, FromRow)]
 pub struct User {
     pub id: Uuid,
     pub email: String,
-    #[serde(skip_serializing)]
+    #[serde(skip_serializing)] // Ne jamais exposer le hash
     pub password_hash: String,
     pub username: String,
     pub avatar_url: Option<String>,
@@ -64,9 +32,7 @@ pub struct User {
     pub created_at: DateTime<Utc>,
 }
 
-//
-// ===== USER RESPONSE (POUR L'API) =====
-//
+/// User sans le password_hash (pour les réponses API)
 #[derive(Debug, Clone, Serialize)]
 pub struct UserResponse {
     pub id: Uuid,
@@ -90,9 +56,7 @@ impl From<User> for UserResponse {
     }
 }
 
-//
-// ===== AUTH PAYLOADS =====
-//
+/// Payload pour l'inscription
 #[derive(Debug, Deserialize)]
 pub struct SignupPayload {
     pub email: String,
@@ -100,28 +64,26 @@ pub struct SignupPayload {
     pub password: String,
 }
 
+/// Payload pour la connexion
 #[derive(Debug, Deserialize)]
 pub struct LoginPayload {
     pub email: String,
     pub password: String,
 }
 
-//
-// ===== AUTH RESPONSE =====
-//
+/// Réponse d'authentification avec token
 #[derive(Debug, Serialize)]
 pub struct AuthResponse {
     pub user: UserResponse,
     pub token: String,
 }
 
-//
-// ===== JWT CLAIMS =====
-//
+/// Claims JWT
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: Uuid,
+    pub sub: Uuid,        // user_id
     pub email: String,
-    pub exp: usize,
-    pub iat: usize,
+    pub exp: usize,       // expiration timestamp
+    pub iat: usize,       // issued at
 }
+
