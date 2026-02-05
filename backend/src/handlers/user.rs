@@ -1,30 +1,33 @@
 use axum::{extract::State, Json};
-use axum_extra::TypedHeader;
-use headers::{authorization::Bearer, Authorization};
 
+use crate::{AppState, Result};
+use crate::ctx::Ctx;
 use crate::models::{UpdateMePayload, UserResponse};
-use crate::services::{self, verify_token, AuthError};
-use crate::AppState;
+use crate::Error;
 
 pub async fn me(
     State(state): State<AppState>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-) -> Result<Json<UserResponse>, AuthError> {
-    let claims = verify_token(auth.token(), &state.jwt_secret)
-        .map_err(|_| AuthError::InvalidCredentials)?;
+    ctx: Ctx,
+) -> Result<Json<UserResponse>> {
+    let user = state
+        .user_repo
+        .find_by_id(ctx.user_id())
+        .await?
+        .ok_or(Error::UserNotFound)?;
 
-    let user = services::user::get_me(&state.db, claims.sub).await?;
-    Ok(Json(user))
+    Ok(Json(user.into()))
 }
 
 pub async fn update_me(
     State(state): State<AppState>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    ctx: Ctx,
     Json(payload): Json<UpdateMePayload>,
-) -> Result<Json<UserResponse>, AuthError> {
-    let claims = verify_token(auth.token(), &state.jwt_secret)
-        .map_err(|_| AuthError::InvalidCredentials)?;
+) -> Result<Json<UserResponse>> {
+    let user = state
+        .user_repo
+        .update_profile(ctx.user_id(), payload)
+        .await?
+        .ok_or(Error::UserNotFound)?;
 
-    let user = services::user::update_me(&state.db, claims.sub, payload).await?;
-    Ok(Json(user))
+    Ok(Json(user.into()))
 }

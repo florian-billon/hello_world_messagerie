@@ -7,7 +7,7 @@ use axum::{
 use axum_extra::TypedHeader;
 use headers::{authorization::Bearer, Authorization};
 
-use crate::models::{AuthResponse, LoginPayload, SignupPayload, UserResponse};
+use crate::models::{AuthResponse, LoginPayload, SignupPayload/* , UserResponse */};
 use crate::services::{self, auth::AuthError, verify_token};
 use crate::AppState;
 
@@ -58,8 +58,7 @@ pub async fn logout(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// GET /me - Obtenir les infos de l'utilisateur connecté
-pub async fn me(
+/* pub async fn me(
     State(state): State<AppState>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
 ) -> Result<Json<UserResponse>, AuthError> {
@@ -68,5 +67,5 @@ pub async fn me(
 
     let user = services::get_user_by_id(&state.db, claims.sub).await?;
     Ok(Json(user))
-}
+} */
 

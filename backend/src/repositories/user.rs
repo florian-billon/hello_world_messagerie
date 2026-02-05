@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::{User, UserStatus};
+use crate::models::{UpdateMePayload, User, UserStatus};
 
 #[derive(Clone)]
 pub struct UserRepository {
@@ -98,6 +98,23 @@ impl UserRepository {
             .fetch_optional(&self.pool)
             .await?;
         Ok(username)
+    }
+
+    pub async fn update_profile(&self, user_id: Uuid, payload: UpdateMePayload,) -> sqlx::Result<Option<User>> {
+        sqlx::query_as::<_, User>(
+            "UPDATE users SET 
+                username = COALESCE($1, username), 
+                avatar_url = COALESCE($2, avatar_url), 
+                status = COALESCE($3, status) 
+            WHERE id = $4
+            RETURNING id, email, password_hash, username, avatar_url, status, created_at",
+        )
+        .bind(payload.username)
+        .bind(payload.avatar_url)
+        .bind(payload.status)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await
     }
 }
 

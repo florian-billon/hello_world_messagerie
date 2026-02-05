@@ -62,6 +62,28 @@ pub struct UpdateMePayload {
     pub avatar_url: Option<String>,
     pub status: Option<UserStatus>,
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PublicUserResponse {
+    pub id: Uuid,
+    pub username: String,
+    pub avatar_url: Option<String>,
+    pub status: UserStatus,
+    pub created_at: DateTime<Utc>,
+}
+
+impl From<User> for PublicUserResponse {
+    fn from(user: User) -> Self {
+        Self {
+            id: user.id,
+            username: user.username,
+            avatar_url: user.avatar_url,
+            status: user.status,
+            created_at: user.created_at,
+        }
+    }
+}
+
 /// Payload pour l'inscription
 #[derive(Debug, Deserialize)]
 pub struct SignupPayload {
