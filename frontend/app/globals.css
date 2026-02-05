@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+/* ============================================
+   HELLO WORLD RTC - Design System
+   Palette: Noir / Bleu cyan (#4fdfff) / Rouge (#ff3333)
+   ============================================ */
+
+:root {
+  /* Couleurs principales */
+  --color-bg-dark: #0a0a0a;
+  --color-bg-panel: rgba(10, 15, 20, 0.85);
+  --color-border: #4fdfff;
+  --color-border-dim: rgba(79, 223, 255, 0.3);
+  --color-accent: #4fdfff;
+  --color-accent-red: #ff3333;
+  --color-text: #ffffff;
+  --color-text-dim: rgba(255, 255, 255, 0.6);
+  --color-text-muted: rgba(255, 255, 255, 0.4);
+}
+
+@layer base {
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--color-bg-dark);
+    color: var(--color-text);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  /* Scrollbar style */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-accent);
+    border-radius: 3px;
+  }
+}
+
+@layer components {
+  /* Panel avec bordure cyan */
+  .panel {
+    background: var(--color-bg-panel);
+    border: 2px solid var(--color-border);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Bouton action rouge */
+  .btn-action {
+    padding: 10px 16px;
+    background: #a00000;
+    border: 2px solid var(--color-border);
+    color: white;
+    font-weight: bold;
+    font-size: 13px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-action:hover {
+    background: #c00000;
+    box-shadow: 0 0 15px rgba(79, 223, 255, 0.6);
+  }
+
+  /* Input style */
+  .input-field {
+    width: 100%;
+    padding: 12px;
+    background: rgba(20, 20, 20, 0.9);
+    border: 2px solid var(--color-border);
+    color: white;
+    font-weight: bold;
+    outline: none;
+  }
+
+  .input-field::placeholder {
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+
+  .input-field:focus {
+    box-shadow: 0 0 12px rgba(79, 223, 255, 0.5);
+  }
+
+  /* Titre de section */
+  .section-title {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--color-accent);
+  }
+}
+
+/* Animation fade in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
