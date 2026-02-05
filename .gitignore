@@ -23,7 +23,10 @@
 # misc
 .DS_Store
 *.pem
+
+# Windows Zone.Identifier files (created automatically by Windows)
 *.Zone.Identifier
+**/*.Zone.Identifier
 
 # debug
 npm-debug.log*
