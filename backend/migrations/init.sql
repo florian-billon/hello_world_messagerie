@@ -7,13 +7,13 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ENUM TYPES
 DO $$ BEGIN
-    CREATE TYPE user_status AS ENUM ('online', 'offline', 'dnd', 'invisible');
+CREATE TYPE user_status AS ENUM ('online', 'offline', 'dnd', 'invisible');
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE member_role AS ENUM ('owner', 'admin', 'member');
+CREATE TYPE member_role AS ENUM ('owner', 'admin', 'member');
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;

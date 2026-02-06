@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signup } from "@/lib/auth/actions";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -74,7 +76,7 @@ export default function RegisterPage() {
           {/* Header Message */}
           <header className="mb-8 text-center">
             <h1 className="text-white text-xl font-bold">
-              Welcome to <span className="text-[#ff3b3b]">HELLO WORLD</span> messaging platform
+              Welcome to <span className="text-[#ff3333]">HELLO WORLD</span> messaging platform
             </h1>
           </header>
 
@@ -91,7 +93,7 @@ export default function RegisterPage() {
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <input
+              <Input
                 type="text"
                 placeholder="Pseudo"
                 required
@@ -99,57 +101,44 @@ export default function RegisterPage() {
                 maxLength={32}
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="p-3 rounded-lg border-2 border-[#4fdfff]/50 bg-[#1f1f1f] text-white placeholder-white/50 outline-none focus:border-[#4fdfff] focus:shadow-[0_0_10px_rgba(79,223,255,0.3)] transition-all"
               />
-              <input
+              <Input
                 type="email"
                 placeholder="Email"
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="p-3 rounded-lg border-2 border-[#4fdfff]/50 bg-[#1f1f1f] text-white placeholder-white/50 outline-none focus:border-[#4fdfff] focus:shadow-[0_0_10px_rgba(79,223,255,0.3)] transition-all"
               />
-              <div>
-                <input
-                  type="password"
-                  placeholder="Mot de passe"
-                  required
-                  minLength={8}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full p-3 rounded-lg border-2 border-[#4fdfff]/50 bg-[#1f1f1f] text-white placeholder-white/50 outline-none focus:border-[#4fdfff] focus:shadow-[0_0_10px_rgba(79,223,255,0.3)] transition-all"
-                />
-                <p className="text-white/40 text-xs mt-1">Minimum 8 caracteres</p>
-              </div>
-              <input
+              <Input
+                type="password"
+                placeholder="Mot de passe"
+                required
+                minLength={8}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                helperText="Minimum 8 caracteres"
+              />
+              <Input
                 type="password"
                 placeholder="Confirmer le mot de passe"
                 required
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="p-3 rounded-lg border-2 border-[#4fdfff]/50 bg-[#1f1f1f] text-white placeholder-white/50 outline-none focus:border-[#4fdfff] focus:shadow-[0_0_10px_rgba(79,223,255,0.3)] transition-all"
               />
-              <button
+              <Button
                 type="submit"
-                disabled={isLoading}
-                className="mt-4 p-3 rounded-lg bg-[#a00000] border-2 border-[#4fdfff] text-white font-bold cursor-pointer hover:bg-[#c00000] hover:shadow-[0_0_12px_rgba(79,223,255,0.8)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="primary"
+                size="lg"
+                isLoading={isLoading}
+                fullWidth
+                className="mt-4"
               >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Creation...
-                  </span>
-                ) : (
-                  "S'INSCRIRE"
-                )}
-              </button>
+                S&apos;INSCRIRE
+              </Button>
             </form>
 
             <div className="mt-6 text-center text-sm">
-              <Link href="/login" className="text-[#4fdfff] hover:underline">
+              <Link href="/login" className="text-[#4fdfff] hover:underline transition-colors">
                 Deja un compte ? Se connecter
               </Link>
             </div>

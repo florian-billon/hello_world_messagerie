@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { User, updateMe, UpdateProfilePayload } from "@/lib/api-server";
+import { logout } from "@/lib/auth/actions";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 
 interface ProfileCardProps {
   user: User;
@@ -44,6 +48,7 @@ function normalizeAvatarUrl(url: string | null | undefined): string | null {
 }
 
 export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProps) {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [editData, setEditData] = useState({
@@ -53,6 +58,12 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+    router.refresh();
+  };
 
   const currentStatus = (user.status?.toLowerCase() || "online") as UserStatus;
   const memberSince = new Date(user.created_at).toLocaleDateString("fr-FR", {
@@ -83,24 +94,33 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+        className="absolute inset-0 bg-black/70 backdrop-blur-md" 
         onClick={onClose}
       />
       
       {/* Card */}
-      <div className="relative w-full max-w-[340px] bg-[#232428] rounded-lg overflow-hidden shadow-2xl animate-[fadeIn_0.2s_ease]">
+      <div className="relative w-full max-w-[420px] bg-[rgba(5,10,15,0.98)] border border-[#4fdfff]/30 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden animate-[fadeIn_0.2s_ease]">
         
-        {/* Banner */}
-        <div className="h-[60px] bg-gradient-to-r from-[#5865f2] to-[#4fdfff]" />
-        
-        {/* Avatar */}
-        <div className="relative px-4">
-          <div className="absolute -top-8 left-4">
+        {/* Header avec avatar */}
+        <div className="relative bg-gradient-to-br from-[#4fdfff]/10 to-[#ff3333]/5 p-6 pb-16">
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center text-white/60 hover:text-white transition-colors"
+            aria-label="Fermer"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Avatar */}
+          <div className="flex justify-center">
             <div className="relative">
-              <div className="w-[80px] h-[80px] rounded-full bg-[#232428] p-1">
+              <div className="w-24 h-24 rounded-full bg-[rgba(5,10,15,0.98)] p-1 border-2 border-[#4fdfff]/50">
                 {user.avatar_url ? (
                   <img 
                     src={normalizeAvatarUrl(user.avatar_url) || ''} 
@@ -108,48 +128,43 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                     className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-[#5865f2] to-[#4fdfff] flex items-center justify-center">
-                    <span className="text-white text-2xl font-bold">
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-[#4fdfff] to-[#ff3333] flex items-center justify-center">
+                    <span className="text-white text-3xl font-bold">
                       {user.username.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
               </div>
               {/* Status badge */}
-              <div className={`absolute bottom-1 right-1 w-5 h-5 rounded-full border-[3px] border-[#232428] ${statusColors[currentStatus]}`} />
+              <div className={`absolute bottom-0 right-0 w-6 h-6 rounded-full border-[3px] border-[rgba(5,10,15,0.98)] ${statusColors[currentStatus]}`} />
             </div>
           </div>
         </div>
         
         {/* Content */}
-        <div className="pt-12 px-4 pb-4">
+        <div className="px-6 pb-6 -mt-8">
           {/* Username section */}
-          <div className="bg-[#111214] rounded-lg p-3 mb-3">
+          <div className="bg-[rgba(0,0,0,0.4)] rounded-lg p-4 mb-4 border border-[#4fdfff]/20">
             {isEditing ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {/* Username edit */}
-                <div>
-                  <label htmlFor="edit-username" className="text-[10px] font-bold text-white/60 uppercase tracking-wider">
-                    Nom d&apos;utilisateur
-                  </label>
-                  <input
-                    id="edit-username"
-                    type="text"
-                    value={editData.username}
-                    onChange={(e) => setEditData({ ...editData, username: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 bg-[#1e1f22] border border-[#3f4147] rounded text-white text-sm focus:outline-none focus:border-[#5865f2]"
-                  />
-                </div>
+                <Input
+                  id="edit-username"
+                  type="text"
+                  label="Nom d'utilisateur"
+                  value={editData.username}
+                  onChange={(e) => setEditData({ ...editData, username: e.target.value })}
+                />
                 
                 {/* Avatar selector */}
                 <div>
-                  <label className="text-[10px] font-bold text-white/60 uppercase tracking-wider">
+                  <label className="text-[10px] font-bold text-white/60 uppercase tracking-wider block mb-2">
                     Avatar
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                    className="w-full mt-1 px-3 py-2 bg-[#1e1f22] border border-[#3f4147] rounded text-white text-sm focus:outline-none focus:border-[#5865f2] flex items-center gap-2 hover:bg-[#2b2d31] transition-colors"
+                    className="w-full px-3 py-2 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white text-sm focus:outline-none focus:border-[#4fdfff] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] flex items-center gap-2 hover:bg-[rgba(20,20,20,0.95)] transition-all"
                   >
                     {editData.avatar_url && (
                       <img src={editData.avatar_url} alt="Avatar" className="w-6 h-6 rounded" />
@@ -158,7 +173,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                   </button>
                   
                   {showAvatarPicker && (
-                    <div className="mt-2 max-h-[200px] overflow-y-auto bg-[#1e1f22] border border-[#3f4147] rounded p-2 grid grid-cols-8 gap-1">
+                    <div className="mt-2 max-h-[240px] overflow-y-auto bg-[rgba(0,0,0,0.6)] border border-[#4fdfff]/20 rounded-lg p-3 grid grid-cols-8 gap-2">
                       {AVATARS.map((avatarUrl, index) => (
                         <button
                           key={index}
@@ -167,14 +182,14 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                             setEditData({ ...editData, avatar_url: avatarUrl });
                             setShowAvatarPicker(false);
                           }}
-                          className={`w-8 h-8 rounded hover:ring-2 hover:ring-[#5865f2] transition-all ${
-                            editData.avatar_url === avatarUrl ? "ring-2 ring-[#5865f2]" : ""
+                          className={`w-10 h-10 rounded-lg hover:ring-2 hover:ring-[#4fdfff] transition-all ${
+                            editData.avatar_url === avatarUrl ? "ring-2 ring-[#4fdfff]" : ""
                           }`}
                         >
                           <img 
                             src={avatarUrl} 
                             alt={`Avatar ${index + 1}`}
-                            className="w-full h-full rounded"
+                            className="w-full h-full rounded-lg object-cover"
                           />
                         </button>
                       ))}
@@ -184,14 +199,14 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                 
                 {/* Status edit */}
                 <div>
-                  <label htmlFor="edit-status" className="text-[10px] font-bold text-white/60 uppercase tracking-wider">
+                  <label htmlFor="edit-status" className="text-[10px] font-bold text-white/60 uppercase tracking-wider block mb-2">
                     Statut
                   </label>
                   <select
                     id="edit-status"
                     value={editData.status}
                     onChange={(e) => setEditData({ ...editData, status: e.target.value as UserStatus })}
-                    className="w-full mt-1 px-3 py-2 bg-[#1e1f22] border border-[#3f4147] rounded text-white text-sm focus:outline-none focus:border-[#5865f2]"
+                    className="w-full px-3 py-2 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white text-sm focus:outline-none focus:border-[#4fdfff] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
                   >
                     {Object.entries(statusLabels).map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
@@ -200,25 +215,24 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                 </div>
 
                 {error && (
-                  <p className="text-red-400 text-xs">{error}</p>
+                  <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-2">
+                    <p className="text-red-400 text-xs">{error}</p>
+                  </div>
                 )}
               </div>
             ) : (
-              <>
-                <h2 className="text-xl font-bold text-white">{user.username}</h2>
-                <p className="text-sm text-white/60">@{user.username.toLowerCase().replace(/\s+/g, "")}</p>
-              </>
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-white mb-1">{user.username}</h2>
+                <p className="text-sm text-white/50">@{user.username.toLowerCase().replace(/\s+/g, "")}</p>
+              </div>
             )}
           </div>
           
-          {/* Divider */}
-          <div className="h-px bg-[#3f4147] my-3" />
-          
           {/* Info section */}
-          <div className="bg-[#111214] rounded-lg p-3 space-y-3">
+          <div className="bg-[rgba(0,0,0,0.4)] rounded-lg p-4 mb-4 border border-[#4fdfff]/20 space-y-4">
             {/* Status display */}
             <div>
-              <h4 className="text-[10px] font-bold text-white/60 uppercase tracking-wider mb-1">
+              <h4 className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-2">
                 Statut
               </h4>
               <div className="flex items-center gap-2">
@@ -229,7 +243,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
             
             {/* Member since */}
             <div>
-              <h4 className="text-[10px] font-bold text-white/60 uppercase tracking-wider mb-1">
+              <h4 className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-2">
                 Membre depuis
               </h4>
               <p className="text-sm text-white">{memberSince}</p>
@@ -237,18 +251,20 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
             
             {/* Email */}
             <div>
-              <h4 className="text-[10px] font-bold text-white/60 uppercase tracking-wider mb-1">
+              <h4 className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-2">
                 Email
               </h4>
-              <p className="text-sm text-white/80">{user.email}</p>
+              <p className="text-sm text-white/80 break-all">{user.email}</p>
             </div>
           </div>
           
           {/* Actions */}
-          <div className="mt-4 flex gap-2">
+          <div className="space-y-2">
             {isEditing ? (
-              <>
-                <button
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="md"
                   onClick={() => {
                     setIsEditing(false);
                     setShowAvatarPicker(false);
@@ -259,28 +275,45 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                     });
                     setError(null);
                   }}
-                  className="flex-1 py-2 px-4 rounded bg-[#4e5058] hover:bg-[#6d6f78] text-white text-sm font-medium transition-colors"
+                  className="flex-1"
                 >
                   Annuler
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
+                  size="md"
                   onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 py-2 px-4 rounded bg-[#5865f2] hover:bg-[#4752c4] text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  isLoading={saving}
+                  className="flex-1"
                 >
-                  {saving ? "..." : "Sauvegarder"}
-                </button>
-              </>
+                  Sauvegarder
+                </Button>
+              </div>
             ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="w-full py-2 px-4 rounded bg-[#5865f2] hover:bg-[#4752c4] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                Modifier le profil
-              </button>
+              <>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => setIsEditing(true)}
+                  fullWidth
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Modifier le profil
+                </Button>
+                <Button
+                  variant="danger"
+                  size="md"
+                  onClick={handleLogout}
+                  fullWidth
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Déconnexion
+                </Button>
+              </>
             )}
           </div>
         </div>
