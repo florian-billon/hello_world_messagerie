@@ -30,9 +30,23 @@ async function fetchApi<T>(
     if (!res.ok) {
       const errorText = await res.text();
       let errorMessage = `HTTP ${res.status}`;
+      let errorDetails: string | undefined;
+      
       try {
         const errorData = JSON.parse(errorText);
         errorMessage = errorData.error || errorMessage;
+        errorDetails = errorData.details;
+        
+        // Log pour debug (dev seulement)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[API Error]', {
+            endpoint,
+            status: res.status,
+            error: errorMessage,
+            details: errorDetails,
+            fullResponse: errorData
+          });
+        }
       } catch {
         errorMessage = errorText || errorMessage;
       }
@@ -41,7 +55,12 @@ async function fetchApi<T>(
         errorMessage = "Authentication required. Please login.";
       }
 
-      throw new Error(errorMessage);
+      // Construire le message d'erreur avec détails si disponibles
+      const fullErrorMessage = errorDetails 
+        ? `${errorMessage}: ${errorDetails}`
+        : errorMessage;
+
+      throw new Error(fullErrorMessage);
     }
 
     if (res.status === 204) return {} as T;
@@ -113,6 +132,35 @@ export async function createServer(name: string): Promise<Server> {
   });
 }
 
+export async function getServer(id: string): Promise<Server> {
+  return fetchApi<Server>(`/servers/${id}`);
+}
+
+export async function updateServer(id: string, name: string): Promise<Server> {
+  return fetchApi<Server>(`/servers/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteServer(id: string): Promise<void> {
+  return fetchApi<void>(`/servers/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function joinServer(id: string): Promise<ServerMember> {
+  return fetchApi<ServerMember>(`/servers/${id}/join`, {
+    method: "POST",
+  });
+}
+
+export async function leaveServer(id: string): Promise<void> {
+  return fetchApi<void>(`/servers/${id}/leave`, {
+    method: "DELETE",
+  });
+}
+
 export async function listChannels(serverId: string): Promise<Channel[]> {
   return fetchApi<Channel[]>(`/servers/${serverId}/channels`);
 }
@@ -121,6 +169,23 @@ export async function createChannel(serverId: string, name: string): Promise<Cha
   return fetchApi<Channel>(`/servers/${serverId}/channels`, {
     method: "POST",
     body: JSON.stringify({ name }),
+  });
+}
+
+export async function getChannel(id: string): Promise<Channel> {
+  return fetchApi<Channel>(`/channels/${id}`);
+}
+
+export async function updateChannel(id: string, name: string): Promise<Channel> {
+  return fetchApi<Channel>(`/channels/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteChannel(id: string): Promise<void> {
+  return fetchApi<void>(`/channels/${id}`, {
+    method: "DELETE",
   });
 }
 
@@ -136,6 +201,19 @@ export async function sendMessage(channelId: string, content: string): Promise<M
   return fetchApi<Message>(`/channels/${channelId}/messages`, {
     method: "POST",
     body: JSON.stringify({ content }),
+  });
+}
+
+export async function updateMessage(id: string, content: string): Promise<Message> {
+  return fetchApi<Message>(`/messages/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function deleteMessage(id: string): Promise<void> {
+  return fetchApi<void>(`/messages/${id}`, {
+    method: "DELETE",
   });
 }
 

@@ -30,25 +30,29 @@ impl UserRepository {
             return Ok(std::collections::HashMap::new());
         }
 
-        let rows: Vec<(Uuid, String)> = sqlx::query_as(
-            "SELECT id, username FROM users WHERE id = ANY($1)"
-        )
-        .bind(user_ids)
-        .fetch_all(&self.pool)
-        .await?;
+        let rows: Vec<(Uuid, String)> =
+            sqlx::query_as("SELECT id, username FROM users WHERE id = ANY($1)")
+                .bind(user_ids)
+                .fetch_all(&self.pool)
+                .await?;
 
         Ok(rows.into_iter().collect())
     }
 
     pub async fn get_username(&self, user_id: Uuid) -> sqlx::Result<Option<String>> {
-        let username: Option<String> = sqlx::query_scalar("SELECT username FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_optional(&self.pool)
-            .await?;
+        let username: Option<String> =
+            sqlx::query_scalar("SELECT username FROM users WHERE id = $1")
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?;
         Ok(username)
     }
 
-    pub async fn update_profile(&self, user_id: Uuid, payload: UpdateMePayload,) -> sqlx::Result<Option<User>> {
+    pub async fn update_profile(
+        &self,
+        user_id: Uuid,
+        payload: UpdateMePayload,
+    ) -> sqlx::Result<Option<User>> {
         sqlx::query_as::<_, User>(
             "UPDATE users SET 
                 username = COALESCE($1, username), 
@@ -65,4 +69,3 @@ impl UserRepository {
         .await
     }
 }
-

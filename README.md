@@ -296,14 +296,28 @@ GitHub Actions automatically runs on push to `main`:
 - Backend: Rust build and tests with PostgreSQL/MongoDB services
 - Frontend: Node.js build verification
 
-## Team
+## Contributing
 
-| Name | Role |
-|------|------|
-| Romeo | Backend (Rust/Axum) |
-| Bilel | Frontend (Next.js) |
-| Florian | Frontend/Design |
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-## License
+## Support
 
-Academic project - Epitech MSc Pro 2028
+For questions, issues, or feature requests, please open an issue on the GitHub repository.
+
+## Acknowledgments
+
+Built with modern web technologies and best practices:
+- [Axum](https://github.com/tokio-rs/axum) - Web framework for Rust
+- [Next.js](https://nextjs.org/) - React framework for production
+- [PostgreSQL](https://www.postgresql.org/) - Advanced open-source relational database
+- [MongoDB](https://www.mongodb.com/) - Document database for scalable applications
+
+---
+
+<div align="center">
+
+**Hello World** - Real-time messaging platform
+
+Made with ❤️ using Rust and Next.js
+
+</div>

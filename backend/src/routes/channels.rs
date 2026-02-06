@@ -1,4 +1,7 @@
-use axum::{routing::{get, post}, Router};
+use axum::{
+    routing::{get, post},
+    Router,
+};
 
 use crate::handlers::channels;
 use crate::AppState;
@@ -16,4 +19,3 @@ pub fn routes() -> Router<AppState> {
                 .delete(channels::delete_channel),
         )
 }
-

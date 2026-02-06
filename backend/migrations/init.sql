@@ -57,10 +57,24 @@ CREATE TABLE IF NOT EXISTS channels (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- INVITES
+CREATE TABLE IF NOT EXISTS invites (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    server_id UUID NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+    code VARCHAR(20) NOT NULL UNIQUE,
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ,
+    max_uses INT,
+    uses_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- INDEXES (idempotent)
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_servers_owner ON servers(owner_id);
 CREATE INDEX IF NOT EXISTS idx_server_members_user ON server_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_channels_server ON channels(server_id);
+CREATE INDEX IF NOT EXISTS idx_invites_code ON invites(code);
+CREATE INDEX IF NOT EXISTS idx_invites_server ON invites(server_id);
 
 -- NOTE: Messages are stored in MongoDB, not PostgreSQL

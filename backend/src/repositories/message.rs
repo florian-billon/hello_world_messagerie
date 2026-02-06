@@ -27,7 +27,10 @@ impl MessageRepository {
         Ok(())
     }
 
-    pub async fn find_by_id(&self, message_id: Uuid) -> mongodb::error::Result<Option<ChannelMessage>> {
+    pub async fn find_by_id(
+        &self,
+        message_id: Uuid,
+    ) -> mongodb::error::Result<Option<ChannelMessage>> {
         self.collection()
             .find_one(doc! { "message_id": BsonUuid::from(message_id) })
             .await
@@ -46,7 +49,7 @@ impl MessageRepository {
             bytes: uuid_bytes.to_vec(),
             subtype: bson::spec::BinarySubtype::Generic,
         };
-        
+
         let mut filter = doc! {
             "channel_id": binary,
             "deleted_at": null,
@@ -89,7 +92,11 @@ impl MessageRepository {
         Ok(())
     }
 
-    pub async fn soft_delete(&self, message_id: Uuid, deleted_by: Uuid) -> mongodb::error::Result<()> {
+    pub async fn soft_delete(
+        &self,
+        message_id: Uuid,
+        deleted_by: Uuid,
+    ) -> mongodb::error::Result<()> {
         self.collection()
             .update_one(
                 doc! { "message_id": BsonUuid::from(message_id) },
@@ -104,4 +111,3 @@ impl MessageRepository {
         Ok(())
     }
 }
-

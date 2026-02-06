@@ -7,7 +7,10 @@ use uuid::Uuid;
 
 use crate::ctx::Ctx;
 use crate::error::Result;
-use crate::models::{CreateServerPayload, Server, ServerMember, UpdateServerPayload};
+use crate::models::{
+    CreateServerPayload, Server, ServerMember, TransferOwnershipPayload, UpdateMemberRolePayload,
+    UpdateServerPayload,
+};
 use crate::services;
 use crate::AppState;
 
@@ -16,14 +19,13 @@ pub async fn create_server(
     ctx: Ctx,
     Json(payload): Json<CreateServerPayload>,
 ) -> Result<Json<Server>> {
-    let server = services::create_server(&state.server_repo, &state.user_repo, ctx.user_id(), payload).await?;
+    let server =
+        services::create_server(&state.server_repo, &state.user_repo, ctx.user_id(), payload)
+            .await?;
     Ok(Json(server))
 }
 
-pub async fn list_servers(
-    State(state): State<AppState>,
-    ctx: Ctx,
-) -> Result<Json<Vec<Server>>> {
+pub async fn list_servers(State(state): State<AppState>, ctx: Ctx) -> Result<Json<Vec<Server>>> {
     let servers = services::list_user_servers(&state.server_repo, ctx.user_id()).await?;
     Ok(Json(servers))
 }
@@ -91,4 +93,32 @@ pub async fn list_members(
 
     let members = services::list_members(&state.server_repo, id).await?;
     Ok(Json(members))
+}
+
+pub async fn update_member_role(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path((server_id, user_id)): Path<(Uuid, Uuid)>,
+    Json(payload): Json<UpdateMemberRolePayload>,
+) -> Result<Json<ServerMember>> {
+    let member = services::update_member_role(
+        &state.server_repo,
+        server_id,
+        user_id,
+        payload.role,
+        ctx.user_id(),
+    )
+    .await?;
+    Ok(Json(member))
+}
+
+pub async fn transfer_ownership(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<TransferOwnershipPayload>,
+) -> Result<Json<Server>> {
+    let server =
+        services::transfer_ownership(&state.server_repo, id, payload, ctx.user_id()).await?;
+    Ok(Json(server))
 }

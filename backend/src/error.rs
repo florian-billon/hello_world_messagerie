@@ -71,9 +71,21 @@ impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let (status, client_error) = self.client_status_and_error();
 
-        let body = serde_json::json!({
+        // Inclure le message détaillé pour les erreurs de base de données en développement
+        let mut body = serde_json::json!({
             "error": client_error,
         });
+
+        // Ajouter le message détaillé pour DatabaseError et InternalError
+        match &self {
+            Self::DatabaseError { message } => {
+                body["details"] = serde_json::json!(message);
+            }
+            Self::InternalError { message } => {
+                body["details"] = serde_json::json!(message);
+            }
+            _ => {}
+        }
 
         (status, Json(body)).into_response()
     }
@@ -82,7 +94,9 @@ impl IntoResponse for Error {
 impl Error {
     pub fn client_status_and_error(&self) -> (StatusCode, &'static str) {
         match self {
-            Self::AuthFailNoAuthHeader => (StatusCode::UNAUTHORIZED, "Missing authorization header"),
+            Self::AuthFailNoAuthHeader => {
+                (StatusCode::UNAUTHORIZED, "Missing authorization header")
+            }
             Self::AuthFailInvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token"),
             Self::AuthFailTokenExpired => (StatusCode::UNAUTHORIZED, "Token expired"),
             Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
@@ -101,4 +115,3 @@ impl Error {
         }
     }
 }
-

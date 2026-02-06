@@ -121,4 +121,3 @@ pub async fn logout(pool: &PgPool, user_id: Uuid) -> Result<(), AuthError> {
 
     Ok(())
 }
-

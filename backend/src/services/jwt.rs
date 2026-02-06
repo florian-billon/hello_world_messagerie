@@ -7,7 +7,11 @@ use crate::models::Claims;
 const TOKEN_EXPIRATION_HOURS: i64 = 24;
 
 /// Génère un JWT pour un utilisateur
-pub fn create_token(user_id: Uuid, email: &str, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn create_token(
+    user_id: Uuid,
+    email: &str,
+    secret: &str,
+) -> Result<String, jsonwebtoken::errors::Error> {
     let now = chrono::Utc::now();
     let exp = now + chrono::Duration::hours(TOKEN_EXPIRATION_HOURS);
 
@@ -53,4 +57,3 @@ mod tests {
         assert_eq!(claims.email, email);
     }
 }
-

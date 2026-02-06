@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 # Web framework
-axum = "0.8"
+axum = { version = "0.8", features = ["ws"] }
 axum-extra = { version = "0.10", features = ["typed-header"] }
 headers = "0.4"
 tokio = { version = "1", features = ["full"] }
@@ -33,3 +33,7 @@ chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
 thiserror = "2"
 rand = "0.9"
+lazy_static = "1.5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+futures-util = "0.3"

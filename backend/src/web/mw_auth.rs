@@ -20,7 +20,7 @@ pub async fn mw_require_auth(
         .get::<Result<Ctx>>()
         .ok_or(Error::AuthFailNoAuthHeader)?
         .clone();
-    
+
     ctx?;
 
     Ok(next.run(req).await)
@@ -41,13 +41,11 @@ pub async fn mw_ctx_resolver(
         Some(header) if header.starts_with("Bearer ") => {
             let token = &header[7..];
             match verify_token(token, &state.jwt_secret) {
-                Ok(claims) => {
-                    match state.user_repo.find_by_id(claims.sub).await {
-                        Ok(Some(_)) => Ok(Ctx::new(claims.sub)),
-                        Ok(None) => Err(Error::AuthFailInvalidToken),
-                        Err(e) => Err(Error::from(e)),
-                    }
-                }
+                Ok(claims) => match state.user_repo.find_by_id(claims.sub).await {
+                    Ok(Some(_)) => Ok(Ctx::new(claims.sub)),
+                    Ok(None) => Err(Error::AuthFailInvalidToken),
+                    Err(e) => Err(Error::from(e)),
+                },
                 Err(_) => Err(Error::AuthFailInvalidToken),
             }
         }
@@ -71,4 +69,3 @@ impl<S: Send + Sync> FromRequestParts<S> for Ctx {
             .clone()
     }
 }
-

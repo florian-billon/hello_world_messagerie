@@ -1,4 +1,7 @@
-use axum::{routing::{post, put}, Router};
+use axum::{
+    routing::{post, put},
+    Router,
+};
 
 use crate::handlers::messages;
 use crate::AppState;
@@ -14,4 +17,3 @@ pub fn routes() -> Router<AppState> {
             put(messages::update_message).delete(messages::delete_message),
         )
 }
-

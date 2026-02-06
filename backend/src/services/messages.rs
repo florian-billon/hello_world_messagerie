@@ -43,9 +43,12 @@ pub async fn create_message(
         deleted_by: None,
     };
 
-    message_repo.create(&message).await.map_err(|e| Error::DatabaseError {
-        message: format!("MongoDB insert failed: {}", e),
-    })?;
+    message_repo
+        .create(&message)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB insert failed: {}", e),
+        })?;
 
     Ok(MessageWithUser {
         id: message_id,
@@ -59,6 +62,7 @@ pub async fn create_message(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn list_messages(
     server_repo: &ServerRepository,
     channel_repo: &ChannelRepository,
@@ -105,7 +109,7 @@ pub async fn list_messages(
             edited_at: m.edited_at,
         })
         .collect();
-    
+
     result.reverse();
     Ok(result)
 }

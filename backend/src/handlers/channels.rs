@@ -48,13 +48,8 @@ pub async fn get_channel(
     ctx: Ctx,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Channel>> {
-    let channel = services::get_channel(
-        &state.server_repo,
-        &state.channel_repo,
-        id,
-        ctx.user_id(),
-    )
-    .await?;
+    let channel =
+        services::get_channel(&state.server_repo, &state.channel_repo, id, ctx.user_id()).await?;
     Ok(Json(channel))
 }
 
@@ -80,12 +75,6 @@ pub async fn delete_channel(
     ctx: Ctx,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode> {
-    services::delete_channel(
-        &state.server_repo,
-        &state.channel_repo,
-        id,
-        ctx.user_id(),
-    )
-    .await?;
+    services::delete_channel(&state.server_repo, &state.channel_repo, id, ctx.user_id()).await?;
     Ok(StatusCode::NO_CONTENT)
 }

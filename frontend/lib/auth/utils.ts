@@ -1,6 +1,22 @@
 "use client";
 
 /**
+ * Récupère le token depuis les cookies (côté client)
+ */
+export function getToken(): string | null {
+  if (typeof document === "undefined") return null;
+  
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split("=");
+    if (name === "token") {
+      return value || null;
+    }
+  }
+  return null;
+}
+
+/**
  * Redirige vers la page de login en supprimant le token
  */
 export function handleAuthError() {

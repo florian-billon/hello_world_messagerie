@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod channels;
+pub mod invites;
 pub mod messages;
 pub mod servers;
 
@@ -12,5 +13,5 @@ pub fn create_router() -> Router<AppState> {
         .merge(servers::routes())
         .merge(channels::routes())
         .merge(messages::routes())
+        .merge(invites::routes())
 }
-

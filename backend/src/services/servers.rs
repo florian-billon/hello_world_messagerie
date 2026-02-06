@@ -1,7 +1,10 @@
 use uuid::Uuid;
 
 use crate::error::{Error, Result};
-use crate::models::{CreateServerPayload, MemberRole, Server, ServerMember, UpdateServerPayload};
+use crate::models::{
+    CreateServerPayload, MemberRole, Server, ServerMember, TransferOwnershipPayload,
+    UpdateServerPayload,
+};
 use crate::repositories::{ServerRepository, UserRepository};
 
 pub async fn create_server(
@@ -150,7 +153,100 @@ pub async fn leave_server(
     Ok(())
 }
 
-pub async fn list_members(server_repo: &ServerRepository, server_id: Uuid) -> Result<Vec<ServerMember>> {
+pub async fn list_members(
+    server_repo: &ServerRepository,
+    server_id: Uuid,
+) -> Result<Vec<ServerMember>> {
     let members = server_repo.list_members(server_id).await?;
     Ok(members)
+}
+
+pub async fn update_member_role(
+    server_repo: &ServerRepository,
+    server_id: Uuid,
+    target_user_id: Uuid,
+    new_role: MemberRole,
+    requester_id: Uuid,
+) -> Result<ServerMember> {
+    // Vérifier que le serveur existe
+    let server = server_repo
+        .find_by_id(server_id)
+        .await?
+        .ok_or(Error::ServerNotFound)?;
+
+    // Vérifier que seul l'Owner peut gérer les rôles
+    if server.owner_id != requester_id {
+        return Err(Error::ServerForbidden);
+    }
+
+    // Vérifier que le membre existe
+    let member = server_repo
+        .find_member(server_id, target_user_id)
+        .await?
+        .ok_or(Error::UserNotFound)?;
+
+    // Empêcher de changer le rôle de l'Owner
+    if member.role == MemberRole::Owner {
+        return Err(Error::ServerForbidden);
+    }
+
+    // Empêcher de créer un autre Owner
+    if new_role == MemberRole::Owner {
+        return Err(Error::ServerForbidden);
+    }
+
+    // Mettre à jour le rôle
+    let updated_member = server_repo
+        .update_member_role(server_id, target_user_id, new_role)
+        .await?
+        .ok_or(Error::UserNotFound)?;
+
+    Ok(updated_member)
+}
+
+pub async fn transfer_ownership(
+    server_repo: &ServerRepository,
+    server_id: Uuid,
+    payload: TransferOwnershipPayload,
+    requester_id: Uuid,
+) -> Result<Server> {
+    // Vérifier que le serveur existe
+    let server = server_repo
+        .find_by_id(server_id)
+        .await?
+        .ok_or(Error::ServerNotFound)?;
+
+    // Vérifier que seul l'Owner actuel peut transférer la propriété
+    if server.owner_id != requester_id {
+        return Err(Error::ServerForbidden);
+    }
+
+    // Vérifier que le nouveau propriétaire est différent de l'actuel
+    if payload.new_owner_id == requester_id {
+        return Err(Error::ServerForbidden);
+    }
+
+    // Vérifier que le nouveau propriétaire est membre du serveur
+    server_repo
+        .find_member(server_id, payload.new_owner_id)
+        .await?
+        .ok_or(Error::UserNotFound)?;
+
+    // Mettre à jour le owner_id du serveur
+    let updated_server = server_repo
+        .update_owner(server_id, payload.new_owner_id)
+        .await?
+        .ok_or(Error::ServerNotFound)?;
+
+    // Mettre à jour le rôle de l'ancien Owner en Admin
+    server_repo
+        .update_member_role(server_id, requester_id, MemberRole::Admin)
+        .await?;
+
+    // Mettre à jour le rôle du nouveau Owner en Owner
+    server_repo
+        .update_member_role(server_id, payload.new_owner_id, MemberRole::Owner)
+        .await?;
+
+    Ok(updated_server)
 }

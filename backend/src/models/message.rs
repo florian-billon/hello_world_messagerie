@@ -43,4 +43,3 @@ pub struct CreateMessagePayload {
 pub struct UpdateMessagePayload {
     pub content: String,
 }
-

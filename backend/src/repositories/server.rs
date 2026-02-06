@@ -57,7 +57,11 @@ impl ServerRepository {
         .await
     }
 
-    pub async fn update(&self, server_id: Uuid, name: Option<String>) -> sqlx::Result<Option<Server>> {
+    pub async fn update(
+        &self,
+        server_id: Uuid,
+        name: Option<String>,
+    ) -> sqlx::Result<Option<Server>> {
         sqlx::query_as::<_, Server>(
             r#"
             UPDATE servers
@@ -67,6 +71,25 @@ impl ServerRepository {
             "#,
         )
         .bind(name)
+        .bind(server_id)
+        .fetch_optional(&self.pool)
+        .await
+    }
+
+    pub async fn update_owner(
+        &self,
+        server_id: Uuid,
+        new_owner_id: Uuid,
+    ) -> sqlx::Result<Option<Server>> {
+        sqlx::query_as::<_, Server>(
+            r#"
+            UPDATE servers
+            SET owner_id = $1, updated_at = NOW()
+            WHERE id = $2
+            RETURNING id, name, owner_id, created_at, updated_at
+            "#,
+        )
+        .bind(new_owner_id)
         .bind(server_id)
         .fetch_optional(&self.pool)
         .await
@@ -131,5 +154,25 @@ impl ServerRepository {
         .fetch_all(&self.pool)
         .await
     }
-}
 
+    pub async fn update_member_role(
+        &self,
+        server_id: Uuid,
+        user_id: Uuid,
+        role: MemberRole,
+    ) -> sqlx::Result<Option<ServerMember>> {
+        sqlx::query_as::<_, ServerMember>(
+            r#"
+            UPDATE server_members
+            SET role = $1::member_role
+            WHERE server_id = $2 AND user_id = $3
+            RETURNING server_id, user_id, role, joined_at
+            "#,
+        )
+        .bind(role)
+        .bind(server_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await
+    }
+}

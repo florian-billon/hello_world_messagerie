@@ -3,18 +3,13 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq, Default)]
 #[sqlx(type_name = "member_role", rename_all = "lowercase")]
 pub enum MemberRole {
+    #[default]
     Owner,
     Admin,
     Member,
-}
-
-impl Default for MemberRole {
-    fn default() -> Self {
-        Self::Member
-    }
 }
 
 #[derive(Debug, Clone, Serialize, FromRow)]
@@ -44,3 +39,12 @@ pub struct UpdateServerPayload {
     pub name: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UpdateMemberRolePayload {
+    pub role: MemberRole,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TransferOwnershipPayload {
+    pub new_owner_id: Uuid,
+}

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import React from "react";
 import Image from "next/image";
 import { logout } from "@/lib/auth/actions";
 import { useServers, useChannels, useMessages, useMembers, useAuth } from "@/hooks";
@@ -63,8 +64,8 @@ export default function Home() {
     selectedServer?.id ?? null
   );
 
-  const { messages, sendMessage, loading: messagesLoading, error: messagesError } = useMessages(selectedChannel?.id ?? null);
-  const { members } = useMembers(selectedServer?.id ?? null);
+  const { messages, sendMessage, loading: messagesLoading, error: messagesError, typingUsers, typingStart, typingStop } = useMessages(selectedChannel?.id ?? null);
+  const { members, getUserStatus } = useMembers(selectedServer?.id ?? null);
 
   const [showCreateServer, setShowCreateServer] = useState(false);
   const [newServerName, setNewServerName] = useState("");
@@ -73,11 +74,22 @@ export default function Home() {
   const [messageInput, setMessageInput] = useState("");
   const [showProfile, setShowProfile] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const typingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize currentUser from useAuth
   if (user && !currentUser) {
     setCurrentUser(user as User);
   }
+
+  // Cleanup typing timeout quand le channel change
+  React.useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+    };
+  }, [selectedChannel?.id]);
 
   // Style des boutons action (rouge + bordure cyan)
 
@@ -103,8 +115,46 @@ export default function Home() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageInput.trim()) return;
+    
+    // Arrêter le typing indicator
+    if (selectedChannel && typingStop) {
+      typingStop(selectedChannel.id);
+    }
+    
     await sendMessage(messageInput.trim());
     setMessageInput("");
+    
+    // Nettoyer le timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  };
+
+  const handleMessageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMessageInput(value);
+    
+    if (!selectedChannel || !typingStart || !typingStop) return;
+    
+    // Nettoyer le timeout précédent
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    if (value.trim().length > 0) {
+      // Démarrer le typing indicator
+      typingStart(selectedChannel.id);
+      
+      // Arrêter automatiquement après 3 secondes d'inactivité
+      typingTimeoutRef.current = setTimeout(() => {
+        typingStop(selectedChannel.id);
+        typingTimeoutRef.current = null;
+      }, 3000);
+    } else {
+      // Arrêter si l'input est vide
+      typingStop(selectedChannel.id);
+    }
   };
 
   if (serversLoading) {
@@ -215,7 +265,15 @@ export default function Home() {
               {channelsLoading ? (
                 <div className="px-2 py-2 text-white/40 text-sm">Chargement...</div>
               ) : channelsError ? (
-                <div className="px-2 py-2 text-[#ff3333] text-sm">{channelsError}</div>
+                <div className="px-2 py-2 bg-red-500/20 border border-red-500/50 rounded text-[#ff3333] text-sm">
+                  <div className="flex items-center gap-1 mb-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-semibold">Erreur</span>
+                  </div>
+                  {channelsError}
+                </div>
               ) : channels.length === 0 ? (
                 <div className="px-2 py-2 text-white/40 text-sm italic">Aucun channel</div>
               ) : (
@@ -329,7 +387,15 @@ export default function Home() {
             </div>
           ) : messagesError ? (
             <div className="h-full flex items-center justify-center">
-              <p className="text-[#ff3333]">{messagesError}</p>
+              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 max-w-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-red-400 font-semibold">Erreur</h3>
+                </div>
+                <p className="text-red-300 text-sm">{messagesError}</p>
+              </div>
             </div>
           ) : Array.isArray(messages) && messages.length > 0 ? (
             <div className="space-y-4">
@@ -358,6 +424,20 @@ export default function Home() {
                   </div>
                 </div>
               ))}
+              
+              {/* Typing indicator */}
+              {typingUsers && typingUsers.size > 0 && (
+                <div className="px-4 py-2 text-white/60 text-sm italic flex items-center gap-2">
+                  <span className="w-1 h-1 bg-[#4fdfff] rounded-full animate-pulse" />
+                  <span>
+                    {Array.from(typingUsers.values()).length === 1
+                      ? `${Array.from(typingUsers.values())[0]} is typing...`
+                      : Array.from(typingUsers.values()).length === 2
+                      ? `${Array.from(typingUsers.values())[0]} and ${Array.from(typingUsers.values())[1]} are typing...`
+                      : `${Array.from(typingUsers.values()).slice(0, 2).join(", ")} and ${Array.from(typingUsers.values()).length - 2} more are typing...`}
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center px-4">
@@ -381,7 +461,7 @@ export default function Home() {
               <input 
                 type="text"
                 value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
+                onChange={handleMessageInputChange}
                 placeholder={`Message #${selectedChannel.name}`}
                 className="w-full px-4 py-2.5 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white placeholder:text-white/40 outline-none focus:border-[#4fdfff] focus:bg-[rgba(20,20,20,0.95)] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
               />
@@ -427,7 +507,12 @@ export default function Home() {
                                 alt="Owner"
                                 className="w-8 h-8 rounded-full object-cover border border-[#ff3333]/50"
                               />
-                              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[rgba(5,10,15,0.95)] rounded-full" />
+                              <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${
+                                getUserStatus(member.user_id) === "online" ? "bg-green-500" :
+                                getUserStatus(member.user_id) === "dnd" ? "bg-red-500" :
+                                getUserStatus(member.user_id) === "invisible" ? "bg-gray-400" :
+                                "bg-gray-500"
+                              }`} />
                             </div>
                             <span className="text-sm text-white/90 truncate">
                               {memberUser?.username || member.user_id.slice(0, 8) + "..."}
@@ -459,7 +544,12 @@ export default function Home() {
                                 alt="Member"
                                 className="w-8 h-8 rounded-full object-cover border border-[#4fdfff]/30"
                               />
-                              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gray-500 border-2 border-[rgba(5,10,15,0.95)] rounded-full" />
+                              <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${
+                                getUserStatus(member.user_id) === "online" ? "bg-green-500" :
+                                getUserStatus(member.user_id) === "dnd" ? "bg-red-500" :
+                                getUserStatus(member.user_id) === "invisible" ? "bg-gray-400" :
+                                "bg-gray-500"
+                              }`} />
                             </div>
                             <span className="text-sm text-white/70 truncate">
                               {memberUser?.username || member.user_id.slice(0, 8) + "..."}

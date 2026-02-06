@@ -3,10 +3,11 @@ pub use self::error::{Error, Result};
 use axum::{
     middleware,
     routing::{get, post},
-    Router,
+    Json, Router,
 };
 use mongodb::{Client as MongoClient, Database as MongoDatabase};
 use sqlx::postgres::PgPoolOptions;
+use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
 
 mod ctx;
@@ -17,7 +18,12 @@ mod repositories;
 mod routes;
 mod services;
 mod web;
-use repositories::{ChannelRepository, MessageRepository, ServerRepository, UserRepository};
+use axum::extract::State;
+use repositories::{
+    ChannelRepository, InviteRepository, MessageRepository, ServerRepository, UserRepository,
+};
+use web::MetricsSnapshot;
+use web::{WsHub, WsMetrics};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -28,10 +34,18 @@ pub struct AppState {
     pub server_repo: ServerRepository,
     pub channel_repo: ChannelRepository,
     pub message_repo: MessageRepository,
+    pub invite_repo: InviteRepository,
+    pub ws_hub: web::WsHub,
+    pub ws_metrics: web::WsMetrics,
 }
 
 async fn health() -> &'static str {
     "OK"
+}
+
+/// Endpoint pour récupérer les métriques WebSocket
+async fn get_ws_metrics(State(state): State<AppState>) -> Json<MetricsSnapshot> {
+    Json(state.ws_metrics.get_metrics().await)
 }
 
 #[tokio::main]
@@ -49,8 +63,8 @@ async fn main() {
         .await
         .expect("Failed to connect to PostgreSQL");
 
-    let mongodb_url = std::env::var("MONGODB_URL")
-        .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
+    let mongodb_url =
+        std::env::var("MONGODB_URL").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
     let mongo_client = MongoClient::with_uri_str(&mongodb_url)
         .await
         .expect("Failed to connect to MongoDB");
@@ -60,6 +74,19 @@ async fn main() {
     let server_repo = ServerRepository::new(pool.clone());
     let channel_repo = ChannelRepository::new(pool.clone());
     let message_repo = MessageRepository::new(mongo_db.clone());
+    let invite_repo = InviteRepository::new(pool.clone());
+
+    let ws_hub = WsHub::new();
+    let ws_metrics = WsMetrics::new();
+
+    // Démarrer le cleanup périodique du cache typing
+    tokio::spawn(async {
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        loop {
+            interval.tick().await;
+            crate::services::realtime::typing::cleanup_typing_cache().await;
+        }
+    });
 
     let state = AppState {
         db: pool,
@@ -69,6 +96,9 @@ async fn main() {
         server_repo,
         channel_repo,
         message_repo,
+        invite_repo,
+        ws_hub,
+        ws_metrics,
     };
 
     let cors = CorsLayer::new()
@@ -77,7 +107,10 @@ async fn main() {
         .allow_headers(Any);
 
     let routes_protected = routes::create_router()
-        .route("/me", get(handlers::user::me).patch(handlers::user::update_me))
+        .route(
+            "/me",
+            get(handlers::user::me).patch(handlers::user::update_me),
+        )
         .route("/auth/logout", post(handlers::auth::logout))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
@@ -86,7 +119,12 @@ async fn main() {
 
     let routes_public = Router::new()
         .route("/health", get(health))
-        .route("/users/{user_id}", get(handlers::user_public::get_public_user))
+        .route("/ws/metrics", get(get_ws_metrics))
+        .route(
+            "/users/{user_id}",
+            get(handlers::user_public::get_public_user),
+        )
+        .route("/ws", get(web::ws_handler))
         .merge(routes::auth::routes());
 
     let app = Router::new()

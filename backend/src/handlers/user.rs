@@ -1,14 +1,11 @@
 use axum::{extract::State, Json};
 
-use crate::{AppState, Result};
 use crate::ctx::Ctx;
 use crate::models::{UpdateMePayload, UserResponse};
 use crate::Error;
+use crate::{AppState, Result};
 
-pub async fn me(
-    State(state): State<AppState>,
-    ctx: Ctx,
-) -> Result<Json<UserResponse>> {
+pub async fn me(State(state): State<AppState>, ctx: Ctx) -> Result<Json<UserResponse>> {
     let user = state
         .user_repo
         .find_by_id(ctx.user_id())

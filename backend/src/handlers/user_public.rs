@@ -4,12 +4,15 @@ use axum::Json;
 
 use uuid::Uuid;
 
+use crate::models::PublicUserResponse;
 use crate::AppState;
 use crate::Error;
 use crate::Result;
-use crate::models::PublicUserResponse;
 
-pub async fn get_public_user(State(state): State<AppState>, Path(user_id): Path<Uuid>) -> Result<Json<PublicUserResponse>> {
+pub async fn get_public_user(
+    State(state): State<AppState>,
+    Path(user_id): Path<Uuid>,
+) -> Result<Json<PublicUserResponse>> {
     let user = state
         .user_repo
         .find_by_id(user_id)

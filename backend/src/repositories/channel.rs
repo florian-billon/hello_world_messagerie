@@ -54,10 +54,12 @@ impl ChannelRepository {
     }
 
     pub async fn get_max_position(&self, server_id: Uuid) -> sqlx::Result<Option<i32>> {
-        let result: Option<Option<i32>> = sqlx::query_scalar::<_, Option<i32>>("SELECT MAX(position) FROM channels WHERE server_id = $1")
-            .bind(server_id)
-            .fetch_optional(&self.pool)
-            .await?;
+        let result: Option<Option<i32>> = sqlx::query_scalar::<_, Option<i32>>(
+            "SELECT MAX(position) FROM channels WHERE server_id = $1",
+        )
+        .bind(server_id)
+        .fetch_optional(&self.pool)
+        .await?;
         Ok(result.flatten())
     }
 
@@ -90,4 +92,3 @@ impl ChannelRepository {
         Ok(())
     }
 }
-

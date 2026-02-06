@@ -4,19 +4,14 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 /// Statut de présence utilisateur
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq, Default)]
 #[sqlx(type_name = "user_status", rename_all = "lowercase")]
 pub enum UserStatus {
     Online,
+    #[default]
     Offline,
     Dnd,
     Invisible,
-}
-
-impl Default for UserStatus {
-    fn default() -> Self {
-        Self::Offline
-    }
 }
 
 /// Modèle User (PostgreSQL)
@@ -109,8 +104,8 @@ pub struct AuthResponse {
 /// Claims JWT
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: Uuid,        // user_id
+    pub sub: Uuid, // user_id
     pub email: String,
-    pub exp: usize,       // expiration timestamp
-    pub iat: usize,       // issued at
+    pub exp: usize, // expiration timestamp
+    pub iat: usize, // issued at
 }

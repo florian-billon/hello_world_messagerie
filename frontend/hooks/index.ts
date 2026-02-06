@@ -38,4 +38,5 @@ export { useChannels } from "./useChannels";
 export { useMessages } from "./useMessages";
 export { useMembers } from "./useMembers";
 export { useAuth } from "./useAuth";
+export { useWebSocket } from "./useWebSocket";
 
