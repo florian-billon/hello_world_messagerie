@@ -92,6 +92,17 @@ pub async fn list_invites(
     Ok(invites)
 }
 
+pub async fn get_invite_by_code(
+    invite_repo: &InviteRepository,
+    code: &str,
+) -> Result<Invite> {
+    let invite = invite_repo
+        .find_by_code(code)
+        .await?
+        .ok_or(Error::ServerNotFound)?;
+    Ok(invite)
+}
+
 pub async fn join_server_with_code(
     invite_repo: &InviteRepository,
     server_repo: &ServerRepository,

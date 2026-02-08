@@ -42,6 +42,30 @@ pub async fn list_invites(
     Ok(Json(invites))
 }
 
+pub async fn get_invite(
+    State(state): State<AppState>,
+    Path(code): Path<String>,
+) -> Result<Json<Invite>> {
+    let invite = services::get_invite_by_code(&state.invite_repo, &code).await?;
+    Ok(Json(invite))
+}
+
+pub async fn accept_invite(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(code): Path<String>,
+) -> Result<Json<serde_json::Value>> {
+    let payload = JoinServerWithCodePayload { code };
+    let server_id = services::join_server_with_code(
+        &state.invite_repo,
+        &state.server_repo,
+        payload,
+        ctx.user_id(),
+    )
+    .await?;
+    Ok(Json(serde_json::json!({ "server_id": server_id })))
+}
+
 pub async fn join_server_with_code(
     State(state): State<AppState>,
     ctx: Ctx,
