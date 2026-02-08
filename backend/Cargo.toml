@@ -32,15 +32,6 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
 thiserror = "2"
-<<<<<<< HEAD
-rand = "0.9"
-lazy_static = "1.5"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-futures-util = "0.3"
-=======
-rand = "0.8"
->>>>>>> Invite
 rand = "0.9"
 lazy_static = "1.5"
 tracing = "0.1"
