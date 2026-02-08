@@ -1,4 +1,4 @@
-use crate::{AppState, Error, Result, models::ServerMember};
+use crate::{models::ServerMember, AppState, Error, Result};
 use uuid::Uuid;
 
 use crate::models::{CreateInvitePayload, InviteResponse, MemberRole};
@@ -52,7 +52,11 @@ pub async fn get_invite_by_code(state: &AppState, code: &str) -> Result<InviteRe
     Ok(invite.into())
 }
 
-pub async fn accept_invite(state: &AppState, user_id: Uuid, code: &str) -> Result<Vec<ServerMember>> {
+pub async fn accept_invite(
+    state: &AppState,
+    user_id: Uuid,
+    code: &str,
+) -> Result<Vec<ServerMember>> {
     let invite = state
         .invite_repo
         .find_by_code(code)
@@ -61,20 +65,51 @@ pub async fn accept_invite(state: &AppState, user_id: Uuid, code: &str) -> Resul
             message: "Invite not found".into(),
         })?;
 
+    let now = chrono::Utc::now();
+
+    if invite.revoked {
+        return Err(Error::InternalError {
+            message: "Invite revoked".into(),
+        });
+    }
+
+    if let Some(exp) = invite.expires_at {
+        if exp < now {
+            return Err(Error::InternalError {
+                message: "Invite expired".into(),
+            });
+        }
+    }
+
+    if let Some(max) = invite.max_uses {
+        if invite.uses >= max {
+            return Err(Error::InternalError {
+                message: "Invite has no remaining uses".into(),
+            });
+        }
+    }
+
     let existing_member = state
         .server_repo
         .find_member(invite.server_id, user_id)
         .await?;
 
-    if existing_member.is_none() {
-        state
-            .server_repo
-            .add_member(invite.server_id, user_id, MemberRole::Member)
-            .await?;
+    if existing_member.is_some() {
+        return Ok(state.server_repo.list_members(invite.server_id).await?);
     }
 
-    state.invite_repo.increment_use(invite.id).await?;
+    //    -> si ça renvoie false, l'invite est devenue invalide entre-temps
+    let ok = state.invite_repo.increment_use_if_valid(invite.id).await?;
+    if !ok {
+        return Err(Error::InternalError {
+            message: "Invite is no longer valid".into(),
+        });
+    }
 
-    let members = state.server_repo.list_members(invite.server_id).await?;
-    Ok(members)
+    state
+        .server_repo
+        .add_member(invite.server_id, user_id, MemberRole::Member)
+        .await?;
+
+    Ok(state.server_repo.list_members(invite.server_id).await?)
 }

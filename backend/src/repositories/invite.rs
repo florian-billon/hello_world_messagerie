@@ -64,6 +64,24 @@ impl InviteRepository {
         Ok(())
     }
 
+    pub async fn increment_use_if_valid(&self, invite_id: Uuid) -> sqlx::Result<bool> {
+        let res = sqlx::query(
+            r#"
+        UPDATE invites
+        SET uses = uses + 1
+        WHERE id = $1
+          AND revoked = FALSE
+          AND (expires_at IS NULL OR expires_at > NOW())
+          AND (max_uses IS NULL OR uses < max_uses)
+        "#,
+        )
+        .bind(invite_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(res.rows_affected() == 1)
+    }
+
     pub async fn revoke(&self, invite_id: Uuid) -> sqlx::Result<()> {
         sqlx::query("UPDATE invites SET revoked = TRUE WHERE id = $1")
             .bind(invite_id)

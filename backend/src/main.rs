@@ -82,7 +82,6 @@ async fn main() {
     let routes_protected = routes::create_router()
         .route("/me", get(handlers::user::me).patch(handlers::user::update_me))
         .route("/auth/logout", post(handlers::auth::logout))
-        .route("/invites/{code}/accept", post(handlers::invite::accept_invite))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             web::mw_require_auth,
@@ -91,7 +90,6 @@ async fn main() {
     let routes_public = Router::new()
         .route("/health", get(health))
         .route("/users/{user_id}", get(handlers::user_public::get_public_user))
-        .route("/invites/{code}", get(handlers::invite::get_invite))
         .merge(routes::auth::routes());
 
     let app = Router::new()

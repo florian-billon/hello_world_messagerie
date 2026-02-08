@@ -152,3 +152,31 @@ export async function updateMe(payload: UpdateProfilePayload): Promise<User> {
   });
 }
 
+export interface CreateInvitePayload {
+  max_uses?: number | null;
+  expires_at?: string | null;
+}
+
+export interface InviteResponse {
+  code: string;
+  server_id: string;
+  max_uses: number | null;
+  uses: number;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export async function createInvite(serverId: string, payload: CreateInvitePayload): Promise<InviteResponse> {
+  return fetchApi<InviteResponse>(`/servers/${serverId}/invites`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getInvite(code: string): Promise<InviteResponse> {
+  return fetchApi<InviteResponse>(`/invites/${code}`);
+}
+
+export async function acceptInvite(code: string): Promise<void> {
+  await fetchApi<void>(`/invites/${code}/accept`, { method: "POST" });
+}
