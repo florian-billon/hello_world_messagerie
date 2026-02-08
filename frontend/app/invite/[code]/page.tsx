@@ -31,8 +31,16 @@ export default async function InvitePage({
   async function onJoin() {
     "use server";
     const { acceptInvite } = await import("@/lib/api-server");
-    await acceptInvite(code);
-    redirect(`/servers/${invite.server_id}`);
+    try {
+      await acceptInvite(code);
+    } catch (e: any) {
+      // Si déjà membre, rediriger quand même vers le serveur
+      if (e?.message?.includes("Already a member")) {
+        redirect(`/`);
+      }
+      throw e;
+    }
+    redirect(`/`);
   }
 
   const expiresText = invite.expires_at ? new Date(invite.expires_at).toLocaleString("fr-FR") : "never";
