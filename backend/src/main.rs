@@ -8,8 +8,8 @@ use axum::{
 use mongodb::{Client as MongoClient, Database as MongoDatabase};
 use sqlx::postgres::PgPoolOptions;
 use std::time::Duration;
-use tower_http::cors::{Any, CorsLayer};
-use http::Method;
+use tower_http::cors::CorsLayer;
+use axum::http::{Method, HeaderValue, header}; // On utilise axum::http au lieu de http direct
 
 mod ctx;
 mod error;
