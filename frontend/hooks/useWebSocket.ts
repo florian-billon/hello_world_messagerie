@@ -6,17 +6,21 @@ import { API_URL } from "@/lib/config";
 
 /**
  * Hook pour gérer la connexion WebSocket globale
- * S'initialise automatiquement avec le token de l'utilisateur
  */
 export function useWebSocket() {
   const gatewayRef = useRef<ReturnType<typeof getGateway> | null>(null);
   const handlersRef = useRef<Set<(event: ServerEvent) => void>>(new Set());
 
   useEffect(() => {
-    const gateway = getGateway(API_URL);
+    // CORRECTION : Transformation dynamique de l'URL pour le WebSocket
+    // http:// -> ws://  |  https:// -> wss://
+    const socketUrl = API_URL.replace(/^http/, 'ws'); 
+    
+    console.log("[useWebSocket] Initializing gateway with:", socketUrl);
+    
+    const gateway = getGateway(socketUrl);
     gatewayRef.current = gateway;
 
-    // Récupérer le token depuis les cookies et connecter
     const connect = () => {
       if (typeof document === "undefined") return;
       
@@ -30,30 +34,25 @@ export function useWebSocket() {
         }
       }
       
-      console.log("[useWebSocket] Token found:", token ? "YES" : "NO");
-      console.log("[useWebSocket] Attempting connection to:", API_URL);
-      
       if (token) {
+        console.log("[useWebSocket] Token found, connecting...");
         gateway.connect(token);
       } else {
-        console.warn("[useWebSocket] No token found, cannot connect to WebSocket");
+        console.warn("[useWebSocket] No token found in cookies");
       }
     };
 
     connect();
 
     return () => {
-      // Ne pas déconnecter ici car c'est un singleton partagé
-      // La déconnexion se fera lors du logout
+      // Singleton partagé, pas de déconnexion ici
     };
   }, []);
 
   const onEvent = useCallback((handler: (event: ServerEvent) => void) => {
     if (!gatewayRef.current) return () => {};
-
     handlersRef.current.add(handler);
     const unsubscribe = gatewayRef.current.onEvent(handler);
-
     return () => {
       handlersRef.current.delete(handler);
       unsubscribe();
@@ -94,4 +93,3 @@ export function useWebSocket() {
     isConnected,
   };
 }
-
