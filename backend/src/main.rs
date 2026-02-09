@@ -146,15 +146,19 @@ async fn main() {
         .layer(cors)
         .with_state(state);
 
-let port = std::env::var("PORT").unwrap_or_else(|_| "3001".to_string());
-let addr = format!("0.0.0.0:{}", port);    let addr = format!("0.0.0.0:{}", port);
+// 1. Récupération du port dynamique de Render
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3001".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+
+    // 2. Création du listener TCP sur l'adresse de production
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
-        .unwrap_or_else(|_| panic!("Failed to bind to port {}", port));
+        .unwrap_or_else(|_| panic!("Failed to bind to address {}", addr));
 
-    println!("Server running on http://localhost:{}", port);
+    // 3. Log de confirmation (on affiche l'adresse réelle au lieu de localhost)
+    println!("🚀 Server running on http://{}", addr);
 
+    // 4. Démarrage du serveur Axum
     axum::serve(listener, app)
         .await
         .expect("Server failed to start");
-}
