@@ -7,10 +7,20 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq, Default)]
 #[sqlx(type_name = "user_status", rename_all = "lowercase")]
 pub enum UserStatus {
+    #[serde(rename = "En ligne")]
+    #[sqlx(rename = "En ligne")]
     Online,
-    #[default]
+    
+    #[serde(rename = "Hors ligne")]
+    #[sqlx(rename = "Hors ligne")]
     Offline,
+    
+    #[serde(rename = "Ne pas déranger")]
+    #[sqlx(rename = "Ne pas déranger")]
     Dnd,
+    
+    #[serde(rename = "Invisible")]
+    #[sqlx(rename = "Invisible")]
     Invisible,
 }
 
