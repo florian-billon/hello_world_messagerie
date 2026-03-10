@@ -4,8 +4,10 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 /// Statut de présence utilisateur
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq, Default)]
-#[sqlx(type_name = "user_status", rename_all = "lowercase")]
+/// Statut de présence utilisateur
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq, Default)]
+// Suppression de rename_all = "lowercase" car il entre en conflit avec tes renames manuels
+#[sqlx(type_name = "user_status")] 
 pub enum UserStatus {
     #[serde(rename = "En ligne")]
     #[sqlx(rename = "En ligne")]
@@ -13,6 +15,7 @@ pub enum UserStatus {
     
     #[serde(rename = "Hors ligne")]
     #[sqlx(rename = "Hors ligne")]
+    #[default] // Définit "Hors ligne" comme valeur par défaut en Rust
     Offline,
     
     #[serde(rename = "Ne pas déranger")]
@@ -23,7 +26,6 @@ pub enum UserStatus {
     #[sqlx(rename = "Invisible")]
     Invisible,
 }
-
 /// Modèle User (PostgreSQL)
 #[derive(Debug, Clone, Serialize, FromRow)]
 pub struct User {
