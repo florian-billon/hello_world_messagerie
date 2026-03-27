@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createInvite } from "@/lib/api-server";
+import { useTranslation } from "@/lib/i18n";
 
 type Props = {
   serverId: string;
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export default function InviteModal({ serverId, serverName, onClose }: Props) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState<string | null>(null);
@@ -27,12 +29,12 @@ export default function InviteModal({ serverId, serverName, onClose }: Props) {
         const res = await createInvite(serverId, { max_uses: 10, expires_at: null });
         setCode(res.code);
       } catch (e: any) {
-        setError(e?.message ?? "Failed to create invite");
+        setError(e?.message ?? t("invite.modal.error"));
       } finally {
         setLoading(false);
       }
     })();
-  }, [serverId]);
+  }, [serverId, t]);
 
   const handleCopy = async () => {
     if (!inviteLink) return;
@@ -46,7 +48,7 @@ export default function InviteModal({ serverId, serverName, onClose }: Props) {
       const res = await createInvite(serverId, { max_uses: 10, expires_at: null });
       setCode(res.code);
     } catch (e: any) {
-      setError(e?.message ?? "Failed to create invite");
+      setError(e?.message ?? t("invite.modal.error"));
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,7 @@ export default function InviteModal({ serverId, serverName, onClose }: Props) {
       <div className="relative w-full max-w-md rounded-xl border-2 border-[#4fdfff] bg-[rgba(20,20,20,0.98)] p-6 shadow-[0_0_40px_rgba(79,223,255,0.3)]">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-white font-bold text-lg">
-            Invite to <span className="text-[#4fdfff]">{serverName}</span>
+            {t("invite.modal.title", { serverName })}
           </h2>
           <button onClick={onClose} className="text-white/60 hover:text-white text-xl">
             ×
@@ -74,13 +76,13 @@ export default function InviteModal({ serverId, serverName, onClose }: Props) {
 
         <div className="space-y-3">
           <label className="block text-[10px] font-bold text-[#4fdfff] tracking-widest uppercase">
-            Invite link
+            {t("invite.modal.linkLabel")}
           </label>
 
           <div className="flex gap-2">
             <input
               readOnly
-              value={inviteLink ?? (loading ? "Generating..." : "")}
+              value={inviteLink ?? (loading ? t("invite.modal.generating") : "")}
               className="flex-1 px-3 py-2 bg-black/50 border border-[#4fdfff]/50 rounded-lg text-white text-sm outline-none"
             />
             <button
@@ -88,7 +90,7 @@ export default function InviteModal({ serverId, serverName, onClose }: Props) {
               disabled={!inviteLink}
               className="px-3 py-2 rounded-lg border-2 border-[#4fdfff] text-white font-bold hover:shadow-[0_0_12px_rgba(79,223,255,0.6)] disabled:opacity-50"
             >
-              Copy
+              {t("common.copy")}
             </button>
           </div>
 
@@ -98,18 +100,18 @@ export default function InviteModal({ serverId, serverName, onClose }: Props) {
               disabled={loading}
               className="flex-1 py-2 rounded-lg bg-[#a00000] border-2 border-[#4fdfff] text-white font-bold hover:bg-[#c00000] disabled:opacity-50"
             >
-              Regenerate
+              {t("invite.modal.regenerate")}
             </button>
             <button
               onClick={onClose}
               className="flex-1 py-2 rounded-lg text-white/70 hover:text-white hover:underline"
             >
-              Close
+              {t("common.close")}
             </button>
           </div>
 
           <p className="text-xs text-white/40">
-            Max uses: 10 • Expires: never
+            {t("invite.modal.info")}
           </p>
         </div>
       </div>

@@ -1,4 +1,5 @@
 services:
+  # Backend (Rust/Axum)
   - type: web
     name: hello-world-backend
     env: rust
@@ -6,17 +7,14 @@ services:
     startCommand: cd backend && ./target/release/hello-world-backend
     envVars:
       - key: DATABASE_URL
-        sync: false
+        sync: false # Set manually (NeonDB PostgreSQL)
       - key: MONGODB_URL
-        sync: false
+        sync: false # Set manually (MongoDB Atlas)
       - key: JWT_SECRET
         generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false # Set manually (Vercel frontend URLs, comma-separated)
       - key: PORT
         value: 3001
-
-databases:
-  - name: helloworld-postgres
-    plan: free
-    databaseName: helloworld
-    user: postgres
-
+      - key: RUST_LOG
+        value: info

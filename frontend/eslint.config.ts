@@ -1,17 +1,14 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import type { Linter } from "eslint";
+import nextConfig from "eslint-config-next";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+const eslintConfig: Linter.Config[] = [
+  ...(nextConfig as Linter.Config[]),
+  {
+    rules: {
+      "@next/next/no-html-link-for-pages": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
-

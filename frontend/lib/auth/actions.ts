@@ -38,7 +38,7 @@ export async function login(email: string, password: string) {
 
   const cookieStore = await cookies();
   cookieStore.set("token", data.token, {
-    httpOnly: false,
+    httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60 * 24,
@@ -70,7 +70,7 @@ export async function signup(username: string, email: string, password: string) 
 
   const cookieStore = await cookies();
   cookieStore.set("token", data.token, {
-    httpOnly: false,
+    httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60 * 24,
@@ -116,4 +116,9 @@ export async function getUser() {
 export async function clearToken() {
   const cookieStore = await cookies();
   cookieStore.delete("token");
+}
+
+export async function getTokenForWs(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get("token")?.value || null;
 }

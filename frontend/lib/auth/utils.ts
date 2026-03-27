@@ -1,26 +1,12 @@
 "use client";
 
-/**
- * Récupère le token depuis les cookies (côté client)
- */
-export function getToken(): string | null {
-  if (typeof document === "undefined") return null;
-  
-  const cookies = document.cookie.split(";");
-  for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split("=");
-    if (name === "token") {
-      return value || null;
-    }
-  }
-  return null;
-}
+import { clearToken } from "./actions";
 
 /**
  * Redirige vers la page de login en supprimant le token
  */
-export function handleAuthError() {
-  document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+export async function handleAuthError() {
+  await clearToken();
   window.location.href = "/login";
 }
 

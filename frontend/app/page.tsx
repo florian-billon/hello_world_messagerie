@@ -7,7 +7,8 @@ import ProfileCard from "@/components/ProfileCard";
 import InviteModal from "@/modals/InviteModal";
 import { User } from "@/lib/api-server";
 import { getAvatar, normalizeAvatarUrl } from "@/lib/avatar";
-import { getStatusColor, getStatusLabel, normalizeStatus } from "@/lib/presence";
+import { getStatusColor, getStatusKey, normalizeStatus } from "@/lib/presence";
+import { useTranslation } from "@/lib/i18n";
 import Button from "@/components/ui/Button";
 
 /**
@@ -15,6 +16,7 @@ import Button from "@/components/ui/Button";
  * Layout: SERVER SIDEBAR (72px) | CHANNEL SIDEBAR (240px) | CHAT CENTER | MEMBERS SIDEBAR (240px)
  */
 export default function Home() {
+  const { t, locale } = useTranslation();
   const { user } = useAuth();
   const {
     servers,
@@ -31,7 +33,7 @@ export default function Home() {
     selectedServer?.id ?? null
   );
 
-  const { messages, sendMessage, loading: messagesLoading, error: messagesError, typingUsers, typingStart, typingStop } = useMessages(selectedChannel?.id ?? null);
+  const { messages, sendMessage, updateMessage, deleteMessage, loading: messagesLoading, error: messagesError, typingUsers, typingStart, typingStop } = useMessages(selectedChannel?.id ?? null);
   const { members, kickMember, banMember } = useMembers(selectedServer?.id ?? null);
 
   const [showCreateServer, setShowCreateServer] = useState(false);
@@ -45,6 +47,10 @@ export default function Home() {
   const [showServerMenu, setShowServerMenu] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [showDeleteMessageConfirm, setShowDeleteMessageConfirm] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const typingStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const TYPING_STOP_DELAY_MS = 2000;
   if (user && !currentUser) {
@@ -109,13 +115,39 @@ export default function Home() {
     setMessageInput("");
   };
 
+  const handleStartEdit = (message: any) => {
+    setEditingMessageId(message.id);
+    setEditContent(message.content);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMessageId || !editContent.trim()) return;
+    await updateMessage(editingMessageId, editContent.trim());
+    setEditingMessageId(null);
+    setEditContent("");
+  };
+
+  const handleDeleteMessage = (id: string) => {
+    setMessageToDelete(id);
+    setShowDeleteMessageConfirm(true);
+  };
+
+  const confirmDeleteMessage = async () => {
+    if (messageToDelete) {
+      await deleteMessage(messageToDelete);
+    }
+    setShowDeleteMessageConfirm(false);
+    setMessageToDelete(null);
+  };
+
   if (serversLoading) {
     return (
       <main className="flex w-full h-screen gap-2 p-2 items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-2 border-[#4fdfff] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[#4fdfff] font-mono text-sm tracking-widest animate-pulse">
-            INITIALIZING SYSTEM...
+            {t("chat.initializing")}
           </p>
         </div>
       </main>
@@ -131,7 +163,7 @@ export default function Home() {
         <button
           onClick={() => selectServer(null)}
           className="w-12 h-12 rounded-2xl bg-[#4fdfff]/10 border border-[#4fdfff]/50 flex items-center justify-center mb-2 hover:rounded-xl hover:bg-[#4fdfff]/20 transition-all cursor-pointer group"
-          title="Hello World"
+          title={t("common.appName")}
         >
           <Image
             src="/logo.png"
@@ -151,8 +183,8 @@ export default function Home() {
               key={server.id}
               onClick={() => selectServer(server)}
               className={`w-12 h-12 rounded-[24px] flex items-center justify-center text-lg font-bold transition-all duration-200 relative group ${selectedServer?.id === server.id
-                  ? "bg-[#4fdfff] text-black rounded-xl shadow-[0_0_12px_rgba(79,223,255,0.6)]"
-                  : "bg-[rgba(20,30,40,0.8)] text-[#4fdfff] hover:bg-[#4fdfff]/20 hover:rounded-xl"
+                ? "bg-[#4fdfff] text-black rounded-xl shadow-[0_0_12px_rgba(79,223,255,0.6)]"
+                : "bg-[rgba(20,30,40,0.8)] text-[#4fdfff] hover:bg-[#4fdfff]/20 hover:rounded-xl"
                 }`}
               title={server.name}
             >
@@ -170,7 +202,7 @@ export default function Home() {
         <button
           onClick={() => setShowCreateServer(true)}
           className="w-12 h-12 rounded-[24px] bg-[rgba(20,30,40,0.8)] border border-dashed border-[#4fdfff]/30 flex items-center justify-center text-[#4fdfff] hover:bg-[#4fdfff]/10 hover:border-[#4fdfff] hover:rounded-xl transition-all group"
-          title="Créer un serveur"
+          title={t("server.createTooltip")}
         >
           <span className="text-2xl group-hover:rotate-90 transition-transform">+</span>
         </button>
@@ -179,7 +211,7 @@ export default function Home() {
         <button
           onClick={() => logout()}
           className="w-12 h-12 rounded-[24px] bg-[rgba(40,10,10,0.8)] flex items-center justify-center text-[#ff3333] hover:bg-[#ff3333]/20 hover:rounded-xl transition-all mt-2"
-          title="Déconnexion"
+          title={t("auth.logout")}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -198,7 +230,7 @@ export default function Home() {
                 type="button"
                 onClick={() => setShowServerMenu((v) => !v)}
                 className="text-[#4fdfff] text-xs font-mono hover:text-white transition-colors px-1"
-                title="Options du serveur"
+                title={t("server.options")}
               >
                 ▼
               </button>
@@ -211,14 +243,14 @@ export default function Home() {
                       onClick={() => { setShowServerMenu(false); setShowLeaveConfirm(true); }}
                       className="w-full text-left px-4 py-2 text-sm text-[#ff3333] hover:bg-[#ff3333]/10 transition-colors"
                     >
-                      Quitter le serveur
+                      {t("server.leave")}
                     </button>
                     <button
                       type="button"
                       onClick={() => { setShowServerMenu(false); setShowDeleteConfirm(true); }}
                       className="w-full text-left px-4 py-2 text-sm text-[#ff3333]/70 hover:bg-[#ff3333]/10 transition-colors"
                     >
-                      Supprimer le serveur
+                      {t("server.delete")}
                     </button>
                   </div>
                 </>
@@ -229,12 +261,12 @@ export default function Home() {
             <div className="flex-1 overflow-y-auto p-2">
               <div className="flex items-center justify-between px-2 mb-2">
                 <span className="text-[10px] font-bold text-white/50 tracking-widest uppercase">
-                  CHANNELS TEXTUELS
+                  {t("channel.textChannels")}
                 </span>
                 <button
                   onClick={() => setShowCreateChannel(true)}
                   className="text-white/50 hover:text-[#4fdfff] transition-colors text-lg font-bold"
-                  title="Créer un channel"
+                  title={t("channel.createTooltip")}
                 >
                   +
                 </button>
@@ -242,26 +274,26 @@ export default function Home() {
 
               <div className="space-y-[2px]">
                 {channelsLoading ? (
-                  <div className="px-2 py-2 text-white/40 text-sm">Chargement...</div>
+                  <div className="px-2 py-2 text-white/40 text-sm">{t("common.loading")}</div>
                 ) : channelsError ? (
                   <div className="px-2 py-2 text-[#ff3333] text-sm">{channelsError}</div>
                 ) : channels.length === 0 ? (
-                  <div className="px-2 py-2 text-white/40 text-sm italic">Aucun channel</div>
+                  <div className="px-2 py-2 text-white/40 text-sm italic">{t("chat.noChannel")}</div>
                 ) : (
                   channels.map((channel) => (
                     <div
                       key={channel.id}
                       className={`group w-full flex items-center rounded transition-colors ${selectedChannel?.id === channel.id
-                          ? "bg-[#4fdfff]/15"
-                          : "hover:bg-white/5"
+                        ? "bg-[#4fdfff]/15"
+                        : "hover:bg-white/5"
                         }`}
                     >
                       <button
                         type="button"
                         onClick={() => selectChannel(channel)}
                         className={`flex-1 text-left px-2 py-1.5 flex items-center gap-2 ${selectedChannel?.id === channel.id
-                            ? "text-white"
-                            : "text-white/60 group-hover:text-white"
+                          ? "text-white"
+                          : "text-white/60 group-hover:text-white"
                           }`}
                       >
                         <span className="text-white/40">#</span>
@@ -271,7 +303,7 @@ export default function Home() {
                         type="button"
                         onClick={() => deleteChannel(channel.id)}
                         className="opacity-0 group-hover:opacity-100 pr-2 text-white/30 hover:text-[#ff3333] transition-all"
-                        title="Supprimer le channel"
+                        title={t("channel.deleteTooltip")}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -286,7 +318,7 @@ export default function Home() {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center">
             <p className="text-white/20 text-xs text-center px-4 italic">
-              Sélectionnez un serveur pour voir les canaux
+              {t("chat.selectServerForChannels")}
             </p>
           </div>
         )}
@@ -314,9 +346,9 @@ export default function Home() {
               <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${getStatusColor((currentUser || user)?.status)}`} />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-medium text-white truncate">{(currentUser || user)?.username || "Guest"}</p>
+              <p className="text-sm font-medium text-white truncate">{(currentUser || user)?.username || t("chat.guest")}</p>
               <p className="text-[10px] text-[#4fdfff] font-mono uppercase">
-                {getStatusLabel((currentUser || user)?.status)}
+                {t(getStatusKey((currentUser || user)?.status))}
               </p>
             </div>
           </button>
@@ -336,12 +368,12 @@ export default function Home() {
             ) : selectedServer ? (
               <>
                 <span className="text-[#4fdfff]">{selectedServer.name}</span>
-                <span className="text-white/40 text-xs font-normal">- Sélectionnez un canal</span>
+                <span className="text-white/40 text-xs font-normal">- {t("chat.selectChannel")}</span>
               </>
             ) : (
               <>
-                <span className="text-[#4fdfff]">HELLO WORLD</span>
-                <span className="text-white/40 text-xs font-normal">- Sélectionnez un serveur</span>
+                <span className="text-[#4fdfff]">{t("common.appName")}</span>
+                <span className="text-white/40 text-xs font-normal">- {t("chat.selectServer")}</span>
               </>
             )}
           </h1>
@@ -356,10 +388,10 @@ export default function Home() {
                   <span className="text-5xl text-[#4fdfff]">#</span>
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">
-                  {selectedServer ? "Sélectionnez un canal" : "Sélectionnez un serveur"}
+                  {selectedServer ? t("chat.selectChannel") : t("chat.selectServer")}
                 </h2>
                 <p className="text-white/50 text-sm">
-                  {selectedServer ? "Choisissez un canal pour commencer à discuter" : "Choisissez un serveur pour commencer"}
+                  {selectedServer ? t("chat.selectChannelPrompt") : t("chat.selectServerPrompt")}
                 </p>
               </div>
             </div>
@@ -367,7 +399,7 @@ export default function Home() {
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="w-8 h-8 border-2 border-[#4fdfff] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-[#4fdfff] text-sm">Chargement des messages...</p>
+                <p className="text-[#4fdfff] text-sm">{t("chat.loadingMessages")}</p>
               </div>
             </div>
           ) : messagesError ? (
@@ -389,16 +421,58 @@ export default function Home() {
                         {msg.username}
                       </span>
                       <span className="text-xs text-white/40">
-                        {new Date(msg.created_at).toLocaleTimeString("fr-FR", {
+                        {new Date(msg.created_at).toLocaleTimeString(locale === "fr" ? "fr-FR" : "en-US", {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
+                        {msg.edited_at && <span className="ml-1 text-[10px] text-white/20 italic">{t("chat.edited")}</span>}
                       </span>
                     </div>
-                    <p className="text-white/90 leading-relaxed break-words">
-                      {msg.content}
-                    </p>
+                    {editingMessageId === msg.id ? (
+                      <form onSubmit={handleSaveEdit} className="mt-1">
+                        <input
+                          type="text"
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          autoFocus
+                          onKeyDown={(e) => e.key === "Escape" && setEditingMessageId(null)}
+                          className="w-full px-3 py-1.5 bg-black/50 border border-[#4fdfff]/50 rounded text-white text-sm outline-none focus:border-[#4fdfff]"
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <button type="submit" className="text-[10px] text-[#4fdfff] hover:underline font-bold uppercase">{t("chat.save")}</button>
+                          <button type="button" onClick={() => setEditingMessageId(null)} className="text-[10px] text-white/40 hover:underline font-bold uppercase">{t("common.cancel")}</button>
+                        </div>
+                      </form>
+                    ) : (
+                      <p className="text-white/90 leading-relaxed break-words">
+                        {msg.content}
+                      </p>
+                    )}
                   </div>
+
+                  {/* Actions au survol */}
+                  {!editingMessageId && msg.author_id === user?.id && (
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2 bg-[rgba(10,15,20,0.95)] border border-[#4fdfff]/20 rounded-lg p-1 transition-all ml-auto self-start shadow-xl">
+                      <button
+                        onClick={() => handleStartEdit(msg)}
+                        className="p-1.5 text-white/40 hover:text-[#4fdfff] transition-colors"
+                        title={t("chat.edit")}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMessage(msg.id)}
+                        className="p-1.5 text-white/40 hover:text-[#ff3333] transition-colors"
+                        title={t("chat.delete")}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -408,10 +482,10 @@ export default function Home() {
                 <span className="text-4xl text-[#4fdfff]">#</span>
               </div>
               <h4 className="text-xl font-semibold text-white mb-2">
-                Bienvenue dans #{selectedChannel.name}
+                {t("chat.welcomeChannel", { channelName: selectedChannel.name })}
               </h4>
               <p className="text-white/50 text-sm">
-                C'est le début de ce canal. Envoyez un message pour commencer !
+                {t("chat.channelStart")}
               </p>
             </div>
           )}
@@ -433,7 +507,7 @@ export default function Home() {
                     <span className="w-1.5 h-1.5 bg-[#4fdfff] rounded-full animate-bounce [animation-delay:150ms]" />
                     <span className="w-1.5 h-1.5 bg-[#4fdfff] rounded-full animate-bounce [animation-delay:300ms]" />
                   </div>
-                  <span>{label}</span>
+                  <span>{t(entries.length === 1 ? "chat.typing" : "chat.typingPlural", { names })}</span>
                 </div>
               );
             })()}
@@ -444,7 +518,7 @@ export default function Home() {
                 onChange={handleInputChange}
                 onFocus={handleInputFocus}
                 onBlur={handleInputBlur}
-                placeholder={`Message #${selectedChannel.name}`}
+                placeholder={t("chat.messagePlaceholder", { channelName: selectedChannel.name })}
                 className="w-full px-4 py-2.5 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white placeholder:text-white/40 outline-none focus:border-[#4fdfff] focus:bg-[rgba(20,20,20,0.95)] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
               />
             </form>
@@ -458,12 +532,12 @@ export default function Home() {
           {/* Header */}
           <div className="h-12 px-4 flex items-center justify-between border-b border-[#4fdfff]/20 bg-[rgba(0,0,0,0.3)]">
             <h3 className="text-xs font-bold text-white/60 uppercase tracking-wider">
-              MEMBRES — {members.length}
+              {t("members.title", { count: members.length })}
             </h3>
             <button
               onClick={() => setShowInviteModal(true)}
               className="text-[#4fdfff] hover:text-white text-lg font-bold"
-              title="Invite member"
+              title={t("members.inviteTooltip")}
             >
               +
             </button>
@@ -472,14 +546,14 @@ export default function Home() {
           {/* Members list */}
           <div className="flex-1 overflow-y-auto p-2">
             {members.length === 0 ? (
-              <p className="text-sm text-white/40 italic px-2">Aucun membre</p>
+              <p className="text-sm text-white/40 italic px-2">{t("members.noMembers")}</p>
             ) : (
               <>
                 {/* Owners */}
                 {members.filter((m) => m.role === "Owner").length > 0 && (
                   <div className="mb-4">
                     <p className="text-[10px] text-[#ff3333] font-bold mb-2 px-2 tracking-wider uppercase">
-                      PROPRIÉTAIRE
+                      {t("members.owner")}
                     </p>
                     {members
                       .filter((m) => m.role === "Owner")
@@ -502,7 +576,7 @@ export default function Home() {
                               {member.username}
                             </span>
                             {isTypingOwner && (
-                              <div className="flex gap-0.5 flex-shrink-0" title="en train d'écrire">
+                              <div className="flex gap-0.5 flex-shrink-0" title={t("chat.isTyping")}>
                                 <span className="w-1 h-1 bg-[#4fdfff] rounded-full animate-bounce [animation-delay:0ms]" />
                                 <span className="w-1 h-1 bg-[#4fdfff] rounded-full animate-bounce [animation-delay:150ms]" />
                                 <span className="w-1 h-1 bg-[#4fdfff] rounded-full animate-bounce [animation-delay:300ms]" />
@@ -518,7 +592,7 @@ export default function Home() {
                 {members.filter((m) => m.role !== "Owner").length > 0 && (
                   <div>
                     <p className="text-[10px] text-white/50 font-bold mb-2 px-2 tracking-wider uppercase">
-                      MEMBRES
+                      {t("members.members")}
                     </p>
                     {(() => {
                       const myRole = members.find((m) => m.user_id === (user?.id))?.role;
@@ -547,7 +621,7 @@ export default function Home() {
                                 {member.username}
                               </span>
                               {isTyping && (
-                                <div className="flex gap-0.5 flex-shrink-0" title="en train d'écrire">
+                                <div className="flex gap-0.5 flex-shrink-0" title={t("chat.isTyping")}>
                                   <span className="w-1 h-1 bg-[#4fdfff] rounded-full animate-bounce [animation-delay:0ms]" />
                                   <span className="w-1 h-1 bg-[#4fdfff] rounded-full animate-bounce [animation-delay:150ms]" />
                                   <span className="w-1 h-1 bg-[#4fdfff] rounded-full animate-bounce [animation-delay:300ms]" />
@@ -559,7 +633,7 @@ export default function Home() {
                                     type="button"
                                     onClick={() => kickMember(member.user_id)}
                                     className="text-white/30 hover:text-[#ff3333] transition-colors"
-                                    title={`Expulser ${member.username}`}
+                                    title={t("members.kick", { username: member.username })}
                                   >
                                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6m3-3l3 3-3 3" />
@@ -570,7 +644,7 @@ export default function Home() {
                                       type="button"
                                       onClick={() => banMember(member.user_id)}
                                       className="text-white/30 hover:text-[#ff3333] transition-colors"
-                                      title={`Bannir ${member.username}`}
+                                      title={t("members.ban", { username: member.username })}
                                     >
                                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-12.728 12.728M6.343 6.343l11.314 11.314" />
@@ -591,7 +665,7 @@ export default function Home() {
         </aside>
       ) : (
         <aside className="w-60 bg-[rgba(5,10,15,0.95)] border-l border-[#4fdfff]/20 flex flex-col items-center justify-center">
-          <p className="text-white/40 text-sm text-center px-4">Sélectionnez un serveur</p>
+          <p className="text-white/40 text-sm text-center px-4">{t("chat.selectServer")}</p>
         </aside>
       )}
 
@@ -600,9 +674,9 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowCreateServer(false)} />
           <div className="relative bg-[rgba(20,20,20,0.98)] border-2 border-[#4fdfff] rounded-xl p-6 w-full max-w-md shadow-[0_0_40px_rgba(79,223,255,0.3)]">
-            <h2 className="text-xl font-bold text-center text-white mb-1">CREATE SERVER</h2>
+            <h2 className="text-xl font-bold text-center text-white mb-1">{t("server.createTitle")}</h2>
             <p className="text-center text-white/50 text-sm mb-6">
-              Your server will be your discussion space
+              {t("server.createDescription")}
             </p>
             {serversError && (
               <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
@@ -611,13 +685,13 @@ export default function Home() {
             )}
             <form onSubmit={handleCreateServer}>
               <label className="block text-[10px] font-bold text-[#4fdfff] tracking-widest uppercase mb-2">
-                SERVER NAME
+                {t("server.nameLabel")}
               </label>
               <input
                 type="text"
                 value={newServerName}
                 onChange={(e) => setNewServerName(e.target.value)}
-                placeholder="My Server"
+                placeholder={t("server.namePlaceholder")}
                 autoFocus
                 className="w-full px-4 py-3 bg-black/50 border-2 border-[#4fdfff]/50 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-[#4fdfff] focus:shadow-[0_0_10px_rgba(79,223,255,0.3)] mb-6 transition-all"
               />
@@ -629,7 +703,7 @@ export default function Home() {
                   onClick={() => setShowCreateServer(false)}
                   className="flex-1"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -638,7 +712,7 @@ export default function Home() {
                   disabled={!newServerName.trim()}
                   className="flex-1 uppercase"
                 >
-                  Create
+                  {t("common.create")}
                 </Button>
               </div>
             </form>
@@ -651,13 +725,13 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowCreateChannel(false)} />
           <div className="relative bg-[rgba(20,20,20,0.98)] border-2 border-[#4fdfff] rounded-xl p-6 w-full max-w-md shadow-[0_0_40px_rgba(79,223,255,0.3)]">
-            <h2 className="text-xl font-bold text-center text-white mb-1">CREATE CHANNEL</h2>
+            <h2 className="text-xl font-bold text-center text-white mb-1">{t("channel.createTitle")}</h2>
             <p className="text-center text-white/50 text-sm mb-6">
-              in {selectedServer?.name}
+              {t("channel.createDescription", { serverName: selectedServer?.name || "" })}
             </p>
             <form onSubmit={handleCreateChannel}>
               <label className="block text-[10px] font-bold text-[#4fdfff] tracking-widest uppercase mb-2">
-                CHANNEL NAME
+                {t("channel.nameLabel")}
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none">#</span>
@@ -676,7 +750,7 @@ export default function Home() {
                   onClick={() => setShowCreateChannel(false)}
                   className="flex-1 py-2.5 text-white/60 hover:text-white hover:underline transition-colors"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <Button
                   type="submit"
@@ -685,7 +759,7 @@ export default function Home() {
                   disabled={!newChannelName.trim()}
                   className="flex-1 uppercase"
                 >
-                  Create
+                  {t("common.create")}
                 </Button>
               </div>
             </form>
@@ -716,11 +790,9 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
           <div className="relative bg-[rgba(20,20,20,0.98)] border-2 border-[#ff3333] rounded-xl p-6 w-full max-w-sm shadow-[0_0_40px_rgba(255,51,51,0.3)]">
-            <h2 className="text-xl font-bold text-center text-white mb-2">Supprimer le serveur</h2>
+            <h2 className="text-xl font-bold text-center text-white mb-2">{t("server.confirmDelete.title")}</h2>
             <p className="text-center text-white/60 text-sm mb-6">
-              Es-tu sûr de vouloir supprimer définitivement{" "}
-              <span className="text-white font-semibold">{selectedServer.name}</span> ?
-              Cette action est irréversible.
+              {t("server.confirmDelete.message", { serverName: selectedServer.name })}
             </p>
             <div className="flex gap-3">
               <Button
@@ -730,7 +802,7 @@ export default function Home() {
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex-1"
               >
-                Annuler
+                {t("common.cancel")}
               </Button>
               <Button
                 type="button"
@@ -742,7 +814,7 @@ export default function Home() {
                 }}
                 className="flex-1"
               >
-                Supprimer
+                {t("common.delete")}
               </Button>
             </div>
           </div>
@@ -753,12 +825,10 @@ export default function Home() {
       {showLeaveConfirm && selectedServer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLeaveConfirm(false)} />
-          <div className="relative bg-[rgba(20,20,20,0.98)] border-2 border-[#ff3333] rounded-xl p-6 w-full max-w-sm shadow-[0_0_40px_rgba(255,51,51,0.3)]">
-            <h2 className="text-xl font-bold text-center text-white mb-2">Quitter le serveur</h2>
+          <div className="relative bg-[rgba(20,20,20,0.98)] border-2 border-[#ff3333] rounded-xl p-6 w-full max-sm shadow-[0_0_40px_rgba(255,51,51,0.3)]">
+            <h2 className="text-xl font-bold text-center text-white mb-2">{t("server.confirmLeave.title")}</h2>
             <p className="text-center text-white/60 text-sm mb-6">
-              Es-tu sûr de vouloir quitter{" "}
-              <span className="text-white font-semibold">{selectedServer.name}</span> ?
-              Tu devras être réinvité pour y revenir.
+              {t("server.confirmLeave.message", { serverName: selectedServer.name })}
             </p>
             <div className="flex gap-3">
               <Button
@@ -768,7 +838,7 @@ export default function Home() {
                 onClick={() => setShowLeaveConfirm(false)}
                 className="flex-1"
               >
-                Annuler
+                {t("common.cancel")}
               </Button>
               <Button
                 type="button"
@@ -780,7 +850,40 @@ export default function Home() {
                 }}
                 className="flex-1"
               >
-                Quitter
+                {t("server.leave")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========== MODAL DELETE MESSAGE ========== */}
+      {showDeleteMessageConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowDeleteMessageConfirm(false)} />
+          <div className="relative bg-[rgba(20,20,20,0.98)] border-2 border-[#ff3333] rounded-xl p-6 w-full max-w-sm shadow-[0_0_40px_rgba(255,51,51,0.3)]">
+            <h2 className="text-xl font-bold text-center text-white mb-2">{t("chat.confirmDeleteTitle")}</h2>
+            <p className="text-center text-white/60 text-sm mb-6">
+              {t("chat.confirmDeleteMessage")}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => setShowDeleteMessageConfirm(false)}
+                className="flex-1"
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="md"
+                onClick={confirmDeleteMessage}
+                className="flex-1"
+              >
+                {t("chat.delete")}
               </Button>
             </div>
           </div>

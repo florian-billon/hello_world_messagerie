@@ -19,6 +19,8 @@ pub enum AuthError {
     EmailExists,
     #[error("Invalid credentials")]
     InvalidCredentials,
+    #[error("{0}")]
+    Validation(String),
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
     #[error("Password hash error: {0}")]
@@ -27,12 +29,44 @@ pub enum AuthError {
     Jwt(#[from] jsonwebtoken::errors::Error),
 }
 
+fn validate_signup(payload: &SignupPayload) -> Result<(), AuthError> {
+    let email = payload.email.trim();
+    let username = payload.username.trim();
+    let password = &payload.password;
+
+    if username.is_empty() || username.len() > 32 {
+        return Err(AuthError::Validation(
+            "Username must be between 1 and 32 characters".into(),
+        ));
+    }
+
+    if !email.contains('@') || email.len() < 5 || email.len() > 254 {
+        return Err(AuthError::Validation("Invalid email address".into()));
+    }
+
+    if password.len() < 8 {
+        return Err(AuthError::Validation(
+            "Password must be at least 8 characters".into(),
+        ));
+    }
+
+    if password.len() > 128 {
+        return Err(AuthError::Validation(
+            "Password must be at most 128 characters".into(),
+        ));
+    }
+
+    Ok(())
+}
+
 /// Crée un nouvel utilisateur
 pub async fn signup(
     pool: &PgPool,
     payload: SignupPayload,
     jwt_secret: &str,
 ) -> Result<AuthResponse, AuthError> {
+    validate_signup(&payload)?;
+
     // Vérifier si l'email existe déjà
     let existing = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE email = $1")
         .bind(&payload.email)

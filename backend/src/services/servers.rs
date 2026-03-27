@@ -3,8 +3,7 @@ use uuid::Uuid;
 use crate::error::{Error, Result};
 use crate::models::{
     BanMemberPayload, CreateServerPayload, MemberRole, Server, ServerBan, ServerMember,
-    TransferOwnershipPayload,
-    UpdateServerPayload,
+    TransferOwnershipPayload, UpdateServerPayload,
 };
 use crate::repositories::{ServerRepository, UserRepository};
 
@@ -276,7 +275,11 @@ pub async fn unban_member(
     Ok(())
 }
 
-pub async fn list_bans(server_repo: &ServerRepository, server_id: Uuid, requester_id: Uuid) -> Result<Vec<ServerBan>> {
+pub async fn list_bans(
+    server_repo: &ServerRepository,
+    server_id: Uuid,
+    requester_id: Uuid,
+) -> Result<Vec<ServerBan>> {
     // Accessible si membre (au minimum)
     let member = server_repo
         .find_member(server_id, requester_id)

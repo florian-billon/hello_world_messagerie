@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { getGateway, ServerEvent } from "@/lib/gateway";
 import { API_URL } from "@/lib/config";
+import { getTokenForWs } from "@/lib/auth/actions";
 
 /**
  * Hook pour gérer la connexion WebSocket globale
@@ -12,33 +13,18 @@ export function useWebSocket() {
   const handlersRef = useRef<Set<(event: ServerEvent) => void>>(new Set());
 
   useEffect(() => {
-    // CORRECTION : Transformation dynamique de l'URL pour le WebSocket
-    // http:// -> ws://  |  https:// -> wss://
-    const socketUrl = API_URL.replace(/^http/, 'ws'); 
-    
-    console.log("[useWebSocket] Initializing gateway with:", socketUrl);
-    
+    const socketUrl = API_URL.replace(/^http/, 'ws');
+
     const gateway = getGateway(socketUrl);
     gatewayRef.current = gateway;
 
-    const connect = () => {
-      if (typeof document === "undefined") return;
-      
-      const cookies = document.cookie.split(";");
-      let token: string | null = null;
-      for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split("=");
-        if (name === "token") {
-          token = value || null;
-          break;
-        }
-      }
-      
+    const connect = async () => {
+      const token = await getTokenForWs();
+
       if (token) {
-        console.log("[useWebSocket] Token found, connecting...");
         gateway.connect(token);
       } else {
-        console.warn("[useWebSocket] No token found in cookies");
+        console.warn("[useWebSocket] No token found");
       }
     };
 

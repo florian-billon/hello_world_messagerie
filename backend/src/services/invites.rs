@@ -92,10 +92,7 @@ pub async fn list_invites(
     Ok(invites)
 }
 
-pub async fn get_invite_by_code(
-    invite_repo: &InviteRepository,
-    code: &str,
-) -> Result<Invite> {
+pub async fn get_invite_by_code(invite_repo: &InviteRepository, code: &str) -> Result<Invite> {
     let invite = invite_repo
         .find_by_code(code)
         .await?

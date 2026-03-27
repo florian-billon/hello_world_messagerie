@@ -5,14 +5,21 @@ import { useRouter } from "next/navigation";
 import { User, updateMe, UpdateProfilePayload } from "@/lib/api-server";
 import { logout } from "@/lib/auth/actions";
 import { normalizeAvatarUrl } from "@/lib/avatar";
-import { UserStatus, STATUS_LABELS, getStatusColor, getStatusLabel, normalizeStatus } from "@/lib/presence";
+import { UserStatus, getStatusColor, getStatusKey, normalizeStatus } from "@/lib/presence";
+import { useTranslation } from "@/lib/i18n";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
-// Générer la liste des 100 avatars
 const AVATARS = Array.from({ length: 100 }, (_, i) =>
   `/avatars/avatar_${String(i + 1).padStart(3, '0')}.png`
 );
+
+const LOCALES: { value: "fr" | "en"; label: string }[] = [
+  { value: "fr", label: "Français" },
+  { value: "en", label: "English" },
+];
+
+const STATUS_VALUES: UserStatus[] = ["online", "offline", "dnd", "invisible"];
 
 interface ProfileCardProps {
   user: User;
@@ -22,6 +29,7 @@ interface ProfileCardProps {
 
 export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProps) {
   const router = useRouter();
+  const { t, locale, setLocale } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [editData, setEditData] = useState({
@@ -39,7 +47,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
   };
 
   const currentStatus = normalizeStatus(user.status);
-  const memberSince = new Date(user.created_at).toLocaleDateString("fr-FR", {
+  const memberSince = new Date(user.created_at).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -60,7 +68,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
       }
       setIsEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de la mise à jour");
+      setError(err instanceof Error ? err.message : t("error.default"));
     } finally {
       setSaving(false);
     }
@@ -68,29 +76,24 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-md"
         onClick={onClose}
       />
 
-      {/* Card */}
       <div className="relative w-full max-w-[420px] bg-[rgba(5,10,15,0.98)] border border-[#4fdfff]/30 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden animate-[fadeIn_0.2s_ease]">
 
-        {/* Header avec avatar */}
         <div className="relative bg-gradient-to-br from-[#4fdfff]/10 to-[#ff3333]/5 p-6 pb-16">
-          {/* Close button */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center text-white/60 hover:text-white transition-colors"
-            aria-label="Fermer"
+            aria-label={t("common.close")}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
 
-          {/* Avatar */}
           <div className="flex justify-center">
             <div className="relative">
               <div className="w-24 h-24 rounded-full bg-[rgba(5,10,15,0.98)] p-1 border-2 border-[#4fdfff]/50">
@@ -108,31 +111,26 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                   </div>
                 )}
               </div>
-              {/* Status badge */}
               <div className={`absolute bottom-0 right-0 w-6 h-6 rounded-full border-[3px] border-[rgba(5,10,15,0.98)] ${getStatusColor(currentStatus)}`} />
             </div>
           </div>
         </div>
 
-        {/* Content */}
         <div className="px-6 pb-6 -mt-8">
-          {/* Username section */}
           <div className="bg-[rgba(0,0,0,0.4)] rounded-lg p-4 mb-4 border border-[#4fdfff]/20">
             {isEditing ? (
               <div className="space-y-4">
-                {/* Username edit */}
                 <Input
                   id="edit-username"
                   type="text"
-                  label="Nom d'utilisateur"
+                  label={t("profile.usernameLabel")}
                   value={editData.username}
                   onChange={(e) => setEditData({ ...editData, username: e.target.value })}
                 />
 
-                {/* Avatar selector */}
                 <div>
                   <label className="text-[10px] font-bold text-white/60 uppercase tracking-wider block mb-2">
-                    Avatar
+                    {t("profile.avatarLabel")}
                   </label>
                   <button
                     type="button"
@@ -142,7 +140,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                     {editData.avatar_url && (
                       <img src={editData.avatar_url} alt="Avatar" className="w-6 h-6 rounded" />
                     )}
-                    <span>{showAvatarPicker ? "Fermer" : "Choisir un avatar"}</span>
+                    <span>{showAvatarPicker ? t("common.close") : t("profile.chooseAvatar")}</span>
                   </button>
 
                   {showAvatarPicker && (
@@ -155,12 +153,11 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                             setEditData({ ...editData, avatar_url: avatarUrl });
                             setShowAvatarPicker(false);
                           }}
-                          className={`w-10 h-10 rounded-lg hover:ring-2 hover:ring-[#4fdfff] transition-all ${editData.avatar_url === avatarUrl ? "ring-2 ring-[#4fdfff]" : ""
-                            }`}
+                          className={`w-10 h-10 rounded-lg hover:ring-2 hover:ring-[#4fdfff] transition-all ${editData.avatar_url === avatarUrl ? "ring-2 ring-[#4fdfff]" : ""}`}
                         >
                           <img
                             src={avatarUrl}
-                            alt={`Avatar ${index + 1}`}
+                            alt={t("profile.avatarAlt", { index: index + 1 })}
                             className="w-full h-full rounded-lg object-cover"
                           />
                         </button>
@@ -169,10 +166,9 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                   )}
                 </div>
 
-                {/* Status edit */}
                 <div>
                   <label htmlFor="edit-status" className="text-[10px] font-bold text-white/60 uppercase tracking-wider block mb-2">
-                    Statut
+                    {t("profile.statusLabel")}
                   </label>
                   <select
                     id="edit-status"
@@ -180,8 +176,24 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                     onChange={(e) => setEditData({ ...editData, status: e.target.value as UserStatus })}
                     className="w-full px-3 py-2 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white text-sm focus:outline-none focus:border-[#4fdfff] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
                   >
-                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
+                    {STATUS_VALUES.map((value) => (
+                      <option key={value} value={value}>{t(getStatusKey(value))}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="edit-locale" className="text-[10px] font-bold text-white/60 uppercase tracking-wider block mb-2">
+                    {t("profile.languageLabel")}
+                  </label>
+                  <select
+                    id="edit-locale"
+                    value={locale}
+                    onChange={(e) => setLocale(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white text-sm focus:outline-none focus:border-[#4fdfff] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
+                  >
+                    {LOCALES.map((l) => (
+                      <option key={l.value} value={l.value}>{l.label}</option>
                     ))}
                   </select>
                 </div>
@@ -200,37 +212,32 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
             )}
           </div>
 
-          {/* Info section */}
           <div className="bg-[rgba(0,0,0,0.4)] rounded-lg p-4 mb-4 border border-[#4fdfff]/20 space-y-4">
-            {/* Status display */}
             <div>
               <h4 className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-2">
-                Statut
+                {t("profile.statusLabel")}
               </h4>
               <div className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${getStatusColor(currentStatus)}`} />
-                <span className="text-sm text-white">{getStatusLabel(currentStatus)}</span>
+                <span className="text-sm text-white">{t(getStatusKey(currentStatus))}</span>
               </div>
             </div>
 
-            {/* Member since */}
             <div>
               <h4 className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-2">
-                Membre depuis
+                {t("profile.memberSince")}
               </h4>
               <p className="text-sm text-white">{memberSince}</p>
             </div>
 
-            {/* Email */}
             <div>
               <h4 className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-2">
-                Email
+                {t("profile.emailLabel")}
               </h4>
               <p className="text-sm text-white/80 break-all">{user.email}</p>
             </div>
           </div>
 
-          {/* Actions */}
           <div className="space-y-2">
             {isEditing ? (
               <div className="flex gap-2">
@@ -249,7 +256,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                   }}
                   className="flex-1"
                 >
-                  Annuler
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   variant="primary"
@@ -258,7 +265,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                   isLoading={saving}
                   className="flex-1"
                 >
-                  Sauvegarder
+                  {t("common.save")}
                 </Button>
               </div>
             ) : (
@@ -272,7 +279,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
-                  Modifier le profil
+                  {t("profile.editProfile")}
                 </Button>
                 <Button
                   variant="danger"
@@ -283,7 +290,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  Déconnexion
+                  {t("auth.logout")}
                 </Button>
               </>
             )}
@@ -293,4 +300,3 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
     </div>
   );
 }
-

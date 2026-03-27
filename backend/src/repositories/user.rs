@@ -22,6 +22,19 @@ impl UserRepository {
         .await
     }
 
+    pub async fn find_by_ids(&self, user_ids: &[Uuid]) -> sqlx::Result<Vec<User>> {
+        if user_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        sqlx::query_as::<_, User>(
+            "SELECT id, email, password_hash, username, avatar_url, status, created_at FROM users WHERE id = ANY($1)",
+        )
+        .bind(user_ids)
+        .fetch_all(&self.pool)
+        .await
+    }
+
     pub async fn get_usernames_batch(
         &self,
         user_ids: &[Uuid],

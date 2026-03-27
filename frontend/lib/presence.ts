@@ -7,13 +7,6 @@ export const STATUS_COLORS: Record<UserStatus, string> = {
   invisible: "bg-gray-400",
 };
 
-export const STATUS_LABELS: Record<UserStatus, string> = {
-  online: "En ligne",
-  offline: "Hors ligne",
-  dnd: "Ne pas déranger",
-  invisible: "Invisible",
-};
-
 /**
  * Normalise un statut (insensible à la casse, fallback sur offline)
  */
@@ -33,8 +26,8 @@ export function getStatusColor(status: string | null | undefined): string {
 }
 
 /**
- * Retourne le label traduit pour un statut
+ * Retourne la clé i18n pour un statut (à utiliser avec t())
  */
-export function getStatusLabel(status: string | null | undefined): string {
-  return STATUS_LABELS[normalizeStatus(status)];
+export function getStatusKey(status: string | null | undefined): string {
+  return `status.${normalizeStatus(status)}`;
 }

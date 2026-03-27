@@ -1,50 +1,100 @@
-import { getInvite } from "@/lib/api-server";
-import { redirect } from "next/navigation";
+"use client";
 
-export default async function InvitePage({
+import { useEffect, useState } from "react";
+import { getInvite, acceptInvite } from "@/lib/api-server";
+import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n";
+import Button from "@/components/ui/Button";
+
+interface InviteData {
+  code: string;
+  server_id: string;
+  max_uses: number | null;
+  uses: number;
+  expires_at: string | null;
+}
+
+export default function InvitePage({
   params,
 }: {
   params: Promise<{ code: string }>;
 }) {
-  const { code } = await params;
+  const router = useRouter();
+  const { t } = useTranslation();
+  const [invite, setInvite] = useState<InviteData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState(false);
+  const [code, setCode] = useState<string>("");
 
-  let invite: Awaited<ReturnType<typeof getInvite>>;
-  try {
-    invite = await getInvite(code);
-  } catch (e: any) {
-    const msg = String(e?.message || "");
-    if (msg.toLowerCase().includes("authentication required") || msg.includes("401")) {
-      redirect(`/login?next=/invite/${code}`);
+  useEffect(() => {
+    (async () => {
+      const { code: pCode } = await params;
+      setCode(pCode);
+      try {
+        const data = await getInvite(pCode);
+        setInvite(data);
+      } catch (e: any) {
+        const msg = String(e?.message || "");
+        if (msg.toLowerCase().includes("authentication required") || msg.includes("401")) {
+          router.push(`/login?next=/invite/${pCode}`);
+        } else {
+          setError(t("invite.invalidDescription"));
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [params, router, t]);
+
+  const onJoin = async () => {
+    if (!code) return;
+    setAccepting(true);
+    try {
+      await acceptInvite(code);
+      router.push("/");
+    } catch (e: any) {
+      if (e?.message?.includes("Already a member")) {
+        router.push("/");
+      } else {
+        setError(e?.message || t("error.default"));
+      }
+    } finally {
+      setAccepting(false);
     }
+  };
+
+  if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-lg bg-[rgba(20,20,20,0.92)] border-2 border-[#4fdfff] rounded-xl p-6 shadow-[0_0_40px_rgba(79,223,255,0.25)]">
-          <h1 className="text-white font-bold text-xl mb-2">Invalid invite</h1>
+        <div className="w-16 h-16 border-2 border-[#4fdfff] border-t-transparent rounded-full animate-spin" />
+      </main>
+    );
+  }
+
+  if (error || !invite) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-lg bg-[rgba(20,20,20,0.92)] border-2 border-[#ff3333] rounded-xl p-6 shadow-[0_0_40px_rgba(255,51,51,0.25)]">
+          <h1 className="text-white font-bold text-xl mb-2">{t("invite.invalidTitle")}</h1>
           <p className="text-white/60 text-sm">
-            This invite link is invalid or expired.
+            {error || t("invite.invalidDescription")}
           </p>
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => router.push("/")}
+            className="mt-6"
+          >
+            {t("common.appName")}
+          </Button>
         </div>
       </main>
     );
   }
 
-  async function onJoin() {
-    "use server";
-    const { acceptInvite } = await import("@/lib/api-server");
-    try {
-      await acceptInvite(code);
-    } catch (e: any) {
-      // Si déjà membre, rediriger quand même vers le serveur
-      if (e?.message?.includes("Already a member")) {
-        redirect(`/`);
-      }
-      throw e;
-    }
-    redirect(`/`);
-  }
-
-  const expiresText = invite.expires_at ? new Date(invite.expires_at).toLocaleString("fr-FR") : "never";
-  const maxUsesText = invite.max_uses ?? "∞";
+  const expiresText = invite.expires_at ? new Date(invite.expires_at).toLocaleString() : t("invite.never");
+  const maxUsesText = invite.max_uses ?? t("invite.unlimited");
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6">
@@ -52,45 +102,49 @@ export default async function InvitePage({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-white font-bold text-xl">
-              You’ve been invited
+              {t("invite.title")}
             </h1>
             <p className="text-white/60 text-sm mt-1">
-              Invite code: <span className="text-[#4fdfff] font-mono">{invite.code}</span>
+              {t("invite.inviteCode")} <span className="text-[#4fdfff] font-mono">{invite.code}</span>
             </p>
           </div>
         </div>
 
         <div className="mt-5 p-4 rounded-lg border border-[#4fdfff]/40 bg-black/30">
           <p className="text-white/70 text-sm">
-            Server ID: <span className="text-white font-mono">{invite.server_id}</span>
+            {t("invite.serverId")} <span className="text-white font-mono">{invite.server_id}</span>
           </p>
           <p className="text-white/70 text-sm mt-2">
-            Max uses: <span className="text-white font-mono">{maxUsesText}</span> • Uses:{" "}
+            {t("invite.maxUses")} <span className="text-white font-mono">{maxUsesText}</span> • {t("invite.uses")}{" "}
             <span className="text-white font-mono">{invite.uses}</span>
           </p>
           <p className="text-white/70 text-sm mt-2">
-            Expires: <span className="text-white font-mono">{expiresText}</span>
+            {t("invite.expires")} <span className="text-white font-mono">{expiresText}</span>
           </p>
           <p className="text-white/40 text-xs mt-3">
-            Anyone with this link can join this server.
+            {t("invite.joinInfo")}
           </p>
         </div>
 
-        <form action={onJoin} className="mt-6 flex gap-3">
-          <button
-            type="submit"
-            className="flex-1 p-[10px] bg-[#a00000] border-2 border-[#4fdfff] text-white font-bold cursor-pointer rounded-lg text-[13px] uppercase transition-all duration-300 hover:bg-[#c00000] hover:shadow-[0_0_12px_rgba(79,223,255,0.8)] hover:scale-[1.02] active:scale-[0.98]"
+        <div className="mt-6 flex gap-3">
+          <Button
+            variant="primary"
+            size="md"
+            onClick={onJoin}
+            isLoading={accepting}
+            className="flex-1 uppercase"
           >
-            Join server
-          </button>
+            {t("invite.joinButton")}
+          </Button>
 
-          <a
-            href="/"
-            className="px-4 py-2.5 text-white/60 hover:text-white hover:underline transition-colors text-sm flex items-center"
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={() => router.push("/")}
           >
-            Cancel
-          </a>
-        </form>
+            {t("common.cancel")}
+          </Button>
+        </div>
       </div>
     </main>
   );

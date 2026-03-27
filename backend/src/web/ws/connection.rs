@@ -103,7 +103,11 @@ impl WsConnection {
             while let Some(msg) = receiver.next().await {
                 match msg {
                     Ok(Message::Text(text)) => {
-                        tracing::debug!("[WS] Received text message from {}: {}", conn_id_clone, &text[..text.len().min(100)]);
+                        tracing::debug!(
+                            "[WS] Received text message from {}: {}",
+                            conn_id_clone,
+                            &text[..text.len().min(100)]
+                        );
                         if text.len() > MAX_MESSAGE_SIZE {
                             tracing::warn!("[WS] Message too large from {}", conn_id_clone);
                             continue;
@@ -112,7 +116,11 @@ impl WsConnection {
                         // Parser l'événement client
                         match ClientEvent::from_json(&text) {
                             Ok(event) => {
-                                tracing::debug!("[WS] Parsed event from {}: {:?}", conn_id_clone, event);
+                                tracing::debug!(
+                                    "[WS] Parsed event from {}: {:?}",
+                                    conn_id_clone,
+                                    event
+                                );
                                 // Envoyer au handler principal via channel
                                 if tx.send((conn_id_clone, event)).await.is_err() {
                                     break; // Handler fermé

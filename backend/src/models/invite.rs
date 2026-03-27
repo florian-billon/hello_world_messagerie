@@ -28,6 +28,7 @@ pub struct JoinServerWithCodePayload {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[allow(dead_code)]
 pub struct InviteResponse {
     pub code: String,
     pub server_id: Uuid,

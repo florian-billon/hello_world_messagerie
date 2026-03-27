@@ -8,8 +8,8 @@ use uuid::Uuid;
 use crate::ctx::Ctx;
 use crate::error::Result;
 use crate::models::{
-    BanMemberPayload, CreateServerPayload, Server, ServerBan, ServerMember, TransferOwnershipPayload,
-    UpdateMemberRolePayload, UpdateServerPayload,
+    BanMemberPayload, CreateServerPayload, Server, ServerBan, ServerMember,
+    TransferOwnershipPayload, UpdateMemberRolePayload, UpdateServerPayload,
 };
 use crate::services;
 use crate::AppState;
@@ -92,22 +92,33 @@ pub async fn list_members(
     }
 
     let members = services::list_members(&state.server_repo, id).await?;
-    
-    // Enrichir avec les infos utilisateur
-    let mut members_with_user = Vec::new();
-    for member in members {
-        if let Ok(Some(user)) = state.user_repo.find_by_id(member.user_id).await {
-            members_with_user.push(crate::models::ServerMemberWithUser {
-                server_id: member.server_id,
-                user_id: member.user_id,
-                role: member.role,
-                joined_at: member.joined_at,
-                username: user.username,
-                avatar_url: user.avatar_url,
-            });
-        }
-    }
-    
+
+    // Batch fetch all users in a single query instead of N+1
+    let user_ids: Vec<uuid::Uuid> = members.iter().map(|m| m.user_id).collect();
+    let users = state
+        .user_repo
+        .find_by_ids(&user_ids)
+        .await
+        .map_err(|_| crate::Error::ServerNotFound)?;
+    let user_map: std::collections::HashMap<uuid::Uuid, _> =
+        users.into_iter().map(|u| (u.id, u)).collect();
+
+    let members_with_user: Vec<_> = members
+        .into_iter()
+        .filter_map(|member| {
+            user_map
+                .get(&member.user_id)
+                .map(|user| crate::models::ServerMemberWithUser {
+                    server_id: member.server_id,
+                    user_id: member.user_id,
+                    role: member.role,
+                    joined_at: member.joined_at,
+                    username: user.username.clone(),
+                    avatar_url: user.avatar_url.clone(),
+                })
+        })
+        .collect();
+
     Ok(Json(members_with_user))
 }
 
@@ -126,7 +137,14 @@ pub async fn ban_member(
     Path((server_id, user_id)): Path<(Uuid, Uuid)>,
     Json(payload): Json<BanMemberPayload>,
 ) -> Result<Json<ServerBan>> {
-    let ban = services::ban_member(&state.server_repo, server_id, user_id, payload, ctx.user_id()).await?;
+    let ban = services::ban_member(
+        &state.server_repo,
+        server_id,
+        user_id,
+        payload,
+        ctx.user_id(),
+    )
+    .await?;
     Ok(Json(ban))
 }
 
