@@ -8,17 +8,17 @@ use uuid::Uuid;
 #[sqlx(type_name = "user_status")]
 #[serde(rename_all = "lowercase")]
 pub enum UserStatus {
-    #[sqlx(rename = "online")]
+    #[sqlx(rename = "Online")]
     Online,
 
-    #[sqlx(rename = "offline")]
+    #[sqlx(rename = "Offline")]
     #[default]
     Offline,
 
-    #[sqlx(rename = "dnd")]
+    #[sqlx(rename = "Dnd")]
     Dnd,
 
-    #[sqlx(rename = "invisible")]
+    #[sqlx(rename = "Invisible")]
     Invisible,
 }
 /// Modèle User (PostgreSQL)
