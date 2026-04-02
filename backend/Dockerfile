@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && echo "fn main() {}" > src/main.rs
+COPY migrations ./migrations
 RUN cargo build --release
 RUN rm -rf src
 
