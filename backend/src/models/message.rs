@@ -149,6 +149,7 @@ pub struct ChannelMessage {
     #[serde(with = "datetime_compat::option")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<DateTime<Utc>>,
+    #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     #[serde(with = "uuid_compat_binary_generic::option")]
