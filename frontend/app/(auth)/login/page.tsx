@@ -3,14 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { login } from "@/lib/auth/actions";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { useTranslation } from "@/lib/i18n";
 
 export default function LoginPage() {
-  const router = useRouter();
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -32,8 +30,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/");
-      router.refresh();
+      return;
     } catch {
       setError(t("auth.login.error"));
     } finally {

@@ -10,6 +10,7 @@ use crate::ctx::Ctx;
 use crate::error::Result;
 use crate::models::{CreateMessagePayload, MessageWithUser, UpdateMessagePayload};
 use crate::services;
+use crate::web::ws::protocol::ServerEvent;
 use crate::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -64,7 +65,29 @@ pub async fn update_message(
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateMessagePayload>,
 ) -> Result<Json<MessageWithUser>> {
-    let message = services::update_message(&state.message_repo, id, ctx.user_id(), payload).await?;
+    let message = services::update_message(
+        &state.server_repo,
+        &state.message_repo,
+        id,
+        ctx.user_id(),
+        payload,
+    )
+    .await?;
+
+    if let Some(edited_at) = message.edited_at {
+        let event = ServerEvent::MessageUpdate {
+            id: message.id,
+            channel_id: message.channel_id,
+            content: message.content.clone(),
+            edited_at,
+        };
+
+        state
+            .ws_hub
+            .broadcast_to_channel_with_metrics(message.channel_id, &event, Some(&state.ws_metrics))
+            .await;
+    }
+
     Ok(Json(message))
 }
 
@@ -73,6 +96,13 @@ pub async fn delete_message(
     ctx: Ctx,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode> {
-    services::delete_message(&state.message_repo, id, ctx.user_id()).await?;
+    let channel_id = services::delete_message(&state.server_repo, &state.message_repo, id, ctx.user_id()).await?;
+
+    let event = ServerEvent::MessageDelete { id, channel_id };
+    state
+        .ws_hub
+        .broadcast_to_channel_with_metrics(channel_id, &event, Some(&state.ws_metrics))
+        .await;
+
     Ok(StatusCode::NO_CONTENT)
 }

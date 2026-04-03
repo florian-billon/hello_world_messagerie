@@ -45,7 +45,7 @@ export async function login(email: string, password: string) {
     path: "/",
   });
 
-  return { user: data.user, token: data.token };
+  redirect("/");
 }
 
 export async function signup(username: string, email: string, password: string) {
@@ -77,7 +77,7 @@ export async function signup(username: string, email: string, password: string) 
     path: "/",
   });
 
-  return { user: data.user };
+  redirect("/");
 }
 
 export async function logout() {

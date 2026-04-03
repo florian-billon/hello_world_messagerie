@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS invites (
 -- INDEXES (idempotent)
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_servers_owner ON servers(owner_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_servers_owner_name_normalized ON servers(owner_id, lower(trim(name)));
 CREATE INDEX IF NOT EXISTS idx_server_members_user ON server_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_channels_server ON channels(server_id);
 CREATE INDEX IF NOT EXISTS idx_invites_code ON invites(code);

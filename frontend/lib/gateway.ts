@@ -97,11 +97,20 @@ export class Gateway {
       };
 
       this.ws.onerror = (error) => {
-        console.error("[Gateway] WebSocket error:", error);
+        console.error("[Gateway] WebSocket error", {
+          url: wsUrl,
+          readyState: this.ws?.readyState,
+          eventType: (error as Event)?.type,
+        });
       };
 
       this.ws.onclose = (event) => {
-        console.log("[Gateway] Disconnected, code:", event.code, "reason:", event.reason);
+        console.log("[Gateway] Disconnected", {
+          url: wsUrl,
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+        });
         this.state = "disconnected";
         this.stopHeartbeat();
 

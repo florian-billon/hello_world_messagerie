@@ -115,10 +115,11 @@ pub async fn list_messages(
 }
 
 pub async fn delete_message(
+    server_repo: &ServerRepository,
     message_repo: &MessageRepository,
     message_id: Uuid,
     user_id: Uuid,
-) -> Result<()> {
+) -> Result<Uuid> {
     let message = message_repo
         .find_by_id(message_id)
         .await
@@ -127,8 +128,16 @@ pub async fn delete_message(
         })?
         .ok_or(Error::MessageNotFound)?;
 
+    servers::get_member(server_repo, message.server_id, user_id)
+        .await?
+        .ok_or(Error::MessageForbidden)?;
+
     if message.author_id != user_id {
         return Err(Error::MessageForbidden);
+    }
+
+    if message.deleted_at.is_some() {
+        return Err(Error::MessageNotFound);
     }
 
     message_repo
@@ -138,10 +147,11 @@ pub async fn delete_message(
             message: format!("MongoDB update failed: {}", e),
         })?;
 
-    Ok(())
+    Ok(message.channel_id)
 }
 
 pub async fn update_message(
+    server_repo: &ServerRepository,
     message_repo: &MessageRepository,
     message_id: Uuid,
     user_id: Uuid,
@@ -154,6 +164,10 @@ pub async fn update_message(
             message: format!("MongoDB query failed: {}", e),
         })?
         .ok_or(Error::MessageNotFound)?;
+
+    servers::get_member(server_repo, message.server_id, user_id)
+        .await?
+        .ok_or(Error::MessageForbidden)?;
 
     if message.author_id != user_id {
         return Err(Error::MessageForbidden);

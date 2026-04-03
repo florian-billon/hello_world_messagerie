@@ -13,18 +13,34 @@ pub async fn create_server(
     owner_id: Uuid,
     payload: CreateServerPayload,
 ) -> Result<Server> {
+    let server_name = payload.name.trim();
+
     user_repo
         .find_by_id(owner_id)
         .await?
         .ok_or(Error::UserNotFound)?;
 
+    if let Some(existing) = server_repo
+        .find_by_owner_and_name(owner_id, server_name)
+        .await?
+    {
+        return Ok(existing);
+    }
+
     let server_id = Uuid::new_v4();
 
     let server = server_repo
-        .create(server_id, &payload.name, owner_id)
+        .create(server_id, server_name, owner_id)
         .await
         .map_err(|e| {
             let err_str = e.to_string();
+            if err_str.contains("duplicate key")
+                || err_str.contains("uq_servers_owner_name_normalized")
+                || err_str.contains("servers_owner_name_unique_live")
+                || err_str.contains("Duplicate server name for owner")
+            {
+                Error::ServerAlreadyExists
+            } else
             if err_str.contains("owner_id_fkey") || err_str.contains("servers_owner_id_fkey") {
                 Error::UserNotFound
             } else {

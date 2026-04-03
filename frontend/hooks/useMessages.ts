@@ -5,6 +5,7 @@ import { listMessages, updateMessage as apiUpdateMessage, deleteMessage as apiDe
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
 import { useWebSocket } from "./useWebSocket";
 import { ServerEvent } from "@/lib/gateway";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * Hook pour gérer les messages d'un channel
@@ -12,6 +13,7 @@ import { ServerEvent } from "@/lib/gateway";
  * et REST pour charger l'historique initial
  */
 export function useMessages(channelId: string | null) {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -20,6 +22,14 @@ export function useMessages(channelId: string | null) {
   const { onEvent, subscribe, unsubscribe, sendMessage: wsSendMessage, typingStart, typingStop, isConnected } = useWebSocket();
   const subscribedRef = useRef(false);
   const typingTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  const toUiError = useCallback((err: unknown, fallbackKey: string): string => {
+    const message = getErrorMessage(err, t(fallbackKey));
+    if (message.startsWith("error.")) {
+      return t(message);
+    }
+    return message;
+  }, [t]);
 
   // Charger l'historique initial via REST
   const loadMessages = useCallback(async (id: string, showLoading = false) => {
@@ -35,7 +45,7 @@ export function useMessages(channelId: string | null) {
       const messagesArray = Array.isArray(data) ? data : [];
       setMessages(messagesArray);
     } catch (err) {
-      const errorMessage = getErrorMessage(err, "Failed to load messages");
+      const errorMessage = toUiError(err, "error.hooks.messages.load");
       setError(errorMessage);
       if (isAuthError(errorMessage)) {
         handleAuthError();
@@ -45,7 +55,7 @@ export function useMessages(channelId: string | null) {
     } finally {
       if (showLoading) setLoading(false);
     }
-  }, []);
+  }, [toUiError]);
 
   // Charger l'historique quand le channel change
   useEffect(() => {
@@ -157,6 +167,23 @@ export function useMessages(channelId: string | null) {
           }
           break;
 
+        case "PRESENCE_UPDATE":
+          if (event.d.status === "offline") {
+            setTypingUsers((prev) => {
+              if (!prev.has(event.d.user_id)) return prev;
+              const next = new Map(prev);
+              next.delete(event.d.user_id);
+              return next;
+            });
+
+            const timeout = typingTimeoutRef.current.get(event.d.user_id);
+            if (timeout) {
+              clearTimeout(timeout);
+              typingTimeoutRef.current.delete(event.d.user_id);
+            }
+          }
+          break;
+
         case "ERROR":
           // Erreur serveur
           if (event.d.code === "MESSAGE_ERROR") {
@@ -175,7 +202,7 @@ export function useMessages(channelId: string | null) {
 
     // Vérifier que WebSocket est connecté
     if (!isConnected()) {
-      setError("Not connected to server. Please refresh the page.");
+      setError(t("error.hooks.messages.notConnected"));
       return false;
     }
 
@@ -190,13 +217,13 @@ export function useMessages(channelId: string | null) {
       // Pas besoin de recharger
       return true;
     } catch (err) {
-      const errorMessage = getErrorMessage(err, "Failed to send message");
+      const errorMessage = toUiError(err, "error.hooks.messages.send");
       setError(errorMessage);
       return false;
     } finally {
       setSending(false);
     }
-  }, [channelId, wsSendMessage, isConnected]);
+  }, [channelId, wsSendMessage, isConnected, t, toUiError]);
 
   // Éditer un message (via REST API, WebSocket broadcast automatique)
   const updateMessage = useCallback(async (id: string, content: string): Promise<boolean> => {
@@ -228,7 +255,7 @@ export function useMessages(channelId: string | null) {
         setMessages(previousMessages);
       }
       
-      const errorMessage = getErrorMessage(err, "Failed to update message");
+      const errorMessage = toUiError(err, "error.hooks.messages.update");
       if (isAuthError(errorMessage)) {
         handleAuthError();
         return false;
@@ -236,7 +263,7 @@ export function useMessages(channelId: string | null) {
       setError(errorMessage);
       return false;
     }
-  }, [channelId]);
+  }, [channelId, toUiError]);
 
   // Supprimer un message (via REST API, WebSocket broadcast automatique)
   const deleteMessage = useCallback(async (id: string): Promise<boolean> => {
@@ -264,7 +291,7 @@ export function useMessages(channelId: string | null) {
         setMessages(previousMessages);
       }
       
-      const errorMessage = getErrorMessage(err, "Failed to delete message");
+      const errorMessage = toUiError(err, "error.hooks.messages.delete");
       if (isAuthError(errorMessage)) {
         handleAuthError();
         return false;
@@ -272,7 +299,7 @@ export function useMessages(channelId: string | null) {
       setError(errorMessage);
       return false;
     }
-  }, [channelId]);
+  }, [channelId, toUiError]);
 
   // Rafraîchir l'historique (utile pour resync après reconnexion)
   const refresh = useCallback(() => {

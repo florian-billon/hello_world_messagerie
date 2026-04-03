@@ -42,6 +42,25 @@ impl ServerRepository {
         .await
     }
 
+    pub async fn find_by_owner_and_name(
+        &self,
+        owner_id: Uuid,
+        name: &str,
+    ) -> sqlx::Result<Option<Server>> {
+        sqlx::query_as::<_, Server>(
+            r#"
+            SELECT id, name, owner_id, created_at, updated_at
+            FROM servers
+            WHERE owner_id = $1 AND lower(trim(name)) = lower(trim($2))
+            LIMIT 1
+            "#,
+        )
+        .bind(owner_id)
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await
+    }
+
     pub async fn list_by_user(&self, user_id: Uuid) -> sqlx::Result<Vec<Server>> {
         sqlx::query_as::<_, Server>(
             r#"

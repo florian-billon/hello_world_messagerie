@@ -2,6 +2,7 @@
 
 import { Server, ServerMember, User } from "@/lib/api-server";
 import { getAvatar } from "@/lib/avatar";
+import SmartImg from "@/components/SmartImg";
 
 type Props = {
   selectedServer: Server | null;
@@ -60,7 +61,7 @@ export default function MemberSidebar({
                     className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
                   >
                     <div className="relative">
-                      <img
+                      <SmartImg
                         src={getAvatar(member.user_id, userForAvatar)}
                         alt="Owner"
                         className="w-8 h-8 rounded-full object-cover border-2 border-[#ff3333]/50"
@@ -91,7 +92,7 @@ export default function MemberSidebar({
                     className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
                   >
                     <div className="relative">
-                      <img
+                      <SmartImg
                         src={getAvatar(member.user_id, userForAvatar)}
                         alt="Member"
                         className="w-8 h-8 rounded-full object-cover border border-[#4fdfff]/30"

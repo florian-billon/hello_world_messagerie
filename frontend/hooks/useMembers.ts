@@ -1,18 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { banMember as apiBanMember, listMembers, kickMember as apiKickMember, ServerMember } from "@/lib/api-server";
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
 import { useWebSocket } from "./useWebSocket";
 import { ServerEvent } from "@/lib/gateway";
+import { useTranslation } from "@/lib/i18n";
 
 export function useMembers(serverId: string | null) {
+  const { t } = useTranslation();
   const [members, setMembers] = useState<ServerMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // État pour stocker les statuts des utilisateurs (user_id -> status)
   const [userStatuses, setUserStatuses] = useState<Map<string, string>>(new Map());
   const { onEvent } = useWebSocket();
+
+  const toUiError = useCallback((err: unknown, fallbackKey: string): string => {
+    const message = getErrorMessage(err, t(fallbackKey));
+    if (message.startsWith("error.")) {
+      return t(message);
+    }
+    return message;
+  }, [t]);
 
   const loadMembers = useCallback(async (id: string) => {
     try {
@@ -21,7 +31,7 @@ export function useMembers(serverId: string | null) {
       const data = await listMembers(id);
       setMembers(data);
     } catch (err) {
-      const errorMessage = getErrorMessage(err, "Failed to load members");
+      const errorMessage = toUiError(err, "error.hooks.members.load");
       if (isAuthError(errorMessage)) {
         handleAuthError();
         return;
@@ -31,7 +41,7 @@ export function useMembers(serverId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toUiError]);
 
   useEffect(() => {
     if (serverId) {
@@ -68,11 +78,11 @@ export function useMembers(serverId: string | null) {
     } catch (err) {
       // Rollback en cas d'erreur
       loadMembers(serverId);
-      const errorMessage = getErrorMessage(err, "Failed to kick member");
+      const errorMessage = toUiError(err, "error.hooks.members.kick");
       if (isAuthError(errorMessage)) handleAuthError();
       return false;
     }
-  }, [serverId, loadMembers]);
+  }, [serverId, loadMembers, toUiError]);
 
   const banMember = useCallback(async (userId: string): Promise<boolean> => {
     if (!serverId) return false;
@@ -83,11 +93,11 @@ export function useMembers(serverId: string | null) {
       return true;
     } catch (err) {
       loadMembers(serverId);
-      const errorMessage = getErrorMessage(err, "Failed to ban member");
+      const errorMessage = toUiError(err, "error.hooks.members.ban");
       if (isAuthError(errorMessage)) handleAuthError();
       return false;
     }
-  }, [serverId, loadMembers]);
+  }, [serverId, loadMembers, toUiError]);
 
   const refresh = useCallback(() => {
     if (serverId) {
@@ -100,8 +110,15 @@ export function useMembers(serverId: string | null) {
     return userStatuses.get(userId) || "offline";
   }, [userStatuses]);
 
+  const membersWithLiveStatus = useMemo(() => {
+    return members.map((member) => ({
+      ...member,
+      status: userStatuses.get(member.user_id) || member.status,
+    }));
+  }, [members, userStatuses]);
+
   return {
-    members,
+    members: membersWithLiveStatus,
     loading,
     error,
     refresh,

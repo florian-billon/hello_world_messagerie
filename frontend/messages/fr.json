@@ -74,13 +74,19 @@
     },
     "confirmLeave": {
       "title": "Quitter le serveur",
-      "message": "Es-tu sûr de vouloir quitter {serverName} ? Tu devras être réinvité pour y revenir."
+      "message": "Es-tu sûr de vouloir quitter {serverName} ? Tu devras être réinvité pour y revenir.",
+      "transferLabel": "Nouveau propriétaire",
+      "transferPlaceholder": "Choisir un membre",
+      "transferRequired": "Tu dois choisir un nouveau propriétaire avant de quitter.",
+      "noCandidates": "Aucun membre éligible pour devenir propriétaire."
     }
   },
   "channel": {
     "textChannels": "CHANNELS TEXTUELS",
     "createTooltip": "Créer un channel",
     "deleteTooltip": "Supprimer le channel",
+    "confirmDeleteTitle": "Supprimer le channel",
+    "confirmDeleteMessage": "Es-tu sûr de vouloir supprimer définitivement #{channelName} ? Cette action est irréversible.",
     "createTitle": "CRÉER UN CHANNEL",
     "createDescription": "dans {serverName}",
     "nameLabel": "NOM DU CHANNEL",
@@ -123,6 +129,7 @@
     "chooseAvatar": "Choisir un avatar",
     "avatarAlt": "Avatar {index}",
     "statusLabel": "Statut",
+    "languageLabel": "Langue",
     "memberSince": "Membre depuis",
     "emailLabel": "Email",
     "editProfile": "Modifier le profil"
@@ -136,6 +143,40 @@
   "error": {
     "title": "Une erreur est survenue",
     "default": "Une erreur inattendue s'est produite.",
-    "digest": "Digest :"
+    "digest": "Digest :",
+    "authRequired": "Authentification requise. Merci de te reconnecter.",
+    "backendUnavailable": "Impossible de contacter le serveur. Vérifie que le backend est lancé.",
+    "hooks": {
+      "authInvalidSession": "Session invalide",
+      "servers": {
+        "load": "Impossible de charger les serveurs",
+        "create": "Impossible de créer le serveur",
+        "get": "Impossible de récupérer le serveur",
+        "update": "Impossible de modifier le serveur",
+        "delete": "Impossible de supprimer le serveur",
+        "join": "Impossible de rejoindre le serveur",
+        "leave": "Impossible de quitter le serveur",
+        "transfer": "Impossible de transférer la propriété"
+      },
+      "channels": {
+        "load": "Impossible de charger les channels",
+        "create": "Impossible de créer le channel",
+        "get": "Impossible de récupérer le channel",
+        "update": "Impossible de modifier le channel",
+        "delete": "Impossible de supprimer le channel"
+      },
+      "messages": {
+        "load": "Impossible de charger les messages",
+        "send": "Impossible d'envoyer le message",
+        "update": "Impossible de modifier le message",
+        "delete": "Impossible de supprimer le message",
+        "notConnected": "Connexion au serveur perdue. Merci d'actualiser la page."
+      },
+      "members": {
+        "load": "Impossible de charger les membres",
+        "kick": "Impossible d'expulser le membre",
+        "ban": "Impossible de bannir le membre"
+      }
+    }
   }
 }

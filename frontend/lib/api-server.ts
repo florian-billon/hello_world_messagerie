@@ -3,6 +3,16 @@
 import { cookies } from "next/headers";
 import { API_URL } from "./config";
 
+const RETRY_DELAY_MS = 300;
+
+function isIdempotentRequest(method?: string): boolean {
+  return !method || method.toUpperCase() === "GET";
+}
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function getToken(): Promise<string | null> {
   const cookieStore = await cookies();
   return cookieStore.get("token")?.value || null;
@@ -20,12 +30,25 @@ async function fetchApi<T>(
     ...options.headers,
   };
 
-  try {
-    const res = await fetch(`${API_URL}${endpoint}`, {
+  const request = () =>
+    fetch(`${API_URL}${endpoint}`, {
       ...options,
       headers,
       cache: "no-store",
     });
+
+  try {
+    let res: Response;
+    try {
+      res = await request();
+    } catch (err) {
+      if (isIdempotentRequest(options.method)) {
+        await delay(RETRY_DELAY_MS);
+        res = await request();
+      } else {
+        throw err;
+      }
+    }
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -52,7 +75,7 @@ async function fetchApi<T>(
       }
 
       if (res.status === 401) {
-        errorMessage = "Authentication required. Please login.";
+        errorMessage = "error.authRequired";
       }
 
       // Construire le message d'erreur avec détails si disponibles
@@ -66,12 +89,23 @@ async function fetchApi<T>(
     if (res.status === 204) return {} as T;
     return await res.json();
   } catch (err) {
-    if (err instanceof Error && err.message.includes("fetch failed")) {
-      throw new Error(
-        `Unable to connect to server at ${API_URL}. Please check that the backend is running (e.g. \`cd backend && cargo run\`).`
-      );
+    if (err instanceof Error) {
+      const message = err.message.toLowerCase();
+      const isNetworkLikeError =
+        err.name === "TypeError" ||
+        message.includes("fetch failed") ||
+        message.includes("network") ||
+        message.includes("econnrefused") ||
+        message.includes("connection refused") ||
+        message.includes("timed out") ||
+        message.includes("socket");
+
+      if (isNetworkLikeError) {
+        throw new Error("error.backendUnavailable");
+      }
     }
-    throw err;
+
+    throw new Error("error.backendUnavailable");
   }
 }
 
@@ -163,6 +197,16 @@ export async function joinServer(id: string): Promise<ServerMember> {
 export async function leaveServer(id: string): Promise<void> {
   return fetchApi<void>(`/servers/${id}/leave`, {
     method: "DELETE",
+  });
+}
+
+export async function transferOwnership(
+  id: string,
+  newOwnerId: string
+): Promise<Server> {
+  return fetchApi<Server>(`/servers/${id}/transfer`, {
+    method: "PUT",
+    body: JSON.stringify({ new_owner_id: newOwnerId }),
   });
 }
 

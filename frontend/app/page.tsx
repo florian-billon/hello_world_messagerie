@@ -10,6 +10,7 @@ import { getAvatar, normalizeAvatarUrl } from "@/lib/avatar";
 import { getStatusColor, getStatusKey, normalizeStatus } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
 import Button from "@/components/ui/Button";
+import SmartImg from "@/components/SmartImg";
 
 /**
  * Page principale - Design Moderne Cyberpunk
@@ -23,8 +24,10 @@ export default function Home() {
     selectedServer,
     selectServer,
     createServer,
+    creatingServer,
     leaveServer,
     deleteServer,
+    transferOwnership,
     loading: serversLoading,
     error: serversError,
   } = useServers();
@@ -51,8 +54,18 @@ export default function Home() {
   const [editContent, setEditContent] = useState("");
   const [showDeleteMessageConfirm, setShowDeleteMessageConfirm] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [showDeleteChannelConfirm, setShowDeleteChannelConfirm] = useState(false);
+  const [channelToDelete, setChannelToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [newOwnerIdForLeave, setNewOwnerIdForLeave] = useState("");
+  const [leaveModalError, setLeaveModalError] = useState<string | null>(null);
   const typingStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const TYPING_STOP_DELAY_MS = 2000;
+  const viewerId = (currentUser || user)?.id;
+  const isServerOwner = selectedServer?.owner_id === viewerId;
+  const transferCandidates = members.filter((member) => member.user_id !== viewerId);
+  const viewerRole = members.find((member) => member.user_id === viewerId)?.role;
+  const canManageChannels = viewerRole === "Owner" || viewerRole === "Admin";
+
   if (user && !currentUser) {
     setCurrentUser(user as User);
   }
@@ -131,6 +144,18 @@ export default function Home() {
   const handleDeleteMessage = (id: string) => {
     setMessageToDelete(id);
     setShowDeleteMessageConfirm(true);
+  };
+
+  const handleDeleteChannel = (id: string, name: string) => {
+    setChannelToDelete({ id, name });
+    setShowDeleteChannelConfirm(true);
+  };
+
+  const confirmDeleteChannel = async () => {
+    if (!channelToDelete) return;
+    await deleteChannel(channelToDelete.id);
+    setShowDeleteChannelConfirm(false);
+    setChannelToDelete(null);
   };
 
   const confirmDeleteMessage = async () => {
@@ -238,20 +263,43 @@ export default function Home() {
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowServerMenu(false)} />
                   <div className="absolute top-12 right-2 z-50 bg-[rgba(15,20,25,0.98)] border border-[#4fdfff]/30 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.8)] py-1 min-w-[180px]">
-                    <button
-                      type="button"
-                      onClick={() => { setShowServerMenu(false); setShowLeaveConfirm(true); }}
-                      className="w-full text-left px-4 py-2 text-sm text-[#ff3333] hover:bg-[#ff3333]/10 transition-colors"
-                    >
-                      {t("server.leave")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setShowServerMenu(false); setShowDeleteConfirm(true); }}
-                      className="w-full text-left px-4 py-2 text-sm text-[#ff3333]/70 hover:bg-[#ff3333]/10 transition-colors"
-                    >
-                      {t("server.delete")}
-                    </button>
+                    {!isServerOwner && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowServerMenu(false);
+                          setLeaveModalError(null);
+                          setNewOwnerIdForLeave("");
+                          setShowLeaveConfirm(true);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-[#ff3333] hover:bg-[#ff3333]/10 transition-colors"
+                      >
+                        {t("server.leave")}
+                      </button>
+                    )}
+                    {isServerOwner && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowServerMenu(false);
+                          setLeaveModalError(null);
+                          setNewOwnerIdForLeave(transferCandidates[0]?.user_id || "");
+                          setShowLeaveConfirm(true);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-[#ff3333] hover:bg-[#ff3333]/10 transition-colors"
+                      >
+                        {t("server.leave")}
+                      </button>
+                    )}
+                    {isServerOwner && (
+                      <button
+                        type="button"
+                        onClick={() => { setShowServerMenu(false); setShowDeleteConfirm(true); }}
+                        className="w-full text-left px-4 py-2 text-sm text-[#ff3333]/70 hover:bg-[#ff3333]/10 transition-colors"
+                      >
+                        {t("server.delete")}
+                      </button>
+                    )}
                   </div>
                 </>
               )}
@@ -299,16 +347,18 @@ export default function Home() {
                         <span className="text-white/40">#</span>
                         <span className="truncate text-sm">{channel.name}</span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteChannel(channel.id)}
-                        className="opacity-0 group-hover:opacity-100 pr-2 text-white/30 hover:text-[#ff3333] transition-all"
-                        title={t("channel.deleteTooltip")}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {canManageChannels && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteChannel(channel.id, channel.name)}
+                          className="opacity-0 group-hover:opacity-100 pr-2 text-white/30 hover:text-[#ff3333] transition-all"
+                          title={t("channel.deleteTooltip")}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   ))
                 )}
@@ -331,7 +381,7 @@ export default function Home() {
           >
             <div className="relative flex-shrink-0">
               {(currentUser || user)?.avatar_url ? (
-                <img
+                <SmartImg
                   src={normalizeAvatarUrl((currentUser || user)?.avatar_url) || ''}
                   alt="Avatar"
                   className="w-8 h-8 rounded-full object-cover border border-[#4fdfff]/50"
@@ -410,7 +460,7 @@ export default function Home() {
             <div className="space-y-4">
               {messages.map((msg) => (
                 <div key={msg.id} className="flex items-start gap-3 px-4 py-2 rounded hover:bg-white/5 transition-colors group">
-                  <img
+                  <SmartImg
                     src={getAvatar(msg.author_id, currentUser || user)}
                     alt={msg.username}
                     className="w-10 h-10 rounded-full object-cover border border-[#4fdfff]/30 flex-shrink-0 group-hover:border-[#4fdfff]/50 transition-colors"
@@ -565,7 +615,7 @@ export default function Home() {
                             className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-white/5 cursor-pointer transition-colors"
                           >
                             <div className="relative">
-                              <img
+                              <SmartImg
                                 src={getAvatar(member.user_id, currentUser || user)}
                                 alt="Owner"
                                 className="w-8 h-8 rounded-full object-cover border border-[#ff3333]/50"
@@ -610,7 +660,7 @@ export default function Home() {
                               className="group flex items-center gap-2 py-1.5 px-2 rounded hover:bg-white/5 transition-colors"
                             >
                               <div className="relative flex-shrink-0">
-                                <img
+                                <SmartImg
                                   src={getAvatar(member.user_id, currentUser || user)}
                                   alt="Member"
                                   className="w-8 h-8 rounded-full object-cover border border-[#4fdfff]/30"
@@ -700,6 +750,7 @@ export default function Home() {
                   type="button"
                   variant="outline"
                   size="md"
+                  disabled={creatingServer}
                   onClick={() => setShowCreateServer(false)}
                   className="flex-1"
                 >
@@ -709,7 +760,8 @@ export default function Home() {
                   type="submit"
                   variant="primary"
                   size="md"
-                  disabled={!newServerName.trim()}
+                  isLoading={creatingServer}
+                  disabled={creatingServer || !newServerName.trim()}
                   className="flex-1 uppercase"
                 >
                   {t("common.create")}
@@ -809,6 +861,7 @@ export default function Home() {
                 variant="danger"
                 size="md"
                 onClick={async () => {
+                  if (!isServerOwner) return;
                   setShowDeleteConfirm(false);
                   await deleteServer(selectedServer.id);
                 }}
@@ -830,12 +883,43 @@ export default function Home() {
             <p className="text-center text-white/60 text-sm mb-6">
               {t("server.confirmLeave.message", { serverName: selectedServer.name })}
             </p>
+            {isServerOwner && (
+              <div className="mb-4">
+                <label htmlFor="new-owner" className="block text-[10px] font-bold text-white/60 uppercase tracking-wider mb-2">
+                  {t("server.confirmLeave.transferLabel")}
+                </label>
+                <select
+                  id="new-owner"
+                  value={newOwnerIdForLeave}
+                  onChange={(e) => {
+                    setNewOwnerIdForLeave(e.target.value);
+                    setLeaveModalError(null);
+                  }}
+                  className="w-full px-3 py-2 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white text-sm focus:outline-none focus:border-[#4fdfff] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
+                >
+                  <option value="">{t("server.confirmLeave.transferPlaceholder")}</option>
+                  {transferCandidates.map((member) => (
+                    <option key={member.user_id} value={member.user_id}>
+                      {member.username}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {leaveModalError && (
+              <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
+                {leaveModalError}
+              </div>
+            )}
             <div className="flex gap-3">
               <Button
                 type="button"
                 variant="outline"
                 size="md"
-                onClick={() => setShowLeaveConfirm(false)}
+                onClick={() => {
+                  setShowLeaveConfirm(false);
+                  setLeaveModalError(null);
+                }}
                 className="flex-1"
               >
                 {t("common.cancel")}
@@ -845,12 +929,84 @@ export default function Home() {
                 variant="danger"
                 size="md"
                 onClick={async () => {
+                  if (isServerOwner) {
+                    if (transferCandidates.length === 0) {
+                      setLeaveModalError(t("server.confirmLeave.noCandidates"));
+                      return;
+                    }
+                    if (!newOwnerIdForLeave) {
+                      setLeaveModalError(t("server.confirmLeave.transferRequired"));
+                      return;
+                    }
+
+                    const transferred = await transferOwnership(selectedServer.id, newOwnerIdForLeave);
+                    if (!transferred) {
+                      setLeaveModalError(serversError || t("error.default"));
+                      return;
+                    }
+
+                    const left = await leaveServer(selectedServer.id);
+                    if (!left) {
+                      setLeaveModalError(serversError || t("error.default"));
+                      return;
+                    }
+
+                    setShowLeaveConfirm(false);
+                    setLeaveModalError(null);
+                    return;
+                  }
+
+                  const left = await leaveServer(selectedServer.id);
+                  if (!left) {
+                    setLeaveModalError(serversError || t("error.default"));
+                    return;
+                  }
+
                   setShowLeaveConfirm(false);
-                  await leaveServer(selectedServer.id);
+                  setLeaveModalError(null);
                 }}
                 className="flex-1"
               >
                 {t("server.leave")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========== MODAL DELETE CHANNEL ========== */}
+      {showDeleteChannelConfirm && channelToDelete && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => {
+            setShowDeleteChannelConfirm(false);
+            setChannelToDelete(null);
+          }} />
+          <div className="relative bg-[rgba(20,20,20,0.98)] border-2 border-[#ff3333] rounded-xl p-6 w-full max-w-sm shadow-[0_0_40px_rgba(255,51,51,0.3)]">
+            <h2 className="text-xl font-bold text-center text-white mb-2">{t("channel.confirmDeleteTitle")}</h2>
+            <p className="text-center text-white/60 text-sm mb-6">
+              {t("channel.confirmDeleteMessage", { channelName: channelToDelete.name })}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => {
+                  setShowDeleteChannelConfirm(false);
+                  setChannelToDelete(null);
+                }}
+                className="flex-1"
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="md"
+                onClick={confirmDeleteChannel}
+                className="flex-1"
+              >
+                {t("chat.delete")}
               </Button>
             </div>
           </div>

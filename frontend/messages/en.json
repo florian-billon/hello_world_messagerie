@@ -74,13 +74,19 @@
     },
     "confirmLeave": {
       "title": "Leave server",
-      "message": "Are you sure you want to leave {serverName}? You will need to be re-invited to come back."
+      "message": "Are you sure you want to leave {serverName}? You will need to be re-invited to come back.",
+      "transferLabel": "New owner",
+      "transferPlaceholder": "Choose a member",
+      "transferRequired": "You must choose a new owner before leaving.",
+      "noCandidates": "No eligible member available to become owner."
     }
   },
   "channel": {
     "textChannels": "TEXT CHANNELS",
     "createTooltip": "Create a channel",
     "deleteTooltip": "Delete channel",
+    "confirmDeleteTitle": "Delete channel",
+    "confirmDeleteMessage": "Are you sure you want to permanently delete #{channelName}? This action is irreversible.",
     "createTitle": "CREATE CHANNEL",
     "createDescription": "in {serverName}",
     "nameLabel": "CHANNEL NAME",
@@ -123,6 +129,7 @@
     "chooseAvatar": "Choose an avatar",
     "avatarAlt": "Avatar {index}",
     "statusLabel": "Status",
+    "languageLabel": "Language",
     "memberSince": "Member since",
     "emailLabel": "Email",
     "editProfile": "Edit profile"
@@ -136,6 +143,40 @@
   "error": {
     "title": "Something went wrong",
     "default": "An unexpected error occurred.",
-    "digest": "Digest:"
+    "digest": "Digest:",
+    "authRequired": "Authentication required. Please log in again.",
+    "backendUnavailable": "Unable to reach the server. Please check that the backend is running.",
+    "hooks": {
+      "authInvalidSession": "Invalid session",
+      "servers": {
+        "load": "Failed to load servers",
+        "create": "Failed to create server",
+        "get": "Failed to get server",
+        "update": "Failed to update server",
+        "delete": "Failed to delete server",
+        "join": "Failed to join server",
+        "leave": "Failed to leave server",
+        "transfer": "Failed to transfer ownership"
+      },
+      "channels": {
+        "load": "Failed to load channels",
+        "create": "Failed to create channel",
+        "get": "Failed to get channel",
+        "update": "Failed to update channel",
+        "delete": "Failed to delete channel"
+      },
+      "messages": {
+        "load": "Failed to load messages",
+        "send": "Failed to send message",
+        "update": "Failed to update message",
+        "delete": "Failed to delete message",
+        "notConnected": "Not connected to server. Please refresh the page."
+      },
+      "members": {
+        "load": "Failed to load members",
+        "kick": "Failed to kick member",
+        "ban": "Failed to ban member"
+      }
+    }
   }
 }

@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
+use crate::error::{Error, Result};
 use crate::web::ws::protocol::ServerEvent;
 use crate::AppState;
 
@@ -20,15 +21,23 @@ lazy_static::lazy_static! {
 const TYPING_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// Traite un événement "typing start"
-pub async fn handle_typing_start(state: &AppState, user_id: Uuid, channel_id: Uuid) {
-    // Vérifier que l'utilisateur a accès au channel
-    // (on pourrait ajouter une vérification ici, mais pour éviter trop de DB calls,
-    // on fait confiance au fait que l'utilisateur est déjà authentifié)
+pub async fn handle_typing_start(state: &AppState, user_id: Uuid, channel_id: Uuid) -> Result<()> {
+    let channel = state
+        .channel_repo
+        .find_by_id(channel_id)
+        .await?
+        .ok_or(Error::ChannelNotFound)?;
+
+    state
+        .server_repo
+        .find_member(channel.server_id, user_id)
+        .await?
+        .ok_or(Error::ChannelForbidden)?;
 
     // Récupérer le username
     let username = match state.user_repo.get_username(user_id).await {
         Ok(Some(name)) => name,
-        _ => return, // User not found, ignore
+        _ => return Ok(()), // User not found, ignore
     };
 
     // Mettre à jour le cache
@@ -50,10 +59,24 @@ pub async fn handle_typing_start(state: &AppState, user_id: Uuid, channel_id: Uu
         drop(cache); // Libérer le lock avant l'await
         state.ws_hub.broadcast_to_channel(channel_id, &event).await;
     }
+
+    Ok(())
 }
 
 /// Traite un événement "typing stop"
-pub async fn handle_typing_stop(state: &AppState, user_id: Uuid, channel_id: Uuid) {
+pub async fn handle_typing_stop(state: &AppState, user_id: Uuid, channel_id: Uuid) -> Result<()> {
+    let channel = state
+        .channel_repo
+        .find_by_id(channel_id)
+        .await?
+        .ok_or(Error::ChannelNotFound)?;
+
+    state
+        .server_repo
+        .find_member(channel.server_id, user_id)
+        .await?
+        .ok_or(Error::ChannelForbidden)?;
+
     let mut cache = TYPING_CACHE.lock().await;
     let key = (user_id, channel_id);
 
@@ -67,6 +90,8 @@ pub async fn handle_typing_stop(state: &AppState, user_id: Uuid, channel_id: Uui
         drop(cache);
         state.ws_hub.broadcast_to_channel(channel_id, &event).await;
     }
+
+    Ok(())
 }
 
 /// Nettoyage périodique du cache typing (expiration)

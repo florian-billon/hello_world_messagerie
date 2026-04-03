@@ -116,7 +116,10 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, state: AppState) {
                 }
 
                 let uid = user_id.expect("User ID should be set after authentication check");
-                crate::services::realtime::handle_typing_start(&state, uid, channel_id).await;
+                if let Err(e) = crate::services::realtime::handle_typing_start(&state, uid, channel_id).await {
+                    tracing::warn!("[WS] TypingStart denied for user {} on channel {}: {}", uid, channel_id, e);
+                    send_error(&hub, conn_id, "TYPING_FORBIDDEN", &e.to_string()).await;
+                }
             }
             ClientEvent::TypingStop { channel_id } => {
                 if !authenticated {
@@ -124,7 +127,10 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, state: AppState) {
                 }
 
                 let uid = user_id.expect("User ID should be set after authentication check");
-                crate::services::realtime::handle_typing_stop(&state, uid, channel_id).await;
+                if let Err(e) = crate::services::realtime::handle_typing_stop(&state, uid, channel_id).await {
+                    tracing::warn!("[WS] TypingStop denied for user {} on channel {}: {}", uid, channel_id, e);
+                    send_error(&hub, conn_id, "TYPING_FORBIDDEN", &e.to_string()).await;
+                }
             }
             ClientEvent::Heartbeat { seq } => {
                 let ack = ServerEvent::HeartbeatAck { seq };
@@ -133,6 +139,30 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, state: AppState) {
             ClientEvent::Subscribe { channel_id } => {
                 if !authenticated {
                     send_error(&hub, conn_id, "NOT_AUTHENTICATED", "Must identify first").await;
+                    continue;
+                }
+
+                let uid = user_id.expect("User ID should be set after authentication check");
+                let can_subscribe = match state.channel_repo.find_by_id(channel_id).await {
+                    Ok(Some(channel)) => {
+                        match state.server_repo.find_member(channel.server_id, uid).await {
+                            Ok(Some(_)) => true,
+                            Ok(None) => false,
+                            Err(e) => {
+                                tracing::error!("[WS] Subscribe membership check failed: {}", e);
+                                false
+                            }
+                        }
+                    }
+                    Ok(None) => false,
+                    Err(e) => {
+                        tracing::error!("[WS] Subscribe channel check failed: {}", e);
+                        false
+                    }
+                };
+
+                if !can_subscribe {
+                    send_error(&hub, conn_id, "SUBSCRIBE_FORBIDDEN", "Channel access forbidden").await;
                     continue;
                 }
 

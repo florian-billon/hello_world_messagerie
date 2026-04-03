@@ -13,18 +13,20 @@ export function useWebSocket() {
   const handlersRef = useRef<Set<(event: ServerEvent) => void>>(new Set());
 
   useEffect(() => {
-    const socketUrl = API_URL.replace(/^http/, 'ws');
-
-    const gateway = getGateway(socketUrl);
+    const gateway = getGateway(API_URL);
     gatewayRef.current = gateway;
 
     const connect = async () => {
-      const token = await getTokenForWs();
+      try {
+        const token = await getTokenForWs();
 
-      if (token) {
-        gateway.connect(token);
-      } else {
-        console.warn("[useWebSocket] No token found");
+        if (token) {
+          gateway.connect(token);
+        } else {
+          console.warn("[useWebSocket] No token found");
+        }
+      } catch (error) {
+        console.error("[useWebSocket] Failed to initialize gateway token", error);
       }
     };
 

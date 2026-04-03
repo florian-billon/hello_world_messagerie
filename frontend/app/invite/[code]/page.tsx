@@ -27,6 +27,19 @@ export default function InvitePage({
   const [accepting, setAccepting] = useState(false);
   const [code, setCode] = useState<string>("");
 
+  const isAuthRequiredError = (message: string) =>
+    message === "error.authRequired" ||
+    message.toLowerCase().includes("authentication required") ||
+    message.includes("401");
+
+  const resolveError = (error: unknown, fallbackKey = "error.default") => {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    if (message.startsWith("error.")) {
+      return t(message);
+    }
+    return message || t(fallbackKey);
+  };
+
   useEffect(() => {
     (async () => {
       const { code: pCode } = await params;
@@ -36,7 +49,7 @@ export default function InvitePage({
         setInvite(data);
       } catch (e: any) {
         const msg = String(e?.message || "");
-        if (msg.toLowerCase().includes("authentication required") || msg.includes("401")) {
+        if (isAuthRequiredError(msg)) {
           router.push(`/login?next=/invite/${pCode}`);
         } else {
           setError(t("invite.invalidDescription"));
@@ -54,10 +67,13 @@ export default function InvitePage({
       await acceptInvite(code);
       router.push("/");
     } catch (e: any) {
-      if (e?.message?.includes("Already a member")) {
+      const msg = String(e?.message || "");
+      if (isAuthRequiredError(msg)) {
+        router.push(`/login?next=/invite/${code}`);
+      } else if (msg.includes("Already a member")) {
         router.push("/");
       } else {
-        setError(e?.message || t("error.default"));
+        setError(resolveError(e));
       }
     } finally {
       setAccepting(false);

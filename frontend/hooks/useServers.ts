@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   listServers,
   createServer as apiCreateServer,
@@ -9,15 +9,28 @@ import {
   deleteServer as apiDeleteServer,
   joinServer as apiJoinServer,
   leaveServer as apiLeaveServer,
+  transferOwnership as apiTransferOwnership,
   Server,
 } from "@/lib/api-server";
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export function useServers() {
+  const { t } = useTranslation();
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [creatingServer, setCreatingServer] = useState(false);
+  const createServerInFlightRef = useRef(false);
+
+  const toUiError = useCallback((err: unknown, fallbackKey: string): string => {
+    const message = getErrorMessage(err, t(fallbackKey));
+    if (message.startsWith("error.")) {
+      return t(message);
+    }
+    return message;
+  }, [t]);
 
   const loadServers = useCallback(async () => {
     try {
@@ -26,7 +39,7 @@ export function useServers() {
       const data = await listServers();
       setServers(data);
     } catch (err) {
-      const errorMessage = getErrorMessage(err, "Failed to load servers");
+      const errorMessage = toUiError(err, "error.hooks.servers.load");
       if (isAuthError(errorMessage)) {
         setServers([]);
         setError(null);
@@ -38,7 +51,7 @@ export function useServers() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toUiError]);
 
   useEffect(() => {
     loadServers();
@@ -50,22 +63,31 @@ export function useServers() {
   }, []);
 
   const createServer = useCallback(async (name: string): Promise<Server | null> => {
+    if (createServerInFlightRef.current) {
+      return null;
+    }
+
     try {
+      createServerInFlightRef.current = true;
+      setCreatingServer(true);
       setError(null);
       const newServer = await apiCreateServer(name);
       await loadServers();
       setSelectedServer(newServer);
       return newServer;
     } catch (err) {
-      const errorMessage = getErrorMessage(err, "Failed to create server");
+      const errorMessage = toUiError(err, "error.hooks.servers.create");
       if (isAuthError(errorMessage)) {
         handleAuthError();
         return null;
       }
       setError(errorMessage);
       return null;
+    } finally {
+      createServerInFlightRef.current = false;
+      setCreatingServer(false);
     }
-  }, [loadServers]);
+  }, [loadServers, toUiError]);
 
   const getServer = useCallback(async (id: string): Promise<Server | null> => {
     try {
@@ -77,7 +99,7 @@ export function useServers() {
       );
       return server;
     } catch (err) {
-      const errorMessage = getErrorMessage(err, "Failed to get server");
+      const errorMessage = toUiError(err, "error.hooks.servers.get");
       if (isAuthError(errorMessage)) {
         handleAuthError();
         return null;
@@ -85,7 +107,7 @@ export function useServers() {
       setError(errorMessage);
       return null;
     }
-  }, []);
+  }, [toUiError]);
 
   const updateServer = useCallback(async (id: string, name: string): Promise<Server | null> => {
     let previousServers: Server[] = [];
@@ -132,7 +154,7 @@ export function useServers() {
         }
       }
       
-      const errorMessage = getErrorMessage(err, "Failed to update server");
+      const errorMessage = toUiError(err, "error.hooks.servers.update");
       if (isAuthError(errorMessage)) {
         handleAuthError();
         return null;
@@ -140,7 +162,7 @@ export function useServers() {
       setError(errorMessage);
       return null;
     }
-  }, [selectedServer]);
+  }, [selectedServer, toUiError]);
 
   const deleteServer = useCallback(async (id: string): Promise<boolean> => {
     let previousServers: Server[] = [];
@@ -187,7 +209,7 @@ export function useServers() {
         }
       }
       
-      const errorMessage = getErrorMessage(err, "Failed to delete server");
+      const errorMessage = toUiError(err, "error.hooks.servers.delete");
       if (isAuthError(errorMessage)) {
         handleAuthError();
         return false;
@@ -195,7 +217,7 @@ export function useServers() {
       setError(errorMessage);
       return false;
     }
-  }, [selectedServer]);
+  }, [selectedServer, toUiError]);
 
   const joinServer = useCallback(async (id: string): Promise<Server | null> => {
     try {
@@ -210,7 +232,7 @@ export function useServers() {
       }
       return joinedServer;
     } catch (err) {
-      const errorMessage = getErrorMessage(err, "Failed to join server");
+      const errorMessage = toUiError(err, "error.hooks.servers.join");
       if (isAuthError(errorMessage)) {
         handleAuthError();
         return null;
@@ -218,7 +240,7 @@ export function useServers() {
       setError(errorMessage);
       return null;
     }
-  }, [loadServers]);
+  }, [loadServers, toUiError]);
 
   const leaveServer = useCallback(async (id: string): Promise<boolean> => {
     let previousServers: Server[] = [];
@@ -255,7 +277,7 @@ export function useServers() {
         }
       }
       
-      const errorMessage = getErrorMessage(err, "Failed to leave server");
+      const errorMessage = toUiError(err, "error.hooks.servers.leave");
       if (isAuthError(errorMessage)) {
         handleAuthError();
         return false;
@@ -263,7 +285,35 @@ export function useServers() {
       setError(errorMessage);
       return false;
     }
-  }, [selectedServer]);
+  }, [selectedServer, toUiError]);
+
+  const transferOwnership = useCallback(async (id: string, newOwnerId: string): Promise<Server | null> => {
+    try {
+      setError(null);
+      const updatedServer = await apiTransferOwnership(id, newOwnerId);
+
+      setServers((prev) =>
+        prev.map((s) => (s.id === id ? updatedServer : s))
+      );
+
+      setSelectedServer((prev) => {
+        if (prev?.id === id) {
+          return updatedServer;
+        }
+        return prev;
+      });
+
+      return updatedServer;
+    } catch (err) {
+      const errorMessage = toUiError(err, "error.hooks.servers.transfer");
+      if (isAuthError(errorMessage)) {
+        handleAuthError();
+        return null;
+      }
+      setError(errorMessage);
+      return null;
+    }
+  }, [toUiError]);
 
   const refresh = useCallback(() => {
     loadServers();
@@ -273,6 +323,7 @@ export function useServers() {
     servers,
     selectedServer,
     loading,
+    creatingServer,
     error,
     selectServer,
     createServer,
@@ -281,6 +332,7 @@ export function useServers() {
     deleteServer,
     joinServer,
     leaveServer,
+    transferOwnership,
     refresh,
   };
 }

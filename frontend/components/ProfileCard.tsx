@@ -9,6 +9,7 @@ import { UserStatus, getStatusColor, getStatusKey, normalizeStatus } from "@/lib
 import { useTranslation } from "@/lib/i18n";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import SmartImg from "@/components/SmartImg";
 
 const AVATARS = Array.from({ length: 100 }, (_, i) =>
   `/avatars/avatar_${String(i + 1).padStart(3, '0')}.png`
@@ -98,7 +99,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
             <div className="relative">
               <div className="w-24 h-24 rounded-full bg-[rgba(5,10,15,0.98)] p-1 border-2 border-[#4fdfff]/50">
                 {user.avatar_url ? (
-                  <img
+                  <SmartImg
                     src={normalizeAvatarUrl(user.avatar_url) || ''}
                     alt={user.username}
                     className="w-full h-full rounded-full object-cover"
@@ -138,7 +139,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                     className="w-full px-3 py-2 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white text-sm focus:outline-none focus:border-[#4fdfff] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] flex items-center gap-2 hover:bg-[rgba(20,20,20,0.95)] transition-all"
                   >
                     {editData.avatar_url && (
-                      <img src={editData.avatar_url} alt="Avatar" className="w-6 h-6 rounded" />
+                      <SmartImg src={editData.avatar_url} alt="Avatar" className="w-6 h-6 rounded" />
                     )}
                     <span>{showAvatarPicker ? t("common.close") : t("profile.chooseAvatar")}</span>
                   </button>
@@ -155,7 +156,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                           }}
                           className={`w-10 h-10 rounded-lg hover:ring-2 hover:ring-[#4fdfff] transition-all ${editData.avatar_url === avatarUrl ? "ring-2 ring-[#4fdfff]" : ""}`}
                         >
-                          <img
+                          <SmartImg
                             src={avatarUrl}
                             alt={t("profile.avatarAlt", { index: index + 1 })}
                             className="w-full h-full rounded-lg object-cover"

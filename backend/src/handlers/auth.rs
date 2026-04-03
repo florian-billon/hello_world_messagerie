@@ -62,5 +62,6 @@ pub async fn logout(
         verify_token(auth.token(), &state.jwt_secret).map_err(|_| AuthError::InvalidCredentials)?;
 
     services::logout(&state.db, claims.sub).await?;
+    crate::services::realtime::handle_user_offline(&state, claims.sub).await;
     Ok(StatusCode::NO_CONTENT)
 }
