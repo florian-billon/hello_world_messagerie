@@ -96,7 +96,9 @@ pub async fn delete_message(
     ctx: Ctx,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode> {
-    let channel_id = services::delete_message(&state.server_repo, &state.message_repo, id, ctx.user_id()).await?;
+    let channel_id =
+        services::delete_message(&state.server_repo, &state.message_repo, id, ctx.user_id())
+            .await?;
 
     let event = ServerEvent::MessageDelete { id, channel_id };
     state

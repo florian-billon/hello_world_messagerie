@@ -105,9 +105,10 @@ impl Error {
             Self::EmailAlreadyExists => (StatusCode::CONFLICT, "Email already exists"),
             Self::UserNotFound => (StatusCode::NOT_FOUND, "User not found"),
             Self::ServerNotFound => (StatusCode::NOT_FOUND, "Server not found"),
-            Self::ServerAlreadyExists => {
-                (StatusCode::CONFLICT, "Server name already exists for this owner")
-            }
+            Self::ServerAlreadyExists => (
+                StatusCode::CONFLICT,
+                "Server name already exists for this owner",
+            ),
             Self::ServerForbidden => (StatusCode::FORBIDDEN, "Server access forbidden"),
             Self::ServerOwnerCannotLeave => (StatusCode::BAD_REQUEST, "Owner cannot leave server"),
             Self::ServerAlreadyMember => (StatusCode::CONFLICT, "Already a member"),

@@ -116,8 +116,15 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, state: AppState) {
                 }
 
                 let uid = user_id.expect("User ID should be set after authentication check");
-                if let Err(e) = crate::services::realtime::handle_typing_start(&state, uid, channel_id).await {
-                    tracing::warn!("[WS] TypingStart denied for user {} on channel {}: {}", uid, channel_id, e);
+                if let Err(e) =
+                    crate::services::realtime::handle_typing_start(&state, uid, channel_id).await
+                {
+                    tracing::warn!(
+                        "[WS] TypingStart denied for user {} on channel {}: {}",
+                        uid,
+                        channel_id,
+                        e
+                    );
                     send_error(&hub, conn_id, "TYPING_FORBIDDEN", &e.to_string()).await;
                 }
             }
@@ -127,8 +134,15 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, state: AppState) {
                 }
 
                 let uid = user_id.expect("User ID should be set after authentication check");
-                if let Err(e) = crate::services::realtime::handle_typing_stop(&state, uid, channel_id).await {
-                    tracing::warn!("[WS] TypingStop denied for user {} on channel {}: {}", uid, channel_id, e);
+                if let Err(e) =
+                    crate::services::realtime::handle_typing_stop(&state, uid, channel_id).await
+                {
+                    tracing::warn!(
+                        "[WS] TypingStop denied for user {} on channel {}: {}",
+                        uid,
+                        channel_id,
+                        e
+                    );
                     send_error(&hub, conn_id, "TYPING_FORBIDDEN", &e.to_string()).await;
                 }
             }
@@ -162,7 +176,13 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, state: AppState) {
                 };
 
                 if !can_subscribe {
-                    send_error(&hub, conn_id, "SUBSCRIBE_FORBIDDEN", "Channel access forbidden").await;
+                    send_error(
+                        &hub,
+                        conn_id,
+                        "SUBSCRIBE_FORBIDDEN",
+                        "Channel access forbidden",
+                    )
+                    .await;
                     continue;
                 }
 

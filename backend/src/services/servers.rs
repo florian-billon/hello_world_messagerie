@@ -40,8 +40,8 @@ pub async fn create_server(
                 || err_str.contains("Duplicate server name for owner")
             {
                 Error::ServerAlreadyExists
-            } else
-            if err_str.contains("owner_id_fkey") || err_str.contains("servers_owner_id_fkey") {
+            } else if err_str.contains("owner_id_fkey") || err_str.contains("servers_owner_id_fkey")
+            {
                 Error::UserNotFound
             } else {
                 Error::from(e)

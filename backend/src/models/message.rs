@@ -91,11 +91,9 @@ mod datetime_compat {
         D: Deserializer<'de>,
     {
         match DateTimeCompat::deserialize(deserializer)? {
-            DateTimeCompat::Rfc3339(value) => {
-                DateTime::parse_from_rfc3339(&value)
-                    .map(|dt| dt.with_timezone(&Utc))
-                    .map_err(D::Error::custom)
-            }
+            DateTimeCompat::Rfc3339(value) => DateTime::parse_from_rfc3339(&value)
+                .map(|dt| dt.with_timezone(&Utc))
+                .map_err(D::Error::custom),
             DateTimeCompat::Bson(value) => Ok(value.to_chrono()),
         }
     }
