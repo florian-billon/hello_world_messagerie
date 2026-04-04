@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { listMessages, updateMessage as apiUpdateMessage, deleteMessage as apiDeleteMessage, Message } from "@/lib/api-server";
+import {
+  addMessageReaction as apiAddMessageReaction,
+  deleteMessage as apiDeleteMessage,
+  listMessages,
+  Message,
+  MessageReaction,
+  removeMessageReaction as apiRemoveMessageReaction,
+  updateMessage as apiUpdateMessage,
+} from "@/lib/api-server";
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
 import { useWebSocket } from "./useWebSocket";
 import { ServerEvent } from "@/lib/gateway";
@@ -12,7 +20,7 @@ import { useTranslation } from "@/lib/i18n";
  * Utilise WebSocket pour les nouveaux messages en temps réel
  * et REST pour charger l'historique initial
  */
-export function useMessages(channelId: string | null) {
+export function useMessages(channelId: string | null, viewerId: string | null) {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,7 +51,7 @@ export function useMessages(channelId: string | null) {
       setError(null);
       const data = await listMessages(id);
       const messagesArray = Array.isArray(data) ? data : [];
-      setMessages(messagesArray);
+      setMessages(messagesArray.map((message) => ({ ...message, reactions: message.reactions ?? [] })));
     } catch (err) {
       const errorMessage = toUiError(err, "error.hooks.messages.load");
       setError(errorMessage);
@@ -95,7 +103,7 @@ export function useMessages(channelId: string | null) {
               if (prev.some((m) => m.id === event.d.id)) {
                 return prev;
               }
-              return [...prev, event.d];
+              return [...prev, { ...event.d, reactions: event.d.reactions ?? [] }];
             });
           }
           break;
@@ -117,6 +125,14 @@ export function useMessages(channelId: string | null) {
           // Message supprimé
           if (event.d.channel_id === channelId) {
             setMessages((prev) => prev.filter((m) => m.id !== event.d.id));
+          }
+          break;
+
+        case "MESSAGE_REACTION_UPDATE":
+          if (event.d.channel_id === channelId) {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === event.d.id ? { ...m, reactions: event.d.reactions ?? [] } : m))
+            );
           }
           break;
 
@@ -301,6 +317,78 @@ export function useMessages(channelId: string | null) {
     }
   }, [channelId, toUiError]);
 
+  const toggleReaction = useCallback(async (messageId: string, emoji: string): Promise<boolean> => {
+    if (!channelId || !viewerId || !emoji.trim()) return false;
+
+    const normalizedEmoji = emoji.trim();
+    let previousMessages: Message[] = [];
+    let shouldRemove = false;
+
+    try {
+      setError(null);
+
+      setMessages((prev) => {
+        previousMessages = [...prev];
+        return prev.map((message) => {
+          if (message.id !== messageId) return message;
+
+          const reactions = message.reactions ?? [];
+          const hasReaction = reactions.some(
+            (reaction) => reaction.user_id === viewerId && reaction.emoji === normalizedEmoji
+          );
+          shouldRemove = hasReaction;
+
+          if (hasReaction) {
+            return {
+              ...message,
+              reactions: reactions.filter(
+                (reaction) => !(reaction.user_id === viewerId && reaction.emoji === normalizedEmoji)
+              ),
+            };
+          }
+
+          const optimisticReaction: MessageReaction = {
+            user_id: viewerId,
+            emoji: normalizedEmoji,
+            created_at: new Date().toISOString(),
+          };
+
+          return {
+            ...message,
+            reactions: [...reactions, optimisticReaction],
+          };
+        });
+      });
+
+      if (shouldRemove) {
+        await apiRemoveMessageReaction(messageId, normalizedEmoji);
+      } else {
+        await apiAddMessageReaction(messageId, normalizedEmoji);
+      }
+
+      return true;
+    } catch (err) {
+      if (previousMessages.length > 0) {
+        setMessages(previousMessages);
+      }
+
+      const rawMessage = getErrorMessage(err, "");
+      if (rawMessage.includes("HTTP 404")) {
+        setError(null);
+        return false;
+      }
+
+      const errorMessage = toUiError(err, "error.hooks.messages.reaction");
+      if (isAuthError(errorMessage)) {
+        handleAuthError();
+        return false;
+      }
+
+      setError(errorMessage);
+      return false;
+    }
+  }, [channelId, viewerId, toUiError, t]);
+
   // Rafraîchir l'historique (utile pour resync après reconnexion)
   const refresh = useCallback(() => {
     if (channelId) {
@@ -317,6 +405,7 @@ export function useMessages(channelId: string | null) {
     sendMessage,
     updateMessage,
     deleteMessage,
+    toggleReaction,
     refresh,
     isConnected: isConnected(),
     typingStart,

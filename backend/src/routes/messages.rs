@@ -16,4 +16,8 @@ pub fn routes() -> Router<AppState> {
             "/messages/{id}",
             put(messages::update_message).delete(messages::delete_message),
         )
+        .route(
+            "/messages/{id}/reactions",
+            post(messages::add_reaction).delete(messages::remove_reaction),
+        )
 }

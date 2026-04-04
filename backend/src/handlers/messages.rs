@@ -8,7 +8,9 @@ use uuid::Uuid;
 
 use crate::ctx::Ctx;
 use crate::error::Result;
-use crate::models::{CreateMessagePayload, MessageWithUser, UpdateMessagePayload};
+use crate::models::{
+    CreateMessagePayload, MessageReactionPayload, MessageWithUser, UpdateMessagePayload,
+};
 use crate::services;
 use crate::web::ws::protocol::ServerEvent;
 use crate::AppState;
@@ -107,4 +109,60 @@ pub async fn delete_message(
         .await;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn add_reaction(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<MessageReactionPayload>,
+) -> Result<Json<MessageWithUser>> {
+    let message = services::messages::add_reaction(
+        &state.server_repo,
+        &state.message_repo,
+        id,
+        ctx.user_id(),
+        payload,
+    )
+    .await?;
+
+    let event = ServerEvent::MessageReactionUpdate {
+        id: message.id,
+        channel_id: message.channel_id,
+        reactions: message.reactions.clone(),
+    };
+    state
+        .ws_hub
+        .broadcast_to_channel_with_metrics(message.channel_id, &event, Some(&state.ws_metrics))
+        .await;
+
+    Ok(Json(message))
+}
+
+pub async fn remove_reaction(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<MessageReactionPayload>,
+) -> Result<Json<MessageWithUser>> {
+    let message = services::messages::remove_reaction(
+        &state.server_repo,
+        &state.message_repo,
+        id,
+        ctx.user_id(),
+        payload,
+    )
+    .await?;
+
+    let event = ServerEvent::MessageReactionUpdate {
+        id: message.id,
+        channel_id: message.channel_id,
+        reactions: message.reactions.clone(),
+    };
+    state
+        .ws_hub
+        .broadcast_to_channel_with_metrics(message.channel_id, &event, Some(&state.ws_metrics))
+        .await;
+
+    Ok(Json(message))
 }

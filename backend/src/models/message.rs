@@ -153,6 +153,18 @@ pub struct ChannelMessage {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(with = "uuid_compat_binary_generic::option")]
     pub deleted_by: Option<Uuid>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub reactions: Vec<MessageReaction>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageReaction {
+    #[serde(with = "uuid_compat_binary_generic")]
+    pub user_id: Uuid,
+    pub emoji: String,
+    #[serde(with = "datetime_compat")]
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -166,6 +178,8 @@ pub struct MessageWithUser {
     pub created_at: DateTime<Utc>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub edited_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub reactions: Vec<MessageReaction>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -176,4 +190,9 @@ pub struct CreateMessagePayload {
 #[derive(Debug, Deserialize)]
 pub struct UpdateMessagePayload {
     pub content: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MessageReactionPayload {
+    pub emoji: String,
 }

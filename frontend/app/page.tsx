@@ -11,6 +11,7 @@ import { getStatusColor, getStatusKey, normalizeStatus } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
 import Button from "@/components/ui/Button";
 import SmartImg from "@/components/SmartImg";
+import MessageReactions from "@/components/chat/MessageReactions";
 
 /**
  * Page principale - Design Moderne Cyberpunk
@@ -36,7 +37,18 @@ export default function Home() {
     selectedServer?.id ?? null
   );
 
-  const { messages, sendMessage, updateMessage, deleteMessage, loading: messagesLoading, error: messagesError, typingUsers, typingStart, typingStop } = useMessages(selectedChannel?.id ?? null);
+  const {
+    messages,
+    sendMessage,
+    updateMessage,
+    deleteMessage,
+    toggleReaction,
+    loading: messagesLoading,
+    error: messagesError,
+    typingUsers,
+    typingStart,
+    typingStop,
+  } = useMessages(selectedChannel?.id ?? null, user?.id ?? null);
   const { members, kickMember, banMember } = useMembers(selectedServer?.id ?? null);
 
   const [showCreateServer, setShowCreateServer] = useState(false);
@@ -498,11 +510,20 @@ export default function Home() {
                         {msg.content}
                       </p>
                     )}
+
+                    {!editingMessageId && (
+                      <MessageReactions
+                        messageId={msg.id}
+                        reactions={msg.reactions ?? []}
+                        onToggleReaction={toggleReaction}
+                        addReactionLabel={t("chat.addReaction")}
+                      />
+                    )}
                   </div>
 
                   {/* Actions au survol */}
                   {!editingMessageId && msg.author_id === user?.id && (
-                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2 bg-[rgba(10,15,20,0.95)] border border-[#4fdfff]/20 rounded-lg p-1 transition-all ml-auto self-start shadow-xl">
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2 transition-all ml-auto self-start">
                       <button
                         onClick={() => handleStartEdit(msg)}
                         className="p-1.5 text-white/40 hover:text-[#4fdfff] transition-colors"

@@ -25,6 +25,7 @@ export type ServerEvent =
   | { op: "MESSAGE_CREATE"; d: Message }
   | { op: "MESSAGE_UPDATE"; d: { id: string; channel_id: string; content: string; edited_at: string } }
   | { op: "MESSAGE_DELETE"; d: { id: string; channel_id: string } }
+  | { op: "MESSAGE_REACTION_UPDATE"; d: { id: string; channel_id: string; reactions: Message["reactions"] } }
   | { op: "TYPING_START"; d: { channel_id: string; user_id: string; username: string } }
   | { op: "TYPING_STOP"; d: { channel_id: string; user_id: string } }
   | { op: "HEARTBEAT_ACK"; d: { seq?: number } }
