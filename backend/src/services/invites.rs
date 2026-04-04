@@ -126,6 +126,11 @@ pub async fn join_server_with_code(
         }
     }
 
+    // Vérifier que l'utilisateur n'est pas banni
+    if server_repo.is_user_banned(invite.server_id, user_id).await? {
+        return Err(Error::ServerBanned);
+    }
+
     // Vérifier que l'utilisateur n'est pas déjà membre
     if server_repo
         .find_member(invite.server_id, user_id)

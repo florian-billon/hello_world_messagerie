@@ -105,6 +105,7 @@
     "title": "Invitation à rejoindre",
     "invalidTitle": "Invitation invalide",
     "invalidDescription": "Ce lien d'invitation est invalide ou expiré.",
+    "banned": "Un administrateur t'a banni de ce serveur.",
     "inviteCode": "Code d'invitation :",
     "serverId": "ID du serveur :",
     "maxUses": "Utilisations max :",

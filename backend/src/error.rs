@@ -27,6 +27,8 @@ pub enum Error {
     ServerAlreadyExists,
     #[error("Server access forbidden")]
     ServerForbidden,
+    #[error("You are banned from this server")]
+    ServerBanned,
     #[error("Owner cannot leave server")]
     ServerOwnerCannotLeave,
     #[error("Already a member")]
@@ -110,6 +112,7 @@ impl Error {
                 "Server name already exists for this owner",
             ),
             Self::ServerForbidden => (StatusCode::FORBIDDEN, "Server access forbidden"),
+            Self::ServerBanned => (StatusCode::FORBIDDEN, "You are banned from this server"),
             Self::ServerOwnerCannotLeave => (StatusCode::BAD_REQUEST, "Owner cannot leave server"),
             Self::ServerAlreadyMember => (StatusCode::CONFLICT, "Already a member"),
             Self::ChannelNotFound => (StatusCode::NOT_FOUND, "Channel not found"),

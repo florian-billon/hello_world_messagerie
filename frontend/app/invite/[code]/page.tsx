@@ -72,6 +72,8 @@ export default function InvitePage({
         router.push(`/login?next=/invite/${code}`);
       } else if (msg.includes("Already a member")) {
         router.push("/");
+      } else if (msg.includes("banned")) {
+        setError(t("invite.banned"));
       } else {
         setError(resolveError(e));
       }

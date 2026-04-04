@@ -103,6 +103,8 @@ async function fetchApi<T>(
       if (isNetworkLikeError) {
         throw new Error("error.backendUnavailable");
       }
+
+      throw err;
     }
 
     throw new Error("error.backendUnavailable");

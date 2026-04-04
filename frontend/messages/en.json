@@ -105,6 +105,7 @@
     "title": "You've been invited",
     "invalidTitle": "Invalid invite",
     "invalidDescription": "This invite link is invalid or expired.",
+    "banned": "An administrator has banned you from this server.",
     "inviteCode": "Invite code:",
     "serverId": "Server ID:",
     "maxUses": "Max uses:",
