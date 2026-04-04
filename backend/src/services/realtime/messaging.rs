@@ -70,6 +70,7 @@ pub async fn handle_send_message(
         content: message_with_user.content,
         created_at: message_with_user.created_at,
         edited_at: message_with_user.edited_at,
+        reactions: message_with_user.reactions,
     };
 
     state

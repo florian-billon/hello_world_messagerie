@@ -55,6 +55,7 @@
     "edit": "Modifier",
     "delete": "Supprimer",
     "save": "Enregistrer",
+    "addReaction": "Réagir",
     "edited": "(modifié)",
     "confirmDeleteTitle": "Supprimer le message",
     "confirmDeleteMessage": "Es-tu sûr de vouloir supprimer ce message ? Cette action est irréversible."
@@ -171,6 +172,8 @@
         "send": "Impossible d'envoyer le message",
         "update": "Impossible de modifier le message",
         "delete": "Impossible de supprimer le message",
+        "reaction": "Impossible de mettre à jour la réaction",
+        "reactionUnavailable": "Les réactions ne sont pas disponibles sur ce backend (déploiement à mettre à jour).",
         "notConnected": "Connexion au serveur perdue. Merci d'actualiser la page."
       },
       "members": {

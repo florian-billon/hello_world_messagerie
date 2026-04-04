@@ -137,6 +137,13 @@ export interface Message {
   content: string;
   created_at: string;
   edited_at?: string;
+  reactions: MessageReaction[];
+}
+
+export interface MessageReaction {
+  user_id: string;
+  emoji: string;
+  created_at: string;
 }
 
 export interface ServerMember {
@@ -302,6 +309,20 @@ export async function updateMessage(id: string, content: string): Promise<Messag
 export async function deleteMessage(id: string): Promise<void> {
   return fetchApi<void>(`/messages/${id}`, {
     method: "DELETE",
+  });
+}
+
+export async function addMessageReaction(id: string, emoji: string): Promise<Message> {
+  return fetchApi<Message>(`/messages/${id}/reactions`, {
+    method: "POST",
+    body: JSON.stringify({ emoji }),
+  });
+}
+
+export async function removeMessageReaction(id: string, emoji: string): Promise<Message> {
+  return fetchApi<Message>(`/messages/${id}/reactions`, {
+    method: "DELETE",
+    body: JSON.stringify({ emoji }),
   });
 }
 

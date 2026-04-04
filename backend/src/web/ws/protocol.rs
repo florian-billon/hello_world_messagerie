@@ -5,6 +5,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::models::MessageReaction;
+
 /// Événements envoyés par le client
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "op", content = "d")]
@@ -71,6 +73,7 @@ pub enum ServerEvent {
         content: String,
         created_at: DateTime<Utc>,
         edited_at: Option<DateTime<Utc>>,
+        reactions: Vec<MessageReaction>,
     },
 
     /// Message modifié
@@ -85,6 +88,14 @@ pub enum ServerEvent {
     /// Message supprimé
     #[serde(rename = "MESSAGE_DELETE")]
     MessageDelete { id: Uuid, channel_id: Uuid },
+
+    /// Réactions du message mises à jour
+    #[serde(rename = "MESSAGE_REACTION_UPDATE")]
+    MessageReactionUpdate {
+        id: Uuid,
+        channel_id: Uuid,
+        reactions: Vec<MessageReaction>,
+    },
 
     /// Quelqu'un commence à taper
     #[serde(rename = "TYPING_START")]
