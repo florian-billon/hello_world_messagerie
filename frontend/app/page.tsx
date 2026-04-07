@@ -515,6 +515,7 @@ export default function Home() {
                       <MessageReactions
                         messageId={msg.id}
                         reactions={msg.reactions ?? []}
+                        viewerId={viewerId}
                         onToggleReaction={toggleReaction}
                         addReactionLabel={t("chat.addReaction")}
                       />

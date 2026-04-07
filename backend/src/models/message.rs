@@ -167,6 +167,23 @@ pub struct MessageReaction {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageReactionPublic {
+    pub user_id: Uuid,
+    pub emoji: String,
+    pub created_at: DateTime<Utc>,
+}
+
+impl From<MessageReaction> for MessageReactionPublic {
+    fn from(value: MessageReaction) -> Self {
+        Self {
+            user_id: value.user_id,
+            emoji: value.emoji,
+            created_at: value.created_at,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct MessageWithUser {
     pub id: Uuid,
@@ -179,7 +196,7 @@ pub struct MessageWithUser {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub edited_at: Option<DateTime<Utc>>,
     #[serde(default)]
-    pub reactions: Vec<MessageReaction>,
+    pub reactions: Vec<MessageReactionPublic>,
 }
 
 #[derive(Debug, Deserialize)]

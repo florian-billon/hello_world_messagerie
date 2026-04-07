@@ -144,7 +144,6 @@ impl MessageRepository {
                     "$pull": {
                         "reactions": {
                             "user_id": Self::uuid_to_binary(user_id),
-                            "emoji": emoji,
                         }
                     }
                 },
