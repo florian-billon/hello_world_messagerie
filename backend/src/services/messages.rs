@@ -4,8 +4,7 @@ use uuid::Uuid;
 use crate::error::{Error, Result};
 use crate::models::{
     ChannelMessage, CreateMessagePayload, MessageReactionPayload, MessageReactionPublic,
-    MessageWithUser,
-    UpdateMessagePayload,
+    MessageWithUser, UpdateMessagePayload,
 };
 use crate::repositories::{ChannelRepository, MessageRepository, ServerRepository, UserRepository};
 use crate::services::{channels, servers};
@@ -30,7 +29,10 @@ fn validate_reaction_emoji(emoji: &str) -> Result<()> {
 fn to_public_reactions(
     reactions: Vec<crate::models::MessageReaction>,
 ) -> Vec<MessageReactionPublic> {
-    reactions.into_iter().map(MessageReactionPublic::from).collect()
+    reactions
+        .into_iter()
+        .map(MessageReactionPublic::from)
+        .collect()
 }
 
 pub async fn create_message(
