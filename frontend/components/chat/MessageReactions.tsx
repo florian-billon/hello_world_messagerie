@@ -7,6 +7,7 @@ import { MessageReaction } from "@/lib/api-server";
 interface MessageReactionsProps {
   messageId: string;
   reactions: MessageReaction[];
+  viewerId?: string | null;
   onToggleReaction: (messageId: string, emoji: string) => Promise<boolean>;
   addReactionLabel: string;
 }
@@ -14,6 +15,7 @@ interface MessageReactionsProps {
 export default function MessageReactions({
   messageId,
   reactions,
+  viewerId,
   onToggleReaction,
   addReactionLabel,
 }: MessageReactionsProps) {
@@ -45,6 +47,12 @@ export default function MessageReactions({
     }, {});
   }, [reactions]);
 
+  const hasViewerReaction = useMemo(() => {
+    if (!viewerId) return false;
+    const normalizedViewerId = viewerId.toLowerCase();
+    return reactions.some((reaction) => reaction.user_id.toLowerCase() === normalizedViewerId);
+  }, [reactions, viewerId]);
+
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5" ref={rootRef}>
       {Object.entries(groupedReactions).map(([emoji, count]) => (
@@ -59,35 +67,38 @@ export default function MessageReactions({
         </button>
       ))}
 
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setOpen((prev) => !prev)}
-          className="text-sm text-white/50 hover:text-[#4fdfff] transition-colors opacity-0 group-hover:opacity-100"
-          title={addReactionLabel}
-          aria-label={addReactionLabel}
-        >
-          +
-        </button>
+      {!hasViewerReaction && (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setOpen((prev) => !prev)}
+            className="text-sm text-white/50 hover:text-[#4fdfff] transition-colors opacity-0 group-hover:opacity-100"
+            title={addReactionLabel}
+            aria-label={addReactionLabel}
+          >
+            +
+          </button>
 
-        {open && (
-          <div className="absolute z-20 mt-2 left-0 border border-[#4fdfff]/30 rounded-lg overflow-hidden shadow-xl">
-            <EmojiPicker
-              width={320}
-              height={380}
-              lazyLoadEmojis={true}
-              defaultSkinTone={SkinTones.NEUTRAL}
-              skinTonesDisabled={true}
-              previewConfig={{ showPreview: false }}
-              theme={Theme.DARK}
-              onEmojiClick={(emojiData) => {
-                onToggleReaction(messageId, emojiData.emoji);
-                setOpen(false);
-              }}
-            />
-          </div>
-        )}
-      </div>
+          {open && (
+            <div className="absolute z-20 mt-2 left-0 border border-[#4fdfff]/30 rounded-lg overflow-hidden shadow-xl">
+              <EmojiPicker
+                className="message-reactions-emoji-picker"
+                width={320}
+                height={380}
+                lazyLoadEmojis={true}
+                defaultSkinTone={SkinTones.NEUTRAL}
+                skinTonesDisabled={true}
+                previewConfig={{ showPreview: false }}
+                theme={Theme.DARK}
+                onEmojiClick={(emojiData) => {
+                  onToggleReaction(messageId, emojiData.emoji);
+                  setOpen(false);
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

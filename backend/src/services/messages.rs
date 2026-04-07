@@ -3,7 +3,8 @@ use uuid::Uuid;
 
 use crate::error::{Error, Result};
 use crate::models::{
-    ChannelMessage, CreateMessagePayload, MessageReactionPayload, MessageWithUser,
+    ChannelMessage, CreateMessagePayload, MessageReactionPayload, MessageReactionPublic,
+    MessageWithUser,
     UpdateMessagePayload,
 };
 use crate::repositories::{ChannelRepository, MessageRepository, ServerRepository, UserRepository};
@@ -24,6 +25,12 @@ fn validate_reaction_emoji(emoji: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn to_public_reactions(
+    reactions: Vec<crate::models::MessageReaction>,
+) -> Vec<MessageReactionPublic> {
+    reactions.into_iter().map(MessageReactionPublic::from).collect()
 }
 
 pub async fn create_message(
@@ -129,7 +136,7 @@ pub async fn list_messages(
             content: m.content,
             created_at: m.created_at,
             edited_at: m.edited_at,
-            reactions: m.reactions,
+            reactions: to_public_reactions(m.reactions),
         })
         .collect();
 
@@ -216,7 +223,7 @@ pub async fn update_message(
         content: payload.content,
         created_at: message.created_at,
         edited_at: Some(Utc::now()),
-        reactions: message.reactions,
+        reactions: to_public_reactions(message.reactions),
     })
 }
 
@@ -269,7 +276,7 @@ pub async fn add_reaction(
         content: updated.content,
         created_at: updated.created_at,
         edited_at: updated.edited_at,
-        reactions: updated.reactions,
+        reactions: to_public_reactions(updated.reactions),
     })
 }
 
@@ -322,6 +329,6 @@ pub async fn remove_reaction(
         content: updated.content,
         created_at: updated.created_at,
         edited_at: updated.edited_at,
-        reactions: updated.reactions,
+        reactions: to_public_reactions(updated.reactions),
     })
 }

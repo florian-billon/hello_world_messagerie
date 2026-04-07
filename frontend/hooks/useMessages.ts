@@ -321,28 +321,32 @@ export function useMessages(channelId: string | null, viewerId: string | null) {
     if (!channelId || !viewerId || !emoji.trim()) return false;
 
     const normalizedEmoji = emoji.trim();
-    let previousMessages: Message[] = [];
-    let shouldRemove = false;
+    const normalizedViewerId = viewerId.toLowerCase();
+    const currentMessage = messages.find((message) => message.id === messageId);
+    if (!currentMessage) return false;
+
+    const currentReactions = currentMessage.reactions ?? [];
+    const hasReaction = currentReactions.some(
+      (reaction) => reaction.user_id.toLowerCase() === normalizedViewerId && reaction.emoji === normalizedEmoji
+    );
+
+    const previousMessages = messages;
 
     try {
       setError(null);
 
-      setMessages((prev) => {
-        previousMessages = [...prev];
-        return prev.map((message) => {
+      setMessages((prev) =>
+        prev.map((message) => {
           if (message.id !== messageId) return message;
 
           const reactions = message.reactions ?? [];
-          const hasReaction = reactions.some(
-            (reaction) => reaction.user_id === viewerId && reaction.emoji === normalizedEmoji
-          );
-          shouldRemove = hasReaction;
 
           if (hasReaction) {
             return {
               ...message,
               reactions: reactions.filter(
-                (reaction) => !(reaction.user_id === viewerId && reaction.emoji === normalizedEmoji)
+                (reaction) =>
+                  !(reaction.user_id.toLowerCase() === normalizedViewerId && reaction.emoji === normalizedEmoji)
               ),
             };
           }
@@ -355,12 +359,17 @@ export function useMessages(channelId: string | null, viewerId: string | null) {
 
           return {
             ...message,
-            reactions: [...reactions, optimisticReaction],
+            reactions: [
+              ...reactions.filter(
+                (reaction) => reaction.user_id.toLowerCase() !== normalizedViewerId
+              ),
+              optimisticReaction,
+            ],
           };
-        });
-      });
+        })
+      );
 
-      if (shouldRemove) {
+      if (hasReaction) {
         await apiRemoveMessageReaction(messageId, normalizedEmoji);
       } else {
         await apiAddMessageReaction(messageId, normalizedEmoji);
@@ -368,9 +377,7 @@ export function useMessages(channelId: string | null, viewerId: string | null) {
 
       return true;
     } catch (err) {
-      if (previousMessages.length > 0) {
-        setMessages(previousMessages);
-      }
+      setMessages(previousMessages);
 
       const rawMessage = getErrorMessage(err, "");
       if (rawMessage.includes("HTTP 404")) {
@@ -387,7 +394,7 @@ export function useMessages(channelId: string | null, viewerId: string | null) {
       setError(errorMessage);
       return false;
     }
-  }, [channelId, viewerId, toUiError, t]);
+  }, [channelId, viewerId, messages, toUiError]);
 
   // Rafraîchir l'historique (utile pour resync après reconnexion)
   const refresh = useCallback(() => {
