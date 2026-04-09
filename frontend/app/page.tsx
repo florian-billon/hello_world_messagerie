@@ -439,7 +439,6 @@ export default function Home() {
             />
           </svg>
         </button>
-        {/* ---------------------------- */}
       </div>
 
       {/* ========== CHAT CENTER ========== */}
