@@ -1,3 +1,4 @@
+pub mod dm;             // Pour lire le fichier dm.rs
 pub mod channel;
 pub mod invite;
 pub mod message;
@@ -8,3 +9,4 @@ pub use invite::InviteRepository;
 pub use message::MessageRepository;
 pub use server::ServerRepository;
 pub use user::UserRepository;
+pub use dm::DmRepository; // Pour l'exporter proprement
