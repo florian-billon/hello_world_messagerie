@@ -9,7 +9,7 @@ use axum::{
 use mongodb::{Client as MongoClient, Database as MongoDatabase};
 use sqlx::postgres::PgPoolOptions;
 use std::time::Duration;
-use tower_http::cors::CorsLayer; // On utilise axum::http au lieu de http direct
+use tower_http::cors::CorsLayer;
 
 mod ctx;
 mod error;
@@ -22,7 +22,7 @@ mod web;
 
 use axum::extract::State;
 use repositories::{
-    ChannelRepository, InviteRepository, MessageRepository, ServerRepository, UserRepository,
+    ChannelRepository, InviteRepository, MessageRepository, ServerRepository, UserRepository, DmRepository
 };
 use web::MetricsSnapshot;
 use web::{WsHub, WsMetrics};
@@ -46,7 +46,6 @@ async fn health() -> &'static str {
     "OK"
 }
 
-/// Endpoint pour récupérer les métriques WebSocket
 async fn get_ws_metrics(State(state): State<AppState>) -> Json<MetricsSnapshot> {
     Json(state.ws_metrics.get_metrics().await)
 }
@@ -55,7 +54,6 @@ async fn get_ws_metrics(State(state): State<AppState>) -> Json<MetricsSnapshot> 
 async fn main() {
     dotenvy::dotenv().ok();
 
-    // Initialiser tracing pour les logs
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -68,29 +66,20 @@ async fn main() {
     let jwt_secret =
         std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
 
+    // 1. Connexion PostgreSQL
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&database_url)
         .await
         .expect("Failed to connect to PostgreSQL");
 
-        // Initialisation des repos
-        let user_repo = UserRepository::new(pool.clone());
-        let server_repo = ServerRepository::new(pool.clone());
-        let dm_repo = DmRepository::new(pool.clone()); // <--- Initialise-le ici
-
-        let state = AppState {
-            user_repo,
-            server_repo,
-            dm_repo,
-        }
-
-    // Exécuter les migrations SQLx automatiquement au démarrage
+    // 2. Exécuter les migrations
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
         .expect("Failed to run database migrations");
 
+    // 3. Connexion MongoDB
     let mongodb_url =
         std::env::var("MONGODB_URL").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
     let mongo_client = MongoClient::with_uri_str(&mongodb_url)
@@ -98,24 +87,18 @@ async fn main() {
         .expect("Failed to connect to MongoDB");
     let mongo_db = mongo_client.database("helloworld");
 
+    // 4. Initialisation UNIQUE des repos
     let user_repo = UserRepository::new(pool.clone());
     let server_repo = ServerRepository::new(pool.clone());
     let channel_repo = ChannelRepository::new(pool.clone());
-    let message_repo = MessageRepository::new(mongo_db.clone());
+    let dm_repo = DmRepository::new(pool.clone());
     let invite_repo = InviteRepository::new(pool.clone());
+    let message_repo = MessageRepository::new(mongo_db.clone());
 
     let ws_hub = WsHub::new();
     let ws_metrics = WsMetrics::new();
 
-    // Démarrer le cleanup périodique du cache typing
-    tokio::spawn(async {
-        let mut interval = tokio::time::interval(Duration::from_secs(5));
-        loop {
-            interval.tick().await;
-            crate::services::realtime::typing::cleanup_typing_cache().await;
-        }
-    });
-
+    // 5. Création de l'AppState
     let state = AppState {
         db: pool,
         mongo: mongo_db,
@@ -124,10 +107,22 @@ async fn main() {
         server_repo,
         channel_repo,
         message_repo,
+        dm_repo,
         invite_repo,
         ws_hub,
         ws_metrics,
     };
+
+    // Cleanup typing cache
+    tokio::spawn(async {
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        loop {
+            interval.tick().await;
+            crate::services::realtime::typing::cleanup_typing_cache().await;
+        }
+    });
+
+    // CORS
     let allowed_origins = std::env::var("ALLOWED_ORIGINS")
         .unwrap_or_else(|_| "https://hello-world-messagerie-jfk7.vercel.app".to_string());
     let origins: Vec<HeaderValue> = allowed_origins
@@ -142,7 +137,7 @@ async fn main() {
             Method::POST,
             Method::PATCH,
             Method::DELETE,
-            Method::OPTIONS, // Très important pour les navigateurs
+            Method::OPTIONS,
         ])
         .allow_headers([
             header::CONTENT_TYPE,
@@ -151,6 +146,7 @@ async fn main() {
             header::CONNECTION,
         ]);
 
+    // Routes
     let routes_protected = routes::create_router()
         .route(
             "/me",
@@ -182,19 +178,15 @@ async fn main() {
         .layer(cors)
         .with_state(state);
 
-    // 1. Récupération du port dynamique de Render
     let port = std::env::var("PORT").unwrap_or_else(|_| "3001".to_string());
     let addr = format!("0.0.0.0:{}", port);
 
-    // 2. Création du listener TCP sur l'adresse de production
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .unwrap_or_else(|_| panic!("Failed to bind to address {}", addr));
 
-    // 3. Log de confirmation (on affiche l'adresse réelle au lieu de localhost)
     println!("🚀 Server running on http://{}", addr);
 
-    // 4. Démarrage du serveur Axum
     axum::serve(listener, app)
         .await
         .expect("Server failed to start");
