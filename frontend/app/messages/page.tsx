@@ -96,42 +96,21 @@ export default function DirectMessagesPage() {
             </button>
           ))}
         </div>
+
+        {/* User Footer (Identique à l'accueil) */}
+        <div className="h-14 px-2 flex items-center gap-2 bg-[rgba(0,0,0,0.5)] border-t border-[#4fdfff]/20">
+            <div className="flex items-center gap-2 flex-1 min-w-0 p-1">
+                <div className="relative">
+                    <SmartImg src={normalizeAvatarUrl(user?.avatar_url) || ''} alt="Avatar" className="w-8 h-8 rounded-full border border-[#4fdfff]/50" />
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${getStatusColor(user?.status)}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{user?.username}</p>
+                    <p className="text-[10px] text-[#4fdfff] font-mono uppercase leading-tight">{t(getStatusKey(user?.status))}</p>
+                </div>
+            </div>
+        </div>
       </aside>
-
-   {/* User Footer (Synchronisé avec l'accueil) */}
-<div className="h-14 px-2 flex items-center gap-2 bg-[rgba(0,0,0,0.5)] border-t border-[#4fdfff]/20">
-  <button
-    onClick={() => router.push('/')} // Cliquer sur son nom ici peut aussi ramener à l'index ou ouvrir le profil
-    className="flex items-center gap-2 flex-1 min-w-0 hover:bg-white/5 rounded p-1 transition-colors"
-  >
-    <div className="relative flex-shrink-0">
-      <SmartImg 
-        src={normalizeAvatarUrl(user?.avatar_url) || ''} 
-        alt="Avatar" 
-        className="w-8 h-8 rounded-full border border-[#4fdfff]/50" 
-      />
-      <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${getStatusColor(user?.status)}`} />
-    </div>
-    <div className="flex-1 min-w-0 text-left">
-      <p className="text-sm font-medium text-white truncate">{user?.username}</p>
-      <p className="text-[10px] text-[#4fdfff] font-mono uppercase leading-tight">
-        {t(getStatusKey(user?.status))}
-      </p>
-    </div>
-  </button>
-
-  {/* Bouton pour revenir à l'accueil (Canaux/Serveurs) */}
-  <button
-    onClick={() => router.push('/')}
-    className="p-2 text-[#4fdfff] hover:bg-[#4fdfff]/20 rounded-lg transition-all"
-    title="Retour aux serveurs"
-  >
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-    </svg>
-  </button>
-</div>
-
 
       {/* ========== CHAT CENTER ========== */}
       <div className="flex-1 flex flex-col bg-[rgba(10,15,20,0.98)]">
