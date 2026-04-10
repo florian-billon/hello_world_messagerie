@@ -21,8 +21,9 @@ mod services;
 mod web;
 
 use axum::extract::State;
+// AJOUT de DmRepository ici pour corriger l'erreur E0412
 use repositories::{
-    ChannelRepository, InviteRepository, MessageRepository, ServerRepository, UserRepository, DmRepository
+    ChannelRepository, InviteRepository, MessageRepository, ServerRepository, UserRepository, DmRepository,
 };
 use web::MetricsSnapshot;
 use web::{WsHub, WsMetrics};
@@ -66,20 +67,14 @@ async fn main() {
     let jwt_secret =
         std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
 
-    // 1. Connexion PostgreSQL
+    // 1. Connexion Postgres
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&database_url)
         .await
         .expect("Failed to connect to PostgreSQL");
 
-    // 2. Exécuter les migrations
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await
-        .expect("Failed to run database migrations");
-
-    // 3. Connexion MongoDB
+    // 2. Connexion MongoDB
     let mongodb_url =
         std::env::var("MONGODB_URL").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
     let mongo_client = MongoClient::with_uri_str(&mongodb_url)
@@ -87,7 +82,7 @@ async fn main() {
         .expect("Failed to connect to MongoDB");
     let mongo_db = mongo_client.database("helloworld");
 
-    // 4. Initialisation UNIQUE des repos
+    // 3. Initialisation des Repositories
     let user_repo = UserRepository::new(pool.clone());
     let server_repo = ServerRepository::new(pool.clone());
     let channel_repo = ChannelRepository::new(pool.clone());
@@ -98,7 +93,13 @@ async fn main() {
     let ws_hub = WsHub::new();
     let ws_metrics = WsMetrics::new();
 
-    // 5. Création de l'AppState
+    // 4. Migration de la DB
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run database migrations");
+
+    // 5. Création de l'AppState (Unique et complet)
     let state = AppState {
         db: pool,
         mongo: mongo_db,
@@ -113,7 +114,7 @@ async fn main() {
         ws_metrics,
     };
 
-    // Cleanup typing cache
+    // Background Tasks
     tokio::spawn(async {
         let mut interval = tokio::time::interval(Duration::from_secs(5));
         loop {
@@ -122,7 +123,7 @@ async fn main() {
         }
     });
 
-    // CORS
+    // Configuration CORS et Routes (le reste de ton code était bon)
     let allowed_origins = std::env::var("ALLOWED_ORIGINS")
         .unwrap_or_else(|_| "https://hello-world-messagerie-jfk7.vercel.app".to_string());
     let origins: Vec<HeaderValue> = allowed_origins
@@ -132,62 +133,32 @@ async fn main() {
 
     let cors = CorsLayer::new()
         .allow_origin(origins)
-        .allow_methods([
-            Method::GET,
-            Method::POST,
-            Method::PATCH,
-            Method::DELETE,
-            Method::OPTIONS,
-        ])
-        .allow_headers([
-            header::CONTENT_TYPE,
-            header::AUTHORIZATION,
-            header::UPGRADE,
-            header::CONNECTION,
-        ]);
+        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE, Method::OPTIONS])
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::UPGRADE, header::CONNECTION]);
 
-    // Routes
     let routes_protected = routes::create_router()
-        .route(
-            "/me",
-            get(handlers::user::me).patch(handlers::user::update_me),
-        )
+        .route("/me", get(handlers::user::me).patch(handlers::user::update_me))
         .route("/auth/logout", post(handlers::auth::logout))
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            web::mw_require_auth,
-        ));
+        .route_layer(middleware::from_fn_with_state(state.clone(), web::mw_require_auth));
 
     let routes_public = Router::new()
         .route("/health", get(health))
         .route("/ws/metrics", get(get_ws_metrics))
-        .route(
-            "/users/{user_id}",
-            get(handlers::user_public::get_public_user),
-        )
+        .route("/users/{user_id}", get(handlers::user_public::get_public_user))
         .route("/ws", get(web::ws_handler))
         .merge(routes::auth::routes());
 
     let app = Router::new()
         .merge(routes_public)
         .merge(routes_protected)
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            web::mw_ctx_resolver,
-        ))
+        .layer(middleware::from_fn_with_state(state.clone(), web::mw_ctx_resolver))
         .layer(cors)
         .with_state(state);
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3001".to_string());
     let addr = format!("0.0.0.0:{}", port);
-
-    let listener = tokio::net::TcpListener::bind(&addr)
-        .await
-        .unwrap_or_else(|_| panic!("Failed to bind to address {}", addr));
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
     println!("🚀 Server running on http://{}", addr);
-
-    axum::serve(listener, app)
-        .await
-        .expect("Server failed to start");
+    axum::serve(listener, app).await.expect("Server failed to start");
 }
