@@ -1,5 +1,6 @@
 pub use self::error::{Error, Result};
 
+use axum::extract::State;
 use axum::http::{header, HeaderValue, Method};
 use axum::{
     middleware,
@@ -20,10 +21,9 @@ mod routes;
 mod services;
 mod web;
 
-use axum::extract::State;
-// AJOUT de DmRepository ici pour corriger l'erreur E0412
 use repositories::{
-    ChannelRepository, InviteRepository, MessageRepository, ServerRepository, UserRepository, DmRepository,
+    ChannelRepository, DmRepository, InviteRepository, MessageRepository, ServerRepository,
+    UserRepository,
 };
 use web::MetricsSnapshot;
 use web::{WsHub, WsMetrics};
@@ -99,7 +99,7 @@ async fn main() {
         .await
         .expect("Failed to run database migrations");
 
-    // 5. Création de l'AppState (Unique et complet)
+    // 5. Création de l'AppState
     let state = AppState {
         db: pool,
         mongo: mongo_db,
@@ -123,7 +123,7 @@ async fn main() {
         }
     });
 
-    // Configuration CORS et Routes (le reste de ton code était bon)
+    // Configuration CORS
     let allowed_origins = std::env::var("ALLOWED_ORIGINS")
         .unwrap_or_else(|_| "https://hello-world-messagerie-jfk7.vercel.app".to_string());
     let origins: Vec<HeaderValue> = allowed_origins
@@ -133,25 +133,49 @@ async fn main() {
 
     let cors = CorsLayer::new()
         .allow_origin(origins)
-        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE, Method::OPTIONS])
-        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::UPGRADE, header::CONNECTION]);
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PATCH,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_headers([
+            header::CONTENT_TYPE,
+            header::AUTHORIZATION,
+            header::UPGRADE,
+            header::CONNECTION,
+        ]);
 
+    // Routes
     let routes_protected = routes::create_router()
-        .route("/me", get(handlers::user::me).patch(handlers::user::update_me))
+        .route(
+            "/me",
+            get(handlers::user::me).patch(handlers::user::update_me),
+        )
         .route("/auth/logout", post(handlers::auth::logout))
-        .route_layer(middleware::from_fn_with_state(state.clone(), web::mw_require_auth));
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            web::mw_require_auth,
+        ));
 
     let routes_public = Router::new()
         .route("/health", get(health))
         .route("/ws/metrics", get(get_ws_metrics))
-        .route("/users/{user_id}", get(handlers::user_public::get_public_user))
+        .route(
+            "/users/{user_id}",
+            get(handlers::user_public::get_public_user),
+        )
         .route("/ws", get(web::ws_handler))
         .merge(routes::auth::routes());
 
     let app = Router::new()
         .merge(routes_public)
         .merge(routes_protected)
-        .layer(middleware::from_fn_with_state(state.clone(), web::mw_ctx_resolver))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            web::mw_ctx_resolver,
+        ))
         .layer(cors)
         .with_state(state);
 
@@ -160,5 +184,7 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
     println!("🚀 Server running on http://{}", addr);
-    axum::serve(listener, app).await.expect("Server failed to start");
+    axum::serve(listener, app)
+        .await
+        .expect("Server failed to start");
 }
