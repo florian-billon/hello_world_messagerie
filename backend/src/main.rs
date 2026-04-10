@@ -36,6 +36,7 @@ pub struct AppState {
     pub server_repo: ServerRepository,
     pub channel_repo: ChannelRepository,
     pub message_repo: MessageRepository,
+    pub dm_repo: DmRepository,
     pub invite_repo: InviteRepository,
     pub ws_hub: web::WsHub,
     pub ws_metrics: web::WsMetrics,
@@ -72,6 +73,16 @@ async fn main() {
         .connect(&database_url)
         .await
         .expect("Failed to connect to PostgreSQL");
+
+        // Initialisation des repos
+        let user_repo = UserRepository::new(pool.clone());
+        let server_repo = ServerRepository::new(pool.clone());
+        let dm_repo = DmRepository::new(pool.clone()); // <--- Initialise-le ici
+
+        let state = AppState {
+            user_repo,
+            server_repo,
+            dm_repo,
 
     // Exécuter les migrations SQLx automatiquement au démarrage
     sqlx::migrate!("./migrations")
