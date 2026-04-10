@@ -58,7 +58,9 @@
     "addReaction": "React",
     "edited": "(edited)",
     "confirmDeleteTitle": "Delete Message",
-    "confirmDeleteMessage": "Are you sure you want to delete this message? This action cannot be undone."
+    "confirmDeleteMessage": "Are you sure you want to delete this message? This action cannot be undone.",
+    "gifTooltip": "Send a GIF",
+    "gifSearch": "Search GIFs..."
   },
   "server": {
     "createTitle": "CREATE SERVER",
