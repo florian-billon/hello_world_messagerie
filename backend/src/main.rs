@@ -83,6 +83,7 @@ async fn main() {
             user_repo,
             server_repo,
             dm_repo,
+        }
 
     // Exécuter les migrations SQLx automatiquement au démarrage
     sqlx::migrate!("./migrations")
