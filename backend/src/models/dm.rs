@@ -1,30 +1,19 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use sqlx::FromRow;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct DirectMessage {
     pub id: Uuid,
     pub user1_id: Uuid,
     pub user2_id: Uuid,
-    pub created_at: DateTime<Utc>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct CreateDMPayload {
-    pub target_username: String,
-}
-
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DMWithRecipient {
     pub id: Uuid,
-    pub recipient: RecipientInfo,
-    pub last_msg: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct RecipientInfo {
-    pub id: Uuid,
+    pub recipient_id: Uuid,
     pub username: String,
     pub avatar_url: Option<String>,
     pub status: String,

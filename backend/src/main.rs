@@ -1,6 +1,6 @@
 pub use self::error::{Error, Result};
 
-use ax_extract::State;
+use axum::extract::State;
 use axum::http::{header, HeaderValue, Method};
 use axum::{
     middleware,

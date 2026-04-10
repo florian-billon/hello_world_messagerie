@@ -16,7 +16,7 @@ impl DmRepository {
     pub async fn create_or_get_dm(&self, u1: Uuid, u2: Uuid) -> Result<Uuid> {
         let (first, second) = if u1 < u2 { (u1, u2) } else { (u2, u1) };
 
-        let row = sqlx::query!(
+        let row = sqlx::query(
             r#"
             INSERT INTO direct_messages (user1_id, user2_id)
             VALUES ($1, $2)

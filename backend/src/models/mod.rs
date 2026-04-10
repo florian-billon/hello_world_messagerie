@@ -1,3 +1,4 @@
+pub mod dm;
 pub mod channel;
 pub mod invite;
 pub mod message;
@@ -9,3 +10,4 @@ pub use invite::*;
 pub use message::*;
 pub use server::*;
 pub use user::*;
+pub use dm::*;
