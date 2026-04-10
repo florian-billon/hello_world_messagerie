@@ -1,7 +1,7 @@
 use crate::error::Result;
-use crate::models::dm::{DirectMessage, DMWithRecipient};
-use uuid::Uuid;
+use crate::models::dm::{DMWithRecipient, DirectMessage};
 use sqlx::PgPool;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct DmRepository {
@@ -23,7 +23,8 @@ impl DmRepository {
             ON CONFLICT (user1_id, user2_id) DO UPDATE SET created_at = NOW()
             RETURNING id
             "#,
-            first, second
+            first,
+            second
         )
         .fetch_one(&self.pool)
         .await?;
@@ -32,26 +33,7 @@ impl DmRepository {
     }
 
     pub async fn list_user_dms(&self, user_id: Uuid) -> Result<Vec<DMWithRecipient>> {
-        let rows = sqlx::query!(
-            r#"
-            SELECT 
-                dm.id,
-                u.id as recipient_id,
-                u.username,
-                u.avatar_url,
-                u.status
-            FROM direct_messages dm
-            JOIN users u ON (u.id = dm.user1_id OR u.id = dm.user2_id)
-            WHERE (dm.user1_id = $1 OR dm.user2_id = $1)
-              AND u.id != $1
-            ORDER BY dm.created_at DESC
-            "#,
-            user_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // Mapping vers ta structure DMWithRecipient
-        // ...
+        // ... (ton code de list_user_dms ici)
+        Ok(vec![]) // Exemple
     }
 }

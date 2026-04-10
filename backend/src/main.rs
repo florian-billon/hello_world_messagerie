@@ -1,6 +1,6 @@
 pub use self::error::{Error, Result};
 
-use axum::extract::State;
+use ax_extract::State;
 use axum::http::{header, HeaderValue, Method};
 use axum::{
     middleware,
@@ -67,14 +67,12 @@ async fn main() {
     let jwt_secret =
         std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
 
-    // 1. Connexion Postgres
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&database_url)
         .await
         .expect("Failed to connect to PostgreSQL");
 
-    // 2. Connexion MongoDB
     let mongodb_url =
         std::env::var("MONGODB_URL").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
     let mongo_client = MongoClient::with_uri_str(&mongodb_url)
@@ -82,7 +80,6 @@ async fn main() {
         .expect("Failed to connect to MongoDB");
     let mongo_db = mongo_client.database("helloworld");
 
-    // 3. Initialisation des Repositories
     let user_repo = UserRepository::new(pool.clone());
     let server_repo = ServerRepository::new(pool.clone());
     let channel_repo = ChannelRepository::new(pool.clone());
@@ -93,13 +90,11 @@ async fn main() {
     let ws_hub = WsHub::new();
     let ws_metrics = WsMetrics::new();
 
-    // 4. Migration de la DB
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
         .expect("Failed to run database migrations");
 
-    // 5. Création de l'AppState
     let state = AppState {
         db: pool,
         mongo: mongo_db,
@@ -114,7 +109,6 @@ async fn main() {
         ws_metrics,
     };
 
-    // Background Tasks
     tokio::spawn(async {
         let mut interval = tokio::time::interval(Duration::from_secs(5));
         loop {
@@ -123,7 +117,6 @@ async fn main() {
         }
     });
 
-    // Configuration CORS
     let allowed_origins = std::env::var("ALLOWED_ORIGINS")
         .unwrap_or_else(|_| "https://hello-world-messagerie-jfk7.vercel.app".to_string());
     let origins: Vec<HeaderValue> = allowed_origins
@@ -147,7 +140,6 @@ async fn main() {
             header::CONNECTION,
         ]);
 
-    // Routes
     let routes_protected = routes::create_router()
         .route(
             "/me",
