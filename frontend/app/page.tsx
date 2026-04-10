@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation"; // Ajoute cette ligne avec les autres imports
 import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { logout } from "@/lib/auth/actions";
@@ -18,6 +19,7 @@ import MessageReactions from "@/components/chat/MessageReactions";
  * Layout: SERVER SIDEBAR (72px) | CHANNEL SIDEBAR (240px) | CHAT CENTER | MEMBERS SIDEBAR (240px)
  */
 export default function Home() {
+  const router = useRouter(); // Initialisation du router
   const { t, locale } = useTranslation();
   const { user } = useAuth();
   const {
@@ -386,60 +388,60 @@ export default function Home() {
         )}
       </aside>
       
-      {/* User info footer (Toujours visible) */}
-      <div className="h-14 px-2 flex items-center gap-2 bg-[rgba(0,0,0,0.5)] border-t border-[#4fdfff]/20">
-        <button
-          onClick={() => setShowProfile(true)}
-          className="flex items-center gap-2 flex-1 min-w-0 hover:bg-white/5 rounded p-1 transition-colors"
-        >
-          <div className="relative flex-shrink-0">
-            {(currentUser || user)?.avatar_url ? (
-              <SmartImg
-                src={normalizeAvatarUrl((currentUser || user)?.avatar_url) || ''}
-                alt="Avatar"
-                className="w-8 h-8 rounded-full object-cover border border-[#4fdfff]/50"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-[#4fdfff]/20 border border-[#4fdfff]/50 flex items-center justify-center">
-                <span className="text-[#4fdfff] text-xs font-bold">
-                  {(currentUser || user)?.username?.charAt(0).toUpperCase() || "?"}
-                </span>
-              </div>
-            )}
-            <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${getStatusColor((currentUser || user)?.status)}`} />
-          </div>
-          <div className="flex-1 min-w-0 text-left">
-            <p className="text-sm font-medium text-white truncate">{(currentUser || user)?.username || t("chat.guest")}</p>
-            <p className="text-[10px] text-[#4fdfff] font-mono uppercase">
-              {t(getStatusKey((currentUser || user)?.status))}
-            </p>
-          </div>
-        </button>
-
-        {/* ----- NOUVEAU BOUTON MP ----- */}
-        <button
-          onClick={() => {
-            // Remplace par ta logique de navigation, ex: router.push('/messages')
-            console.log("Redirection vers les MP");
-          }}
-          className="p-2 text-[#4fdfff] hover:bg-[#4fdfff]/10 rounded-lg transition-all group"
-          title="Messages Privés"
-        >
-          <svg 
-            className="w-5 h-5 group-hover:scale-110 transition-transform" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" 
+    {/* User info footer (Toujours visible) */}
+    <div className="h-14 px-2 flex items-center gap-2 bg-[rgba(0,0,0,0.5)] border-t border-[#4fdfff]/20">
+      {/* BLOC PROFIL (Reste à gauche grâce à flex-1) */}
+      <button
+        onClick={() => setShowProfile(true)}
+        className="flex items-center gap-2 flex-1 min-w-0 hover:bg-white/5 rounded p-1 transition-colors"
+      >
+        <div className="relative flex-shrink-0">
+          {(currentUser || user)?.avatar_url ? (
+            <SmartImg
+              src={normalizeAvatarUrl((currentUser || user)?.avatar_url) || ''}
+              alt="Avatar"
+              className="w-8 h-8 rounded-full object-cover border border-[#4fdfff]/50"
             />
-          </svg>
-        </button>
-      </div>
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-[#4fdfff]/20 border border-[#4fdfff]/50 flex items-center justify-center">
+              <span className="text-[#4fdfff] text-xs font-bold">
+                {(currentUser || user)?.username?.charAt(0).toUpperCase() || "?"}
+              </span>
+            </div>
+          )}
+          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${getStatusColor((currentUser || user)?.status)}`} />
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <p className="text-sm font-medium text-white truncate">
+            {(currentUser || user)?.username || t("chat.guest")}
+          </p>
+          <p className="text-[10px] text-[#4fdfff] font-mono uppercase">
+            {t(getStatusKey((currentUser || user)?.status))}
+          </p>
+        </div>
+      </button>
+
+      {/* ----- NOUVEAU BOUTON MP (Placé à droite) ----- */}
+      <button
+        onClick={() => router.push('/messages')} // Redirection vers la page /messages
+        className="p-2 text-[#4fdfff] hover:bg-[#4fdfff]/10 rounded-lg transition-all group"
+        title="Messages Privés"
+      >
+        <svg 
+          className="w-5 h-5 group-hover:scale-110 transition-transform" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            strokeWidth={2} 
+            d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" 
+          />
+        </svg>
+      </button>
+    </div>
 
       {/* ========== CHAT CENTER ========== */}
       <div className="flex-1 flex flex-col bg-[rgba(10,15,20,0.98)]">
