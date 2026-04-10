@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow; // sqlx avant uuid (ordre alphabétique)
 use uuid::Uuid;
-use sqlx::FromRow;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct DirectMessage {

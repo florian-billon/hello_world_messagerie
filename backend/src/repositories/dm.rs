@@ -24,7 +24,7 @@ impl DmRepository {
             RETURNING id
             "#,
             first,
-            second
+            second,
         )
         .fetch_one(&self.pool)
         .await?;
