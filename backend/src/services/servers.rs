@@ -1,3 +1,6 @@
+use crate::error::{Error, Result};
+use crate::models::server::MemberRole;
+use crate::repositories::ServerRepository;
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -175,45 +178,42 @@ pub async fn leave_server(
     Ok(())
 }
 
+
 pub async fn kick_member(
     server_repo: &ServerRepository,
     server_id: Uuid,
     target_user_id: Uuid,
     requester_id: Uuid,
 ) -> Result<()> {
-    // Vérifier que le serveur existe
+    // 1. Vérifier que le serveur existe
     let server = server_repo
         .find_by_id(server_id)
         .await?
         .ok_or(Error::ServerNotFound)?;
 
-    // Vérifier que le requester est membre et a le droit de kick (Owner ou Admin)
+    // 2. Vérifier que le requester a le droit de kick (Owner ou Admin)
     let requester = server_repo
         .find_member(server_id, requester_id)
         .await?
         .ok_or(Error::ServerForbidden)?;
 
+    // Si le membre n'est ni Admin ni Owner, il ne peut pas kick
     if requester.role == MemberRole::Member {
         return Err(Error::ServerForbidden);
     }
 
-    // Vérifier que la cible est bien membre
+    // 3. Vérifier que la cible est bien membre
     let target = server_repo
         .find_member(server_id, target_user_id)
         .await?
         .ok_or(Error::UserNotFound)?;
 
-    // On ne peut pas kick l'Owner
+    // 4. Sécurité : On ne peut pas kick l'Owner du serveur
     if target.user_id == server.owner_id {
         return Err(Error::ServerForbidden);
     }
 
-    // Vérification des permissions
-    if !requester_is_admin {
-        return Err(Error::ServerForbidden);
-    }
-
-    // Ban temporaire de 1h pour empêcher de rejoindre via invitation
+    // 5. Ban temporaire de 1h pour empêcher de rejoindre via invitation
     let expires_at = Utc::now() + chrono::Duration::hours(1);
     server_repo
         .upsert_ban(
@@ -225,6 +225,7 @@ pub async fn kick_member(
         )
         .await?;
 
+    // 6. Suppression effective du membre
     server_repo.remove_member(server_id, target_user_id).await?;
 
     Ok(())
