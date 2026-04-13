@@ -227,6 +227,7 @@ pub async fn kick_member(
 
     server_repo.remove_member(server_id, target_user_id).await?;
 }
+
 pub async fn ban_member(
     server_repo: &ServerRepository,
     server_id: Uuid,
