@@ -1,0 +1,188 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "create": "Créer",
+    "delete": "Supprimer",
+    "close": "Fermer",
+    "save": "Sauvegarder",
+    "copy": "Copier",
+    "loading": "Chargement...",
+    "tryAgain": "Réessayer",
+    "appName": "HELLO WORLD"
+  },
+  "auth": {
+    "welcomeMessage": "Bienvenue sur la plateforme de messagerie HELLO WORLD",
+    "logoAlt": "Logo Hello World",
+    "login": {
+      "title": "CONNEXION",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Mot de passe",
+      "submit": "SE CONNECTER",
+      "noAccount": "Pas encore de compte ? Inscrivez-vous",
+      "error": "Erreur de connexion"
+    },
+    "register": {
+      "title": "INSCRIPTION",
+      "usernamePlaceholder": "Pseudo",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Mot de passe",
+      "passwordHelper": "Minimum 8 caractères",
+      "confirmPasswordPlaceholder": "Confirmer le mot de passe",
+      "submit": "S'INSCRIRE",
+      "hasAccount": "Déjà un compte ? Se connecter",
+      "error": "Erreur lors de l'inscription",
+      "passwordMismatch": "Les mots de passe ne correspondent pas",
+      "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères"
+    },
+    "logout": "Déconnexion"
+  },
+  "chat": {
+    "initializing": "INITIALISATION DU SYSTÈME...",
+    "selectServer": "Sélectionnez un serveur",
+    "selectChannel": "Sélectionnez un canal",
+    "selectServerPrompt": "Choisissez un serveur pour commencer",
+    "selectChannelPrompt": "Choisissez un canal pour commencer à discuter",
+    "selectServerForChannels": "Sélectionnez un serveur pour voir les canaux",
+    "loadingMessages": "Chargement des messages...",
+    "welcomeChannel": "Bienvenue dans #{channelName}",
+    "channelStart": "C'est le début de ce canal. Envoyez un message pour commencer !",
+    "messagePlaceholder": "Message #{channelName}",
+    "noChannel": "Aucun channel",
+    "guest": "Invité",
+    "typing": "{names} est en train d'écrire",
+    "typingPlural": "{names} sont en train d'écrire",
+    "isTyping": "en train d'écrire",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "save": "Enregistrer",
+    "addReaction": "Réagir",
+    "edited": "(modifié)",
+    "confirmDeleteTitle": "Supprimer le message",
+    "confirmDeleteMessage": "Es-tu sûr de vouloir supprimer ce message ? Cette action est irréversible.",
+    "gifTooltip": "Envoyer un GIF",
+    "gifSearch": "Rechercher des GIFs..."
+  },
+  "server": {
+    "createTitle": "CRÉER UN SERVEUR",
+    "createDescription": "Votre serveur sera votre espace de discussion",
+    "nameLabel": "NOM DU SERVEUR",
+    "namePlaceholder": "Mon Serveur",
+    "options": "Options du serveur",
+    "leave": "Quitter le serveur",
+    "delete": "Supprimer le serveur",
+    "createTooltip": "Créer un serveur",
+    "confirmDelete": {
+      "title": "Supprimer le serveur",
+      "message": "Es-tu sûr de vouloir supprimer définitivement {serverName} ? Cette action est irréversible."
+    },
+    "confirmLeave": {
+      "title": "Quitter le serveur",
+      "message": "Es-tu sûr de vouloir quitter {serverName} ? Tu devras être réinvité pour y revenir.",
+      "transferLabel": "Nouveau propriétaire",
+      "transferPlaceholder": "Choisir un membre",
+      "transferRequired": "Tu dois choisir un nouveau propriétaire avant de quitter.",
+      "noCandidates": "Aucun membre éligible pour devenir propriétaire."
+    }
+  },
+  "channel": {
+    "textChannels": "CHANNELS TEXTUELS",
+    "createTooltip": "Créer un channel",
+    "deleteTooltip": "Supprimer le channel",
+    "confirmDeleteTitle": "Supprimer le channel",
+    "confirmDeleteMessage": "Es-tu sûr de vouloir supprimer définitivement #{channelName} ? Cette action est irréversible.",
+    "createTitle": "CRÉER UN CHANNEL",
+    "createDescription": "dans {serverName}",
+    "nameLabel": "NOM DU CHANNEL",
+    "namePlaceholder": "général"
+  },
+  "members": {
+    "title": "MEMBRES — {count}",
+    "inviteTooltip": "Inviter un membre",
+    "noMembers": "Aucun membre",
+    "owner": "PROPRIÉTAIRE",
+    "members": "MEMBRES",
+    "kick": "Expulser {username}",
+    "ban": "Bannir {username}"
+  },
+  "invite": {
+    "title": "Invitation à rejoindre",
+    "invalidTitle": "Invitation invalide",
+    "invalidDescription": "Ce lien d'invitation est invalide ou expiré.",
+    "banned": "Un administrateur t'a banni de ce serveur.",
+    "inviteCode": "Code d'invitation :",
+    "serverId": "ID du serveur :",
+    "maxUses": "Utilisations max :",
+    "uses": "Utilisations :",
+    "expires": "Expire :",
+    "never": "jamais",
+    "unlimited": "∞",
+    "joinInfo": "Toute personne disposant de ce lien peut rejoindre ce serveur.",
+    "joinButton": "Rejoindre le serveur",
+    "modal": {
+      "title": "Inviter dans {serverName}",
+      "linkLabel": "Lien d'invitation",
+      "generating": "Génération...",
+      "regenerate": "Régénérer",
+      "info": "Utilisations max : 10 • Expire : jamais",
+      "error": "Impossible de créer l'invitation"
+    }
+  },
+  "profile": {
+    "usernameLabel": "Nom d'utilisateur",
+    "avatarLabel": "Avatar",
+    "chooseAvatar": "Choisir un avatar",
+    "avatarAlt": "Avatar {index}",
+    "statusLabel": "Statut",
+    "languageLabel": "Langue",
+    "memberSince": "Membre depuis",
+    "emailLabel": "Email",
+    "editProfile": "Modifier le profil"
+  },
+  "status": {
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "dnd": "Ne pas déranger",
+    "invisible": "Invisible"
+  },
+  "error": {
+    "title": "Une erreur est survenue",
+    "default": "Une erreur inattendue s'est produite.",
+    "digest": "Digest :",
+    "authRequired": "Authentification requise. Merci de te reconnecter.",
+    "backendUnavailable": "Impossible de contacter le serveur. Vérifie que le backend est lancé.",
+    "hooks": {
+      "authInvalidSession": "Session invalide",
+      "servers": {
+        "load": "Impossible de charger les serveurs",
+        "create": "Impossible de créer le serveur",
+        "get": "Impossible de récupérer le serveur",
+        "update": "Impossible de modifier le serveur",
+        "delete": "Impossible de supprimer le serveur",
+        "join": "Impossible de rejoindre le serveur",
+        "leave": "Impossible de quitter le serveur",
+        "transfer": "Impossible de transférer la propriété"
+      },
+      "channels": {
+        "load": "Impossible de charger les channels",
+        "create": "Impossible de créer le channel",
+        "get": "Impossible de récupérer le channel",
+        "update": "Impossible de modifier le channel",
+        "delete": "Impossible de supprimer le channel"
+      },
+      "messages": {
+        "load": "Impossible de charger les messages",
+        "send": "Impossible d'envoyer le message",
+        "update": "Impossible de modifier le message",
+        "delete": "Impossible de supprimer le message",
+        "reaction": "Impossible de mettre à jour la réaction",
+        "reactionUnavailable": "Les réactions ne sont pas disponibles sur ce backend (déploiement à mettre à jour).",
+        "notConnected": "Connexion au serveur perdue. Merci d'actualiser la page."
+      },
+      "members": {
+        "load": "Impossible de charger les membres",
+        "kick": "Impossible d'expulser le membre",
+        "ban": "Impossible de bannir le membre"
+      }
+    }
+  }
+}

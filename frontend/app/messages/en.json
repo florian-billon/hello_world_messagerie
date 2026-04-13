@@ -1,0 +1,188 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "create": "Create",
+    "delete": "Delete",
+    "close": "Close",
+    "save": "Save",
+    "copy": "Copy",
+    "loading": "Loading...",
+    "tryAgain": "Try again",
+    "appName": "HELLO WORLD"
+  },
+  "auth": {
+    "welcomeMessage": "Welcome to HELLO WORLD messaging platform",
+    "logoAlt": "Hello World logo",
+    "login": {
+      "title": "LOGIN",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "submit": "LOG IN",
+      "noAccount": "No account yet? Sign up",
+      "error": "Login error"
+    },
+    "register": {
+      "title": "SIGN UP",
+      "usernamePlaceholder": "Username",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "passwordHelper": "Minimum 8 characters",
+      "confirmPasswordPlaceholder": "Confirm password",
+      "submit": "SIGN UP",
+      "hasAccount": "Already have an account? Log in",
+      "error": "Sign up error",
+      "passwordMismatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 8 characters"
+    },
+    "logout": "Log out"
+  },
+  "chat": {
+    "initializing": "INITIALIZING SYSTEM...",
+    "selectServer": "Select a server",
+    "selectChannel": "Select a channel",
+    "selectServerPrompt": "Choose a server to get started",
+    "selectChannelPrompt": "Choose a channel to start chatting",
+    "selectServerForChannels": "Select a server to see channels",
+    "loadingMessages": "Loading messages...",
+    "welcomeChannel": "Welcome to #{channelName}",
+    "channelStart": "This is the beginning of this channel. Send a message to get started!",
+    "messagePlaceholder": "Message #{channelName}",
+    "noChannel": "No channels",
+    "guest": "Guest",
+    "typing": "{names} is typing",
+    "typingPlural": "{names} are typing",
+    "isTyping": "typing",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "addReaction": "React",
+    "edited": "(edited)",
+    "confirmDeleteTitle": "Delete Message",
+    "confirmDeleteMessage": "Are you sure you want to delete this message? This action cannot be undone.",
+    "gifTooltip": "Send a GIF",
+    "gifSearch": "Search GIFs..."
+  },
+  "server": {
+    "createTitle": "CREATE SERVER",
+    "createDescription": "Your server will be your discussion space",
+    "nameLabel": "SERVER NAME",
+    "namePlaceholder": "My Server",
+    "options": "Server options",
+    "leave": "Leave server",
+    "delete": "Delete server",
+    "createTooltip": "Create a server",
+    "confirmDelete": {
+      "title": "Delete server",
+      "message": "Are you sure you want to permanently delete {serverName}? This action is irreversible."
+    },
+    "confirmLeave": {
+      "title": "Leave server",
+      "message": "Are you sure you want to leave {serverName}? You will need to be re-invited to come back.",
+      "transferLabel": "New owner",
+      "transferPlaceholder": "Choose a member",
+      "transferRequired": "You must choose a new owner before leaving.",
+      "noCandidates": "No eligible member available to become owner."
+    }
+  },
+  "channel": {
+    "textChannels": "TEXT CHANNELS",
+    "createTooltip": "Create a channel",
+    "deleteTooltip": "Delete channel",
+    "confirmDeleteTitle": "Delete channel",
+    "confirmDeleteMessage": "Are you sure you want to permanently delete #{channelName}? This action is irreversible.",
+    "createTitle": "CREATE CHANNEL",
+    "createDescription": "in {serverName}",
+    "nameLabel": "CHANNEL NAME",
+    "namePlaceholder": "general"
+  },
+  "members": {
+    "title": "MEMBERS — {count}",
+    "inviteTooltip": "Invite member",
+    "noMembers": "No members",
+    "owner": "OWNER",
+    "members": "MEMBERS",
+    "kick": "Kick {username}",
+    "ban": "Ban {username}"
+  },
+  "invite": {
+    "title": "You've been invited",
+    "invalidTitle": "Invalid invite",
+    "invalidDescription": "This invite link is invalid or expired.",
+    "banned": "An administrator has banned you from this server.",
+    "inviteCode": "Invite code:",
+    "serverId": "Server ID:",
+    "maxUses": "Max uses:",
+    "uses": "Uses:",
+    "expires": "Expires:",
+    "never": "never",
+    "unlimited": "∞",
+    "joinInfo": "Anyone with this link can join this server.",
+    "joinButton": "Join server",
+    "modal": {
+      "title": "Invite to {serverName}",
+      "linkLabel": "Invite link",
+      "generating": "Generating...",
+      "regenerate": "Regenerate",
+      "info": "Max uses: 10 • Expires: never",
+      "error": "Failed to create invite"
+    }
+  },
+  "profile": {
+    "usernameLabel": "Username",
+    "avatarLabel": "Avatar",
+    "chooseAvatar": "Choose an avatar",
+    "avatarAlt": "Avatar {index}",
+    "statusLabel": "Status",
+    "languageLabel": "Language",
+    "memberSince": "Member since",
+    "emailLabel": "Email",
+    "editProfile": "Edit profile"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "dnd": "Do not disturb",
+    "invisible": "Invisible"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "default": "An unexpected error occurred.",
+    "digest": "Digest:",
+    "authRequired": "Authentication required. Please log in again.",
+    "backendUnavailable": "Unable to reach the server. Please check that the backend is running.",
+    "hooks": {
+      "authInvalidSession": "Invalid session",
+      "servers": {
+        "load": "Failed to load servers",
+        "create": "Failed to create server",
+        "get": "Failed to get server",
+        "update": "Failed to update server",
+        "delete": "Failed to delete server",
+        "join": "Failed to join server",
+        "leave": "Failed to leave server",
+        "transfer": "Failed to transfer ownership"
+      },
+      "channels": {
+        "load": "Failed to load channels",
+        "create": "Failed to create channel",
+        "get": "Failed to get channel",
+        "update": "Failed to update channel",
+        "delete": "Failed to delete channel"
+      },
+      "messages": {
+        "load": "Failed to load messages",
+        "send": "Failed to send message",
+        "update": "Failed to update message",
+        "delete": "Failed to delete message",
+        "reaction": "Failed to update reaction",
+        "reactionUnavailable": "Reactions are unavailable on this backend (deploy update required).",
+        "notConnected": "Not connected to server. Please refresh the page."
+      },
+      "members": {
+        "load": "Failed to load members",
+        "kick": "Failed to kick member",
+        "ban": "Failed to ban member"
+      }
+    }
+  }
+}
