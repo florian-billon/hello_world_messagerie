@@ -208,7 +208,8 @@ pub async fn kick_member(
         return Err(Error::ServerForbidden);
     }
 
-if !requester_is_admin {
+// Vérification des permissions
+    if !requester_is_admin {
         return Err(Error::ServerForbidden);
     }
 
