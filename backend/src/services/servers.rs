@@ -208,12 +208,12 @@ pub async fn kick_member(
         return Err(Error::ServerForbidden);
     }
 
-    if !requester_is_admin {
+if !requester_is_admin {
         return Err(Error::ServerForbidden);
     }
 
     // Ban temporaire de 1h pour empêcher de rejoindre via invitation
-let expires_at = Utc::now() + chrono::Duration::hours(1);
+    let expires_at = Utc::now() + chrono::Duration::hours(1);
     server_repo
         .upsert_ban(
             server_id,
