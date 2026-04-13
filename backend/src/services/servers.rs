@@ -213,7 +213,7 @@ pub async fn kick_member(
     }
 
     // Ban temporaire de 1h pour empêcher de rejoindre via invitation
-    let expires_at = Utc::now() + chrono::Duration::hours(1);
+let expires_at = Utc::now() + chrono::Duration::hours(1);
     server_repo
         .upsert_ban(
             server_id,
@@ -223,7 +223,11 @@ pub async fn kick_member(
             Some(expires_at),
         )
         .await?;
-    }
+
+    server_repo.remove_member(server_id, target_user_id).await?;
+
+    Ok(())
+}
 
 pub async fn ban_member(
     server_repo: &ServerRepository,
