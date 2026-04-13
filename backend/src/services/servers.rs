@@ -1,15 +1,11 @@
 use crate::error::{Error, Result};
-use crate::models::server::MemberRole;
-use crate::repositories::ServerRepository;
-use chrono::Utc;
-use uuid::Uuid;
-
-use crate::error::{Error, Result};
 use crate::models::{
     BanMemberPayload, CreateServerPayload, MemberRole, Server, ServerBan, ServerMember,
     TransferOwnershipPayload, UpdateServerPayload,
 };
 use crate::repositories::{ServerRepository, UserRepository};
+use chrono::Utc;
+use uuid::Uuid;
 
 pub async fn create_server(
     server_repo: &ServerRepository,
@@ -144,7 +140,6 @@ pub async fn join_server(
         .await?
         .ok_or(Error::ServerNotFound)?;
 
-    // Empêcher de rejoindre si banni (ban actif uniquement)
     if server_repo.is_user_banned(server_id, user_id).await? {
         return Err(Error::ServerForbidden);
     }
@@ -178,42 +173,36 @@ pub async fn leave_server(
     Ok(())
 }
 
-
 pub async fn kick_member(
     server_repo: &ServerRepository,
     server_id: Uuid,
     target_user_id: Uuid,
     requester_id: Uuid,
 ) -> Result<()> {
-    // 1. Vérifier que le serveur existe
     let server = server_repo
         .find_by_id(server_id)
         .await?
         .ok_or(Error::ServerNotFound)?;
 
-    // 2. Vérifier que le requester a le droit de kick (Owner ou Admin)
     let requester = server_repo
         .find_member(server_id, requester_id)
         .await?
         .ok_or(Error::ServerForbidden)?;
 
-    // Si le membre n'est ni Admin ni Owner, il ne peut pas kick
     if requester.role == MemberRole::Member {
         return Err(Error::ServerForbidden);
     }
 
-    // 3. Vérifier que la cible est bien membre
     let target = server_repo
         .find_member(server_id, target_user_id)
         .await?
         .ok_or(Error::UserNotFound)?;
 
-    // 4. Sécurité : On ne peut pas kick l'Owner du serveur
     if target.user_id == server.owner_id {
         return Err(Error::ServerForbidden);
     }
 
-    // 5. Ban temporaire de 1h pour empêcher de rejoindre via invitation
+    // Ban temporaire de 1h lors d'un kick
     let expires_at = Utc::now() + chrono::Duration::hours(1);
     server_repo
         .upsert_ban(
@@ -225,9 +214,7 @@ pub async fn kick_member(
         )
         .await?;
 
-    // 6. Suppression effective du membre
     server_repo.remove_member(server_id, target_user_id).await?;
-
     Ok(())
 }
 
@@ -238,13 +225,11 @@ pub async fn ban_member(
     payload: BanMemberPayload,
     requester_id: Uuid,
 ) -> Result<ServerBan> {
-    // Vérifier que le serveur existe
     let server = server_repo
         .find_by_id(server_id)
         .await?
         .ok_or(Error::ServerNotFound)?;
 
-    // Vérifier que le requester est membre et a le droit de ban (Owner ou Admin)
     let requester = server_repo
         .find_member(server_id, requester_id)
         .await?
@@ -254,24 +239,19 @@ pub async fn ban_member(
         return Err(Error::ServerForbidden);
     }
 
-    // Vérifier que la cible existe (membre) OU autoriser ban d'un non-membre ?
-    // Ici: on exige que la cible soit membre pour rester cohérent avec l'UI et éviter les bans “à l’aveugle”.
     let target = server_repo
         .find_member(server_id, target_user_id)
         .await?
         .ok_or(Error::UserNotFound)?;
 
-    // On ne peut pas bannir l'Owner
     if target.user_id == server.owner_id {
         return Err(Error::ServerForbidden);
     }
 
-    // Un Admin ne peut pas bannir un autre Admin
     if requester.role == MemberRole::Admin && target.role == MemberRole::Admin {
         return Err(Error::ServerForbidden);
     }
 
-    // Ban puis kick (retirer du serveur)
     let ban = server_repo
         .upsert_ban(
             server_id,
@@ -292,7 +272,6 @@ pub async fn unban_member(
     target_user_id: Uuid,
     requester_id: Uuid,
 ) -> Result<()> {
-    // Vérifier perms (Owner ou Admin)
     let requester = server_repo
         .find_member(server_id, requester_id)
         .await?
@@ -311,12 +290,10 @@ pub async fn list_bans(
     server_id: Uuid,
     requester_id: Uuid,
 ) -> Result<Vec<ServerBan>> {
-    // Accessible si membre (au minimum)
-    let member = server_repo
+    server_repo
         .find_member(server_id, requester_id)
         .await?
         .ok_or(Error::ServerForbidden)?;
-    let _ = member;
 
     let bans = server_repo.list_bans(server_id).await?;
     Ok(bans)
@@ -337,34 +314,24 @@ pub async fn update_member_role(
     new_role: MemberRole,
     requester_id: Uuid,
 ) -> Result<ServerMember> {
-    // Vérifier que le serveur existe
     let server = server_repo
         .find_by_id(server_id)
         .await?
         .ok_or(Error::ServerNotFound)?;
 
-    // Vérifier que seul l'Owner peut gérer les rôles
     if server.owner_id != requester_id {
         return Err(Error::ServerForbidden);
     }
 
-    // Vérifier que le membre existe
     let member = server_repo
         .find_member(server_id, target_user_id)
         .await?
         .ok_or(Error::UserNotFound)?;
 
-    // Empêcher de changer le rôle de l'Owner
-    if member.role == MemberRole::Owner {
+    if member.role == MemberRole::Owner || new_role == MemberRole::Owner {
         return Err(Error::ServerForbidden);
     }
 
-    // Empêcher de créer un autre Owner
-    if new_role == MemberRole::Owner {
-        return Err(Error::ServerForbidden);
-    }
-
-    // Mettre à jour le rôle
     let updated_member = server_repo
         .update_member_role(server_id, target_user_id, new_role)
         .await?
@@ -379,40 +346,29 @@ pub async fn transfer_ownership(
     payload: TransferOwnershipPayload,
     requester_id: Uuid,
 ) -> Result<Server> {
-    // Vérifier que le serveur existe
     let server = server_repo
         .find_by_id(server_id)
         .await?
         .ok_or(Error::ServerNotFound)?;
 
-    // Vérifier que seul l'Owner actuel peut transférer la propriété
-    if server.owner_id != requester_id {
+    if server.owner_id != requester_id || payload.new_owner_id == requester_id {
         return Err(Error::ServerForbidden);
     }
 
-    // Vérifier que le nouveau propriétaire est différent de l'actuel
-    if payload.new_owner_id == requester_id {
-        return Err(Error::ServerForbidden);
-    }
-
-    // Vérifier que le nouveau propriétaire est membre du serveur
     server_repo
         .find_member(server_id, payload.new_owner_id)
         .await?
         .ok_or(Error::UserNotFound)?;
 
-    // Mettre à jour le owner_id du serveur
     let updated_server = server_repo
         .update_owner(server_id, payload.new_owner_id)
         .await?
         .ok_or(Error::ServerNotFound)?;
 
-    // Mettre à jour le rôle de l'ancien Owner en Admin
     server_repo
         .update_member_role(server_id, requester_id, MemberRole::Admin)
         .await?;
 
-    // Mettre à jour le rôle du nouveau Owner en Owner
     server_repo
         .update_member_role(server_id, payload.new_owner_id, MemberRole::Owner)
         .await?;
