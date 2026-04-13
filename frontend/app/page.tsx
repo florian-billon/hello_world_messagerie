@@ -426,8 +426,8 @@ export default function Home() {
     </button>
 
     {/* ----- NOUVEAU BOUTON MP (Placé à droite) ----- */}
-    <button
-      onClick={() => router.push('/messages')} // Redirection vers la page /messages
+    <butto
+      onClick={() => router.push('/message')} // Redirection vers la page /messages
       className="p-2 text-[#4fdfff] hover:bg-[#4fdfff]/10 rounded-lg transition-all group"
       title="Messages Privés"
     >
