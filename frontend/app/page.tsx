@@ -424,27 +424,6 @@ export default function Home() {
         </p>
       </div>
     </button>
-
-    {/* ----- NOUVEAU BOUTON MP (Placé à droite) ----- */}
-    <butto
-      onClick={() => router.push('/message')} // Redirection vers la page /messages
-      className="p-2 text-[#4fdfff] hover:bg-[#4fdfff]/10 rounded-lg transition-all group"
-      title="Messages Privés"
-    >
-      <svg 
-        className="w-5 h-5 group-hover:scale-110 transition-transform" 
-        fill="none" 
-        stroke="currentColor" 
-        viewBox="0 0 24 24"
-      >
-        <path 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
-          strokeWidth={2} 
-          d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" 
-        />
-      </svg>
-    </button>
   </div>
 </aside>
 
