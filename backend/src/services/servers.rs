@@ -1,3 +1,4 @@
+use chrono::Utc;
 use uuid::Uuid;
 
 use crate::error::{Error, Result};
@@ -211,6 +212,12 @@ pub async fn kick_member(
     if requester.role == MemberRole::Admin && target.role == MemberRole::Admin {
         return Err(Error::ServerForbidden);
     }
+
+    // Ban temporaire de 1h pour empêcher de rejoindre via invitation
+    let expires_at = Utc::now() + chrono::Duration::hours(1);
+    server_repo
+        .upsert_ban(server_id, target_user_id, requester_id, None, Some(expires_at))
+        .await?;
 
     server_repo.remove_member(server_id, target_user_id).await?;
     Ok(())

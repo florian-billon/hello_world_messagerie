@@ -58,7 +58,9 @@
     "addReaction": "Réagir",
     "edited": "(modifié)",
     "confirmDeleteTitle": "Supprimer le message",
-    "confirmDeleteMessage": "Es-tu sûr de vouloir supprimer ce message ? Cette action est irréversible."
+    "confirmDeleteMessage": "Es-tu sûr de vouloir supprimer ce message ? Cette action est irréversible.",
+    "gifTooltip": "Envoyer un GIF",
+    "gifSearch": "Rechercher des GIFs..."
   },
   "server": {
     "createTitle": "CRÉER UN SERVEUR",

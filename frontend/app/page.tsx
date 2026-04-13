@@ -13,6 +13,7 @@ import { useTranslation } from "@/lib/i18n";
 import Button from "@/components/ui/Button";
 import SmartImg from "@/components/SmartImg";
 import MessageReactions from "@/components/chat/MessageReactions";
+import GifPicker from "@/components/chat/GifPicker";
 
 /**
  * Page principale - Design Moderne Cyberpunk
@@ -58,6 +59,7 @@ export default function Home() {
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
   const [messageInput, setMessageInput] = useState("");
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -534,6 +536,14 @@ export default function Home() {
                           <button type="button" onClick={() => setEditingMessageId(null)} className="text-[10px] text-white/40 hover:underline font-bold uppercase">{t("common.cancel")}</button>
                         </div>
                       </form>
+                    ) : msg.content.includes("giphy.com") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={msg.content}
+                        alt="GIF"
+                        className="max-w-xs max-h-48 rounded-lg mt-1"
+                        loading="lazy"
+                      />
                     ) : (
                       <p className="text-white/90 leading-relaxed break-words">
                         {msg.content}
@@ -612,17 +622,37 @@ export default function Home() {
                 </div>
               );
             })()}
-            <form onSubmit={handleSendMessage}>
-              <input
-                type="text"
-                value={messageInput}
-                onChange={handleInputChange}
-                onFocus={handleInputFocus}
-                onBlur={handleInputBlur}
-                placeholder={t("chat.messagePlaceholder", { channelName: selectedChannel.name })}
-                className="w-full px-4 py-2.5 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white placeholder:text-white/40 outline-none focus:border-[#4fdfff] focus:bg-[rgba(20,20,20,0.95)] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
-              />
-            </form>
+            <div className="relative">
+              {showGifPicker && (
+                <GifPicker
+                  onSelect={async (gifUrl) => {
+                    await sendMessage(gifUrl);
+                    setShowGifPicker(false);
+                  }}
+                  onClose={() => setShowGifPicker(false)}
+                  searchPlaceholder={t("chat.gifSearch")}
+                />
+              )}
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowGifPicker((v) => !v)}
+                  className="px-2 py-2 text-xs font-bold text-[#4fdfff] border border-[#4fdfff]/40 rounded-lg hover:bg-[#4fdfff]/10 transition-colors flex-shrink-0"
+                  title={t("chat.gifTooltip")}
+                >
+                  GIF
+                </button>
+                <input
+                  type="text"
+                  value={messageInput}
+                  onChange={handleInputChange}
+                  onFocus={handleInputFocus}
+                  onBlur={handleInputBlur}
+                  placeholder={t("chat.messagePlaceholder", { channelName: selectedChannel.name })}
+                  className="flex-1 px-4 py-2.5 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white placeholder:text-white/40 outline-none focus:border-[#4fdfff] focus:bg-[rgba(20,20,20,0.95)] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
+                />
+              </form>
+            </div>
           </footer>
         )}
       </div>
