@@ -543,7 +543,7 @@ export default function Home() {
                         loading="lazy"
                       />
                     ) : (
-                      <p className="text-white/90 leading-relaxed break-words">
+                      <p className="text-white/90 leading-relaxed break-all whitespace-pre-wrap">
                         {msg.content}
                       </p>
                     )}
