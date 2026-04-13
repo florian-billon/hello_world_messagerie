@@ -208,12 +208,11 @@ pub async fn kick_member(
         return Err(Error::ServerForbidden);
     }
 
-    // Un Admin ne peut pas kick un autre Admin
-    if requester.role == MemberRole::Admin && target.role == MemberRole::Admin {
+    if !requester_is_admin {
         return Err(Error::ServerForbidden);
     }
 
-  // Ban temporaire de 1h pour empêcher de rejoindre via invitation
+    // Ban temporaire de 1h pour empêcher de rejoindre via invitation
     let expires_at = Utc::now() + chrono::Duration::hours(1);
     server_repo
         .upsert_ban(
@@ -224,9 +223,7 @@ pub async fn kick_member(
             Some(expires_at),
         )
         .await?;
-
-    server_repo.remove_member(server_id, target_user_id).await?;
-}
+    }
 
 pub async fn ban_member(
     server_repo: &ServerRepository,
