@@ -5,7 +5,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use tower_http::cors::{CorsLayer}; // Un seul import suffit
+use tower_http::cors::CorsLayer;
 
 pub use self::error::{Error, Result};
 
@@ -142,7 +142,6 @@ async fn main() {
             header::CONNECTION,
         ])
         .allow_credentials(true);
-
 
     let routes_protected = routes::create_router()
         .route(
