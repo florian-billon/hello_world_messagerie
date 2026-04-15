@@ -1,8 +1,7 @@
-use axum::{routing::post, Router};
+use crate::handlers;
 use crate::AppState;
-use crate::handlers; // Assure-toi que tes handlers existent
+use axum::{routing::post, Router};
 
 pub fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/conversations", post(handlers::dm::create_conversation))
+    Router::new().route("/conversations", post(handlers::dm::create_conversation))
 }
