@@ -1,16 +1,17 @@
-pub use self::error::{Error, Result};
-
 use axum::extract::State;
-use axum::http::{header, HeaderValue, Method};
+use axum::http::{header, HeaderValue, Method}; // Utilise celui d'axum, c'est plus simple
 use axum::{
     middleware,
     routing::{get, post},
     Json, Router,
 };
+use tower_http::cors::{CorsLayer}; // Un seul import suffit
+
+pub use self::error::{Error, Result};
+
 use mongodb::{Client as MongoClient, Database as MongoDatabase};
 use sqlx::postgres::PgPoolOptions;
 use std::time::Duration;
-use tower_http::cors::CorsLayer;
 
 mod ctx;
 mod error;
@@ -131,6 +132,7 @@ async fn main() {
             Method::POST,
             Method::PATCH,
             Method::DELETE,
+            Method::PUT,
             Method::OPTIONS,
         ])
         .allow_headers([
@@ -138,7 +140,9 @@ async fn main() {
             header::AUTHORIZATION,
             header::UPGRADE,
             header::CONNECTION,
-        ]);
+        ])
+        .allow_credentials(true);
+
 
     let routes_protected = routes::create_router()
         .route(
