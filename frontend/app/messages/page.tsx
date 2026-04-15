@@ -27,20 +27,66 @@ export default function DirectMessagesPage() {
   // Si tu n'as pas encore l'endpoint, on garde une structure prête pour l'intégration
   const [conversations, setConversations] = useState<any[]>([]); 
 
-  // Simulation du chargement initial depuis la DB
   useEffect(() => {
-    // fetch("/api/me/conversations").then(...)
-  }, []);
+    const fetchConversations = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me/conversations`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}` // Si tu utilises un token JWT
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setConversations(data);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des conversations:", error);
+      }
+    };
 
-  const handleStartConversation = async (e: React.FormEvent) => {
+    if (currentUser) {
+      fetchConversations();
+    }
+  }, [currentUser]);
+
+const handleStartConversation = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Recherche de l'utilisateur :", searchUsername);
-    // LOGIQUE DB : 
-    // 1. Appeler le backend pour vérifier si le pseudo existe
-    // 2. Créer une conversation/channel de type DM
-    // 3. Ajouter à la liste et sélectionner
-    setShowNewChatModal(false);
-    setSearchUsername("");
+    if (!searchUsername.trim()) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/conversations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify({ username: searchUsername }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        alert(err.message || "Utilisateur introuvable");
+        return;
+      }
+
+      const newConv = await response.json();
+
+      // 1. Ajouter à la liste si elle n'y est pas déjà
+      setConversations((prev) => {
+        const exists = prev.find((c) => c.id === newConv.id);
+        return exists ? prev : [newConv, ...prev];
+      });
+
+      // 2. Sélectionner la conversation
+      setSelectedConversationId(newConv.id);
+      
+      // 3. Fermer la modal et reset le champ
+      setShowNewChatModal(false);
+      setSearchUsername("");
+
+    } catch (error) {
+      console.error("Erreur technique lors du lancement de la conversation:", error);
+    }
   };
 
   return (
