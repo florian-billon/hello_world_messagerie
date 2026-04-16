@@ -1,5 +1,5 @@
-use axum::{extract::State, Json};
 use crate::{AppState, Error, Result};
+use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -29,7 +29,7 @@ pub async fn create_conversation(
     // Note : Vérifie si ton dm_repo nécessite aussi l'ID de l'utilisateur qui fait la requête
     let conversation = state
         .dm_repo
-        .create_dm(target_user.id) 
+        .create_dm(target_user.id)
         .await
         .map_err(|_| Error::InternalServer)?;
 
