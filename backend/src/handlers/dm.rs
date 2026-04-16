@@ -22,7 +22,7 @@ pub async fn create_conversation(
     // Note : On utilise 'get_username' car c'est ce que Clippy suggère comme existant
     let target_user = state
         .user_repo
-        .get_username(&payload.target_username) 
+        .get_username(&payload.target_username)
         .await
         .map_err(|_| Error::UserNotFound)?;
 
