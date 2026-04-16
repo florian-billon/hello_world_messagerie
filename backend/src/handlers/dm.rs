@@ -19,13 +19,15 @@ pub async fn create_conversation(
     Json(payload): Json<CreateDMRequest>,
 ) -> Result<Json<DMResponse>> {
     // 1. On cherche l'utilisateur cible
+    // Note : On utilise 'get_username' car c'est ce que Clippy suggère comme existant
     let target_user = state
         .user_repo
-        .get_user_by_username(&payload.target_username)
+        .get_username(&payload.target_username) 
         .await
         .map_err(|_| Error::UserNotFound)?;
 
     // 2. On crée le DM (il faut ton ID et l'ID de la cible)
+    // Ici on utilise un ID temporaire pour le sender, à remplacer par le JWT plus tard
     let current_user_id = Uuid::new_v4();
 
     let conversation_id = state
