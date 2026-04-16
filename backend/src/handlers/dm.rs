@@ -28,7 +28,7 @@ pub async fn create_conversation(
 
     // 2. Créer ou récupérer le DM (u1, u2)
     // TODO: Récupérer l'ID de l'utilisateur connecté via les claims JWT
-    let current_user_id = Uuid::new_v4(); 
+    let current_user_id = Uuid::new_v4();
 
     let conversation_id = state
         .dm_repo
