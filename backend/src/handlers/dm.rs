@@ -18,17 +18,17 @@ pub async fn create_conversation(
     State(state): State<AppState>,
     Json(payload): Json<CreateDMRequest>,
 ) -> Result<Json<DMResponse>> {
-    // 1. On cherche l'utilisateur cible par son nom
-    // On utilise find_by_username qui renvoie un Result<Option<User>>
+    // 1. Chercher l'utilisateur par son pseudo
     let target_user = state
         .user_repo
-        .find_by_username(&payload.target_username)
+        .get_by_username(&payload.target_username)
         .await
         .map_err(|_| Error::UserNotFound)?
         .ok_or(Error::UserNotFound)?;
 
-    // 2. On crée le DM (u1: envoyeur, u2: destinataire)
-    let current_user_id = Uuid::new_v4();
+    // 2. Créer ou récupérer le DM (u1, u2)
+    // TODO: Récupérer l'ID de l'utilisateur connecté via les claims JWT
+    let current_user_id = Uuid::new_v4(); 
 
     let conversation_id = state
         .dm_repo

@@ -61,6 +61,14 @@ impl UserRepository {
         Ok(username)
     }
 
+    pub async fn get_by_username(&self, username: &str) -> sqlx::Result<Option<User>> {
+        let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE username = $1")
+            .bind(username)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(user)
+    }
+
     pub async fn update_profile(
         &self,
         user_id: Uuid,
