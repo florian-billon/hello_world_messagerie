@@ -18,17 +18,16 @@ pub async fn create_conversation(
     State(state): State<AppState>,
     Json(payload): Json<CreateDMRequest>,
 ) -> Result<Json<DMResponse>> {
-    // 1. On cherche l'utilisateur cible par son nom pour obtenir son ID
-    // Note : J'utilise 'get_user_by_username' car c'est le standard dans ton repo
+    // 1. On cherche l'utilisateur cible par son nom
+    // On utilise find_by_username qui renvoie un Result<Option<User>>
     let target_user = state
         .user_repo
-        .get_user_by_username(&payload.target_username)
+        .find_by_username(&payload.target_username)
         .await
         .map_err(|_| Error::UserNotFound)?
-        .ok_or(Error::UserNotFound)?; // On gère le cas où l'Option est None
+        .ok_or(Error::UserNotFound)?;
 
-    // 2. On crée le DM (u1: l'envoyeur, u2: le destinataire)
-    // Pour l'instant, on utilise un ID généré, mais target_user.id est maintenant valide
+    // 2. On crée le DM (u1: envoyeur, u2: destinataire)
     let current_user_id = Uuid::new_v4();
 
     let conversation_id = state
