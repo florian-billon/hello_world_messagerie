@@ -15,7 +15,7 @@ jobs:
   # ──────────────────────────────────────────────
   create-release:
     name: Create Release
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -66,7 +66,7 @@ jobs:
   # ──────────────────────────────────────────────
   build-binaries:
     name: Build Binaries
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: create-release
 
     steps:

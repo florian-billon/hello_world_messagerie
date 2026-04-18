@@ -23,7 +23,7 @@ concurrency:
 jobs:
   checks:
     name: Quality & Security Checks
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -69,7 +69,7 @@ jobs:
 
   build-and-test:
     name: Build & Test (Rust)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: checks
 
     services:
