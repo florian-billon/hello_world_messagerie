@@ -15,7 +15,7 @@ jobs:
   # ──────────────────────────────────────────────
   create-release:
     name: Create Release
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -66,12 +66,15 @@ jobs:
   # ──────────────────────────────────────────────
   build-binaries:
     name: Build Binaries
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: create-release
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential pkg-config libssl-dev
 
       - name: Install Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable

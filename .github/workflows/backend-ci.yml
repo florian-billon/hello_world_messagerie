@@ -23,11 +23,14 @@ concurrency:
 jobs:
   checks:
     name: Quality & Security Checks
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential pkg-config libssl-dev
 
       - name: Install Rust toolchain (stable + fmt + clippy)
         uses: dtolnay/rust-toolchain@stable
@@ -69,7 +72,7 @@ jobs:
 
   build-and-test:
     name: Build & Test (Rust)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: checks
 
     services:
@@ -100,6 +103,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential pkg-config libssl-dev postgresql-client
 
       - name: Install Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
