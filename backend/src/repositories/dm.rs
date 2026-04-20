@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::models::dm::{DMWithRecipient, DirectMessageItem};
+use crate::models::dm::DMWithRecipient;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
@@ -113,60 +113,5 @@ impl DmRepository {
         .await?;
 
         Ok(conversation)
-    }
-
-    pub async fn create_message(
-        &self,
-        dm_id: Uuid,
-        author_id: Uuid,
-        content: &str,
-    ) -> Result<DirectMessageItem> {
-        let message = sqlx::query_as::<_, DirectMessageItem>(
-            r#"
-            INSERT INTO direct_message_items (dm_id, author_id, content)
-            VALUES ($1, $2, $3)
-            RETURNING
-                id,
-                dm_id,
-                author_id,
-                (SELECT username FROM users WHERE id = $2) AS username,
-                content,
-                created_at,
-                edited_at
-            "#,
-        )
-        .bind(dm_id)
-        .bind(author_id)
-        .bind(content)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(message)
-    }
-
-    pub async fn list_messages(&self, dm_id: Uuid, limit: i64) -> Result<Vec<DirectMessageItem>> {
-        let messages = sqlx::query_as::<_, DirectMessageItem>(
-            r#"
-            SELECT
-                item.id,
-                item.dm_id,
-                item.author_id,
-                users.username,
-                item.content,
-                item.created_at,
-                item.edited_at
-            FROM direct_message_items item
-            JOIN users ON users.id = item.author_id
-            WHERE item.dm_id = $1
-            ORDER BY item.created_at DESC
-            LIMIT $2
-            "#,
-        )
-        .bind(dm_id)
-        .bind(limit)
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(messages.into_iter().rev().collect())
     }
 }

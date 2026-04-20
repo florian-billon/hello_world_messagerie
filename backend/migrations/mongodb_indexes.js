@@ -23,3 +23,18 @@ db.channel_messages.createIndex(
   { "author_id": 1 },
   { name: "idx_channel_messages_author" }
 );
+
+db.direct_message_items.createIndex(
+  { "dm_id": 1, "created_at": -1 },
+  { name: "idx_direct_message_items_dm_created" }
+);
+
+db.direct_message_items.createIndex(
+  { "message_id": 1 },
+  { name: "idx_direct_message_items_message_id", unique: true }
+);
+
+db.direct_message_items.createIndex(
+  { "author_id": 1, "created_at": -1 },
+  { name: "idx_direct_message_items_author_created" }
+);

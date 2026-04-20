@@ -110,20 +110,4 @@ ON direct_messages (LEAST(user1_id, user2_id), GREATEST(user1_id, user2_id));
 CREATE INDEX IF NOT EXISTS idx_direct_messages_user1 ON direct_messages(user1_id);
 CREATE INDEX IF NOT EXISTS idx_direct_messages_user2 ON direct_messages(user2_id);
 
--- DIRECT MESSAGE ITEMS (isolated from server/channel messages)
-CREATE TABLE IF NOT EXISTS direct_message_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    dm_id UUID NOT NULL REFERENCES direct_messages(id) ON DELETE CASCADE,
-    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    edited_at TIMESTAMPTZ
-);
-
-CREATE INDEX IF NOT EXISTS idx_direct_message_items_dm_created
-ON direct_message_items(dm_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_direct_message_items_author
-ON direct_message_items(author_id);
-
--- NOTE: Channel messages are stored in MongoDB, not PostgreSQL
+-- NOTE: Channel messages and direct message items are stored in MongoDB, not PostgreSQL

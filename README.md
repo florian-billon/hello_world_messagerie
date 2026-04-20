@@ -253,13 +253,13 @@ Connexion : `WS /ws` avec JWT en paramètre. Une fois connecté, le client rejoi
 - **invites** — id (UUID), server_id (FK servers), code (unique), created_by (FK users), expires_at, max_uses, uses, revoked, created_at
 - **server_bans** — server_id + user_id (PK composite), banned_by (FK users), reason, expires_at, banned_at
 - **direct_messages** — conversations privées entre deux utilisateurs
-- **direct_message_items** — messages privés liés à une conversation
 
 **MongoDB** (base `helloworld`) :
 
 - **channel_messages** — message_id, channel_id, server_id, author_id, content, created_at, edited_at, deleted_at
+- **direct_message_items** — message_id, dm_id, author_id, content, created_at, edited_at, deleted_at
 
-Les messages de canaux sont stockés dans MongoDB pour permettre une scalabilité indépendante de l'historique de chat par rapport aux données relationnelles. Les messages privés utilisent PostgreSQL via `direct_messages` et `direct_message_items`.
+Les historiques de messages de canaux et de conversations privées sont stockés dans MongoDB pour permettre une scalabilité indépendante de l'historique de chat par rapport aux données relationnelles. PostgreSQL garde les conversations privées (`direct_messages`) afin de conserver les contraintes relationnelles et le contrôle d'accès.
 
 ---
 

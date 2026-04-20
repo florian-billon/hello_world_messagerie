@@ -1,5 +1,8 @@
 use crate::ctx::Ctx;
-use crate::models::{CreateDMMessagePayload, CreateDMPayload, DMWithRecipient, DirectMessageItem};
+use crate::models::{
+    CreateDMMessagePayload, CreateDMPayload, DMWithRecipient, DirectMessageItem,
+    DirectMessageItemResponse,
+};
 use crate::{AppState, Error, Result};
 use axum::{
     extract::{Path, Query, State},
@@ -7,6 +10,18 @@ use axum::{
 };
 use serde::Deserialize;
 use uuid::Uuid;
+
+fn to_response(message: DirectMessageItem, username: String) -> DirectMessageItemResponse {
+    DirectMessageItemResponse {
+        id: message.message_id,
+        dm_id: message.dm_id,
+        author_id: message.author_id,
+        username,
+        content: message.content,
+        created_at: message.created_at,
+        edited_at: message.edited_at,
+    }
+}
 
 #[derive(Deserialize)]
 pub struct ListDMMessagesQuery {
@@ -64,14 +79,39 @@ pub async fn list_messages(
     ctx: Ctx,
     Path(dm_id): Path<Uuid>,
     Query(query): Query<ListDMMessagesQuery>,
-) -> Result<Json<Vec<DirectMessageItem>>> {
+) -> Result<Json<Vec<DirectMessageItemResponse>>> {
     if !state.dm_repo.user_has_access(dm_id, ctx.user_id()).await? {
         return Err(Error::MessageForbidden);
     }
 
     let limit = query.limit.unwrap_or(50).clamp(1, 100);
-    let messages = state.dm_repo.list_messages(dm_id, limit).await?;
-    Ok(Json(messages))
+    let messages = state
+        .dm_message_repo
+        .list_by_dm(dm_id, limit)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB query failed: {}", e),
+        })?;
+
+    if messages.is_empty() {
+        return Ok(Json(vec![]));
+    }
+
+    let author_ids: Vec<Uuid> = messages.iter().map(|message| message.author_id).collect();
+    let usernames = state.user_repo.get_usernames_batch(&author_ids).await?;
+
+    let response = messages
+        .into_iter()
+        .map(|message| {
+            let username = usernames
+                .get(&message.author_id)
+                .cloned()
+                .unwrap_or_else(|| "Unknown".to_string());
+            to_response(message, username)
+        })
+        .collect();
+
+    Ok(Json(response))
 }
 
 pub async fn create_message(
@@ -79,7 +119,7 @@ pub async fn create_message(
     ctx: Ctx,
     Path(dm_id): Path<Uuid>,
     Json(payload): Json<CreateDMMessagePayload>,
-) -> Result<Json<DirectMessageItem>> {
+) -> Result<Json<DirectMessageItemResponse>> {
     let content = payload.content.trim();
     if content.is_empty() {
         return Err(Error::BadRequest {
@@ -91,10 +131,30 @@ pub async fn create_message(
         return Err(Error::MessageForbidden);
     }
 
-    let message = state
-        .dm_repo
-        .create_message(dm_id, ctx.user_id(), content)
-        .await?;
+    let message = DirectMessageItem {
+        id: None,
+        message_id: Uuid::new_v4(),
+        dm_id,
+        author_id: ctx.user_id(),
+        content: content.to_string(),
+        created_at: chrono::Utc::now(),
+        edited_at: None,
+        deleted_at: None,
+    };
 
-    Ok(Json(message))
+    state
+        .dm_message_repo
+        .create(&message)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB insert failed: {}", e),
+        })?;
+
+    let username = state
+        .user_repo
+        .get_username(ctx.user_id())
+        .await?
+        .ok_or(Error::UserNotFound)?;
+
+    Ok(Json(to_response(message, username)))
 }
