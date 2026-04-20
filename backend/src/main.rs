@@ -144,6 +144,7 @@ async fn main() {
         .allow_credentials(true);
 
     let routes_protected = routes::create_router()
+        .merge(routes::dm::routes())
         .route(
             "/me",
             get(handlers::user::me).patch(handlers::user::update_me),

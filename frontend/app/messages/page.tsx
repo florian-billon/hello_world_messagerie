@@ -54,7 +54,7 @@ const handleStartConversation = async (e: React.FormEvent) => {
     if (!searchUsername.trim()) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/conversations`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/conversations`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
