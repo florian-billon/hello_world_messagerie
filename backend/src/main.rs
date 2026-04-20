@@ -158,7 +158,6 @@ async fn main() {
         ));
 
     let routes_public = Router::new()
-        .merge(routes::dm::routes())
         .route("/health", get(health))
         .route("/ws/metrics", get(get_ws_metrics))
         .route(
