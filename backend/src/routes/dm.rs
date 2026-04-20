@@ -1,7 +1,15 @@
 use crate::handlers;
 use crate::AppState;
-use axum::{routing::post, Router};
+use axum::{routing::get, Router};
 
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/conversations", post(handlers::dm::create_conversation))
+    Router::new()
+        .route(
+            "/conversations",
+            get(handlers::dm::list_conversations).post(handlers::dm::create_conversation),
+        )
+        .route(
+            "/conversations/{dm_id}/messages",
+            get(handlers::dm::list_messages).post(handlers::dm::create_message),
+        )
 }

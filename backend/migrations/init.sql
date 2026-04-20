@@ -79,6 +79,40 @@ CREATE INDEX IF NOT EXISTS idx_channels_server ON channels(server_id);
 CREATE INDEX IF NOT EXISTS idx_invites_code ON invites(code);
 CREATE INDEX IF NOT EXISTS idx_invites_server ON invites(server_id);
 
+UPDATE servers
+SET name = trim(name)
+WHERE name <> trim(name);
+
+CREATE OR REPLACE FUNCTION prevent_duplicate_server_name_per_owner()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.name := trim(NEW.name);
+
+    IF EXISTS (
+        SELECT 1
+        FROM servers s
+        WHERE s.owner_id = NEW.owner_id
+          AND lower(trim(s.name)) = lower(trim(NEW.name))
+          AND s.id <> NEW.id
+    ) THEN
+        RAISE EXCEPTION 'Duplicate server name for owner'
+            USING ERRCODE = '23505',
+                  CONSTRAINT = 'servers_owner_name_unique_live';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_servers_prevent_duplicate_name_per_owner ON servers;
+
+CREATE TRIGGER trg_servers_prevent_duplicate_name_per_owner
+BEFORE INSERT OR UPDATE OF name, owner_id ON servers
+FOR EACH ROW
+EXECUTE FUNCTION prevent_duplicate_server_name_per_owner();
+
 -- SERVER BANS (temporaire ou permanent)
 CREATE TABLE IF NOT EXISTS server_bans (
     server_id UUID NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
@@ -110,20 +144,4 @@ ON direct_messages (LEAST(user1_id, user2_id), GREATEST(user1_id, user2_id));
 CREATE INDEX IF NOT EXISTS idx_direct_messages_user1 ON direct_messages(user1_id);
 CREATE INDEX IF NOT EXISTS idx_direct_messages_user2 ON direct_messages(user2_id);
 
--- DIRECT MESSAGE ITEMS (isolated from server/channel messages)
-CREATE TABLE IF NOT EXISTS direct_message_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    dm_id UUID NOT NULL REFERENCES direct_messages(id) ON DELETE CASCADE,
-    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    edited_at TIMESTAMPTZ
-);
-
-CREATE INDEX IF NOT EXISTS idx_direct_message_items_dm_created
-ON direct_message_items(dm_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_direct_message_items_author
-ON direct_message_items(author_id);
-
--- NOTE: Channel messages are stored in MongoDB, not PostgreSQL
+-- NOTE: Channel messages and direct message items are stored in MongoDB, not PostgreSQL

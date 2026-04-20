@@ -41,6 +41,8 @@ pub enum Error {
     MessageNotFound,
     #[error("Message access forbidden")]
     MessageForbidden,
+    #[error("Bad request: {message}")]
+    BadRequest { message: String },
     #[error("Database error: {message}")]
     DatabaseError { message: String },
     #[error("Internal error: {message}")]
@@ -119,6 +121,7 @@ impl Error {
             Self::ChannelForbidden => (StatusCode::FORBIDDEN, "Channel access forbidden"),
             Self::MessageNotFound => (StatusCode::NOT_FOUND, "Message not found"),
             Self::MessageForbidden => (StatusCode::FORBIDDEN, "Message access forbidden"),
+            Self::BadRequest { .. } => (StatusCode::BAD_REQUEST, "Bad request"),
             Self::DatabaseError { .. } => (StatusCode::INTERNAL_SERVER_ERROR, "Database error"),
             Self::InternalError { .. } => (StatusCode::INTERNAL_SERVER_ERROR, "Internal error"),
         }

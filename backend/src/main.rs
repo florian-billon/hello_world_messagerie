@@ -23,8 +23,8 @@ mod services;
 mod web;
 
 use repositories::{
-    ChannelRepository, DmRepository, InviteRepository, MessageRepository, ServerRepository,
-    UserRepository,
+    ChannelRepository, DirectMessageRepository, DmRepository, InviteRepository, MessageRepository,
+    ServerRepository, UserRepository,
 };
 use web::MetricsSnapshot;
 use web::{WsHub, WsMetrics};
@@ -38,6 +38,7 @@ pub struct AppState {
     pub server_repo: ServerRepository,
     pub channel_repo: ChannelRepository,
     pub message_repo: MessageRepository,
+    pub dm_message_repo: DirectMessageRepository,
     pub dm_repo: DmRepository,
     pub invite_repo: InviteRepository,
     pub ws_hub: web::WsHub,
@@ -87,6 +88,7 @@ async fn main() {
     let dm_repo = DmRepository::new(pool.clone());
     let invite_repo = InviteRepository::new(pool.clone());
     let message_repo = MessageRepository::new(mongo_db.clone());
+    let dm_message_repo = DirectMessageRepository::new(mongo_db.clone());
 
     let ws_hub = WsHub::new();
     let ws_metrics = WsMetrics::new();
@@ -104,6 +106,7 @@ async fn main() {
         server_repo,
         channel_repo,
         message_repo,
+        dm_message_repo,
         dm_repo,
         invite_repo,
         ws_hub,
@@ -144,7 +147,6 @@ async fn main() {
         .allow_credentials(true);
 
     let routes_protected = routes::create_router()
-        .merge(routes::dm::routes())
         .route(
             "/me",
             get(handlers::user::me).patch(handlers::user::update_me),

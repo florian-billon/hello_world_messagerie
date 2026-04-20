@@ -32,6 +32,7 @@
 - Serveurs et rôles (Owner / Admin / Member)
 - Canaux texte avec ordre par position
 - Messagerie temps réel via WebSocket avec indicateur "en train d'écrire"
+- Messages privés entre utilisateurs
 - Profils utilisateur et statuts (Online / Offline / DND / Invisible)
 - Gestion des membres : kick, ban (temporaire ou permanent), transfert de propriété
 - Edition de messages (fenêtre 5 minutes)
@@ -214,6 +215,15 @@ Toutes les routes sauf auth nécessitent un header `Authorization: Bearer <JWT>`
 | PUT     | `/messages/{id}`           | Modifier un message (auteur, fenêtre 5 min) |
 | DELETE  | `/messages/{id}`           | Supprimer un message |
 
+### Messages privés
+
+| Méthode | Endpoint                                  | Description |
+|---------|-------------------------------------------|-------------|
+| GET     | `/conversations`                          | Liste des conversations privées de l'utilisateur |
+| POST    | `/conversations`                          | Créer ou récupérer une conversation privée (`target_username`) |
+| GET     | `/conversations/{id}/messages`            | Liste des messages privés d'une conversation |
+| POST    | `/conversations/{id}/messages`            | Envoyer un message privé |
+
 ### Invitations
 
 | Méthode | Endpoint                      | Description |
@@ -242,12 +252,14 @@ Connexion : `WS /ws` avec JWT en paramètre. Une fois connecté, le client rejoi
 - **channels** — id (UUID), server_id (FK servers), name, position, created_at, updated_at
 - **invites** — id (UUID), server_id (FK servers), code (unique), created_by (FK users), expires_at, max_uses, uses, revoked, created_at
 - **server_bans** — server_id + user_id (PK composite), banned_by (FK users), reason, expires_at, banned_at
+- **direct_messages** — conversations privées entre deux utilisateurs
 
 **MongoDB** (base `helloworld`) :
 
 - **channel_messages** — message_id, channel_id, server_id, author_id, content, created_at, edited_at, deleted_at
+- **direct_message_items** — message_id, dm_id, author_id, content, created_at, edited_at, deleted_at
 
-Les messages sont stockés dans MongoDB pour permettre une scalabilité indépendante de l'historique de chat par rapport aux données relationnelles.
+Les historiques de messages de canaux et de conversations privées sont stockés dans MongoDB pour permettre une scalabilité indépendante de l'historique de chat par rapport aux données relationnelles. PostgreSQL garde les conversations privées (`direct_messages`) afin de conserver les contraintes relationnelles et le contrôle d'accès.
 
 ---
 

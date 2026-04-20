@@ -3,13 +3,21 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAuth, useServers, useMessages } from "@/hooks"; // On utilise useMessages
+import { useAuth, useServers } from "@/hooks";
 import { normalizeAvatarUrl } from "@/lib/avatar";
-import { getStatusColor, getStatusKey } from "@/lib/presence";
+import { getStatusKey } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
 import SmartImg from "@/components/SmartImg";
 import { logout } from "@/lib/auth/actions";
 import Button from "@/components/ui/Button";
+import {
+  createDirectConversation,
+  DirectConversation,
+  DirectMessage,
+  listDirectConversations,
+  listDirectMessages,
+  sendDirectMessage,
+} from "@/lib/api-server";
 
 export default function DirectMessagesPage() {
   const { t } = useTranslation();
@@ -22,25 +30,21 @@ export default function DirectMessagesPage() {
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [searchUsername, setSearchUsername] = useState("");
   const [messageInput, setMessageInput] = useState("");
+  const [conversations, setConversations] = useState<DirectConversation[]>([]);
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  // Ici, on imagine un hook qui récupère tes conversations privées en DB
-  // Si tu n'as pas encore l'endpoint, on garde une structure prête pour l'intégration
-  const [conversations, setConversations] = useState<any[]>([]); 
+  const selectedConversation = conversations.find((conv) => conv.id === selectedConversationId);
 
   useEffect(() => {
     const fetchConversations = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me/conversations`, {
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token")}` // Si tu utilises un token JWT
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setConversations(data);
-        }
+        const data = await listDirectConversations();
+        setConversations(data);
+        setError(null);
       } catch (error) {
         console.error("Erreur lors du chargement des conversations:", error);
+        setError("Impossible de charger les conversations.");
       }
     };
 
@@ -49,43 +53,61 @@ export default function DirectMessagesPage() {
     }
   }, [currentUser]);
 
-const handleStartConversation = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!selectedConversationId) {
+        setMessages([]);
+        return;
+      }
+
+      try {
+        const data = await listDirectMessages(selectedConversationId);
+        setMessages(data);
+        setError(null);
+      } catch (error) {
+        console.error("Erreur lors du chargement des messages privés:", error);
+        setError("Impossible de charger les messages privés.");
+      }
+    };
+
+    fetchMessages();
+  }, [selectedConversationId]);
+
+  const handleStartConversation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchUsername.trim()) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/conversations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({ username: searchUsername }),
-      });
+      const newConv = await createDirectConversation(searchUsername.trim());
 
-      if (!response.ok) {
-        const err = await response.json();
-        alert(err.message || "Utilisateur introuvable");
-        return;
-      }
-
-      const newConv = await response.json();
-
-      // 1. Ajouter à la liste si elle n'y est pas déjà
       setConversations((prev) => {
         const exists = prev.find((c) => c.id === newConv.id);
         return exists ? prev : [newConv, ...prev];
       });
 
-      // 2. Sélectionner la conversation
       setSelectedConversationId(newConv.id);
-      
-      // 3. Fermer la modal et reset le champ
       setShowNewChatModal(false);
       setSearchUsername("");
+      setError(null);
 
     } catch (error) {
       console.error("Erreur technique lors du lancement de la conversation:", error);
+      setError("Utilisateur introuvable ou conversation impossible.");
+    }
+  };
+
+  const handleSendDirectMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedConversationId || !messageInput.trim()) return;
+
+    try {
+      const sentMessage = await sendDirectMessage(selectedConversationId, messageInput.trim());
+      setMessages((prev) => [...prev, sentMessage]);
+      setMessageInput("");
+      setError(null);
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du message privé:", error);
+      setError("Impossible d'envoyer le message privé.");
     }
   };
 
@@ -151,10 +173,10 @@ const handleStartConversation = async (e: React.FormEvent) => {
               className={`w-full flex items-center gap-3 px-2 py-2 rounded transition-colors ${selectedConversationId === conv.id ? "bg-[#4fdfff]/15 text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}`}
             >
               <div className="w-8 h-8 rounded-full bg-[#4fdfff]/20 border border-[#4fdfff]/30 flex items-center justify-center text-xs font-bold">
-                {conv.recipient.username.charAt(0)}
+                {conv.username.charAt(0)}
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium truncate">{conv.recipient.username}</p>
+                <p className="text-sm font-medium truncate">{conv.username}</p>
               </div>
             </button>
           ))}
@@ -181,13 +203,37 @@ const handleStartConversation = async (e: React.FormEvent) => {
       <div className="flex-1 flex flex-col bg-[rgba(10,15,20,0.98)]">
         {selectedConversationId ? (
            <div className="flex-1 flex flex-col">
-              {/* Intégration de tes composants de messages ici */}
               <header className="h-12 border-b border-[#4fdfff]/20 flex items-center px-4 text-white font-bold">
-                Conversation en cours...
+                {selectedConversation ? `@${selectedConversation.username}` : "Conversation"}
               </header>
-              <div className="flex-1 p-4 overflow-y-auto">
-                {/* Liste des messages filtrés par selectedConversationId */}
+              <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                {error && <p className="text-sm text-[#ff3333]">{error}</p>}
+                {messages.length === 0 && (
+                  <p className="text-sm text-white/40">Aucun message pour le moment.</p>
+                )}
+                {messages.map((message) => (
+                  <div key={message.id} className="flex flex-col gap-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-bold text-[#4fdfff]">{message.username}</span>
+                      <span className="text-[10px] text-white/30">
+                        {new Date(message.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-white/80 whitespace-pre-wrap break-words">{message.content}</p>
+                  </div>
+                ))}
               </div>
+              <form onSubmit={handleSendDirectMessage} className="border-t border-[#4fdfff]/20 p-3 flex gap-2">
+                <input
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  placeholder={selectedConversation ? `Message @${selectedConversation.username}` : "Message"}
+                  className="flex-1 bg-black/40 border border-[#4fdfff]/20 rounded px-3 py-2 text-sm text-white outline-none focus:border-[#4fdfff]/50"
+                />
+                <Button type="submit" className="bg-[#4fdfff] text-black">
+                  Envoyer
+                </Button>
+              </form>
            </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-4">

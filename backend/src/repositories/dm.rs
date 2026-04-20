@@ -18,25 +18,100 @@ impl DmRepository {
 
         let row = sqlx::query(
             r#"
-            INSERT INTO direct_messages (user1_id, user2_id)
-            VALUES ($1, $2)
-            ON CONFLICT (user1_id, user2_id) DO UPDATE SET created_at = NOW()
-            RETURNING id
+            WITH inserted AS (
+                INSERT INTO direct_messages (user1_id, user2_id)
+                VALUES ($1, $2)
+                ON CONFLICT DO NOTHING
+                RETURNING id
+            )
+            SELECT id FROM inserted
+            UNION ALL
+            SELECT id FROM direct_messages
+            WHERE user1_id = $1 AND user2_id = $2
+            LIMIT 1
             "#,
         )
-        .bind(first) // On lie le premier argument ($1)
-        .bind(second) // On lie le deuxième argument ($2)
+        .bind(first)
+        .bind(second)
         .fetch_one(&self.pool)
         .await?;
 
-        // Avec query (sans !), on récupère la colonne par son nom ou index
         let id: Uuid = row.get("id");
         Ok(id)
     }
 
-    pub async fn list_user_dms(&self, _user_id: Uuid) -> Result<Vec<DMWithRecipient>> {
-        // Ajout d'un underscore devant user_id pour dire à Rust qu'il est
-        // normal qu'il soit inutilisé pour l'instant.
-        Ok(vec![])
+    pub async fn user_has_access(&self, dm_id: Uuid, user_id: Uuid) -> Result<bool> {
+        let has_access = sqlx::query_scalar::<_, bool>(
+            r#"
+            SELECT EXISTS(
+                SELECT 1 FROM direct_messages
+                WHERE id = $1 AND (user1_id = $2 OR user2_id = $2)
+            )
+            "#,
+        )
+        .bind(dm_id)
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(has_access)
+    }
+
+    pub async fn list_user_dms(&self, user_id: Uuid) -> Result<Vec<DMWithRecipient>> {
+        let conversations = sqlx::query_as::<_, DMWithRecipient>(
+            r#"
+            SELECT
+                dm.id,
+                recipient.id AS recipient_id,
+                recipient.username,
+                recipient.avatar_url,
+                recipient.status::TEXT AS status,
+                dm.created_at
+            FROM direct_messages dm
+            JOIN users recipient
+              ON recipient.id = CASE
+                WHEN dm.user1_id = $1 THEN dm.user2_id
+                ELSE dm.user1_id
+              END
+            WHERE dm.user1_id = $1 OR dm.user2_id = $1
+            ORDER BY dm.created_at DESC
+            "#,
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(conversations)
+    }
+
+    pub async fn get_dm_details(
+        &self,
+        dm_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<DMWithRecipient>> {
+        let conversation = sqlx::query_as::<_, DMWithRecipient>(
+            r#"
+            SELECT
+                dm.id,
+                recipient.id AS recipient_id,
+                recipient.username,
+                recipient.avatar_url,
+                recipient.status::TEXT AS status,
+                dm.created_at
+            FROM direct_messages dm
+            JOIN users recipient
+              ON recipient.id = CASE
+                WHEN dm.user1_id = $2 THEN dm.user2_id
+                ELSE dm.user1_id
+              END
+            WHERE dm.id = $1 AND (dm.user1_id = $2 OR dm.user2_id = $2)
+            "#,
+        )
+        .bind(dm_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(conversation)
     }
 }
