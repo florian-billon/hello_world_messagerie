@@ -146,6 +146,25 @@ export interface MessageReaction {
   created_at: string;
 }
 
+export interface DirectConversation {
+  id: string;
+  recipient_id: string;
+  username: string;
+  avatar_url?: string;
+  status: string;
+  created_at: string;
+}
+
+export interface DirectMessage {
+  id: string;
+  dm_id: string;
+  author_id: string;
+  username: string;
+  content: string;
+  created_at: string;
+  edited_at?: string;
+}
+
 export interface ServerMember {
   server_id: string;
   user_id: string;
@@ -323,6 +342,28 @@ export async function removeMessageReaction(id: string, emoji: string): Promise<
   return fetchApi<Message>(`/messages/${id}/reactions`, {
     method: "DELETE",
     body: JSON.stringify({ emoji }),
+  });
+}
+
+export async function listDirectConversations(): Promise<DirectConversation[]> {
+  return fetchApi<DirectConversation[]>("/conversations");
+}
+
+export async function createDirectConversation(targetUsername: string): Promise<DirectConversation> {
+  return fetchApi<DirectConversation>("/conversations", {
+    method: "POST",
+    body: JSON.stringify({ target_username: targetUsername }),
+  });
+}
+
+export async function listDirectMessages(conversationId: string, limit = 50): Promise<DirectMessage[]> {
+  return fetchApi<DirectMessage[]>(`/conversations/${conversationId}/messages?limit=${limit}`);
+}
+
+export async function sendDirectMessage(conversationId: string, content: string): Promise<DirectMessage> {
+  return fetchApi<DirectMessage>(`/conversations/${conversationId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ content }),
   });
 }
 
