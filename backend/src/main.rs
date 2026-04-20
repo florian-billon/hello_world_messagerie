@@ -49,6 +49,10 @@ async fn health() -> &'static str {
     "OK"
 }
 
+async fn root() -> &'static str {
+    "Hello World backend is running. Use /health for health checks."
+}
+
 async fn get_ws_metrics(State(state): State<AppState>) -> Json<MetricsSnapshot> {
     Json(state.ws_metrics.get_metrics().await)
 }
@@ -158,6 +162,7 @@ async fn main() {
         ));
 
     let routes_public = Router::new()
+        .route("/", get(root))
         .route("/health", get(health))
         .route("/ws/metrics", get(get_ws_metrics))
         .route(
