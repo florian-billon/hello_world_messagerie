@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, useServers } from "@/hooks";
-import { normalizeAvatarUrl } from "@/lib/avatar";
+import { normalizeAvatarUrl, getAvatar } from "@/lib/avatar";
 import { getStatusKey } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
 import PublicProfileCard from "@/components/PublicProfileCard";
@@ -289,7 +289,7 @@ function DirectMessagesPageContent() {
         {/* User Footer */}
         <div className="h-14 px-2 flex items-center gap-2 bg-[rgba(0,0,0,0.5)] border-t border-[#4fdfff]/20">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-                <SmartImg src={normalizeAvatarUrl(currentUser?.avatar_url) || ''} alt="Avatar" className="w-8 h-8 rounded-full border border-[#4fdfff]/50" />
+                <SmartImg src={getAvatar(currentUser?.id || "", currentUser)} alt="Avatar" className="w-8 h-8 rounded-full border border-[#4fdfff]/50" />
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{currentUser?.username}</p>
                     <p className="text-[10px] text-[#4fdfff] font-mono uppercase">{t(getStatusKey(currentUser?.status))}</p>
@@ -412,7 +412,7 @@ function DirectMessagesPageContent() {
                         }`}
                       >
                         <SmartImg
-                          src={normalizeAvatarUrl(user.avatar_url) || ""}
+                          src={getAvatar(user.id, null)}
                           alt={user.username}
                           className="h-10 w-10 rounded-full border border-[#4fdfff]/30"
                         />

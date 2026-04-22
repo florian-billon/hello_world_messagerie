@@ -5,20 +5,16 @@ use uuid::Uuid;
 
 /// Statut de présence utilisateur
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq, Default)]
-#[sqlx(type_name = "user_status")]
+#[sqlx(type_name = "user_status", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum UserStatus {
-    #[sqlx(rename = "Online")]
     Online,
 
-    #[sqlx(rename = "Offline")]
     #[default]
     Offline,
 
-    #[sqlx(rename = "Dnd")]
     Dnd,
 
-    #[sqlx(rename = "Invisible")]
     Invisible,
 }
 /// Modèle User (PostgreSQL)
