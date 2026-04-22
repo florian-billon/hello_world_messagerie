@@ -37,7 +37,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const result = await signup(formData.username, formData.email, formData.password);
+      const result = await signup(formData.username.trim(), formData.email, formData.password);
 
       if (result.error) {
         setError(result.error);
@@ -88,7 +88,7 @@ export default function RegisterPage() {
                 type="text"
                 placeholder={t("auth.register.usernamePlaceholder")}
                 required
-                minLength={3}
+                minLength={1}
                 maxLength={32}
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}

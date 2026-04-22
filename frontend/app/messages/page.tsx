@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, useServers } from "@/hooks";
 import { normalizeAvatarUrl } from "@/lib/avatar";
 import { getStatusKey } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
+import PublicProfileCard from "@/components/PublicProfileCard";
 import SmartImg from "@/components/SmartImg";
 import { logout } from "@/lib/auth/actions";
 import Button from "@/components/ui/Button";
@@ -16,14 +17,17 @@ import {
   DirectMessage,
   listDirectConversations,
   listDirectMessages,
+  searchUsers,
   sendDirectMessage,
+  UserSearchResult,
 } from "@/lib/api-server";
 
-export default function DirectMessagesPage() {
+function DirectMessagesPageContent() {
   const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const { servers, selectServer } = useServers();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // ÉTATS
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -33,8 +37,40 @@ export default function DirectMessagesPage() {
   const [conversations, setConversations] = useState<DirectConversation[]>([]);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedPublicUserId, setSelectedPublicUserId] = useState<string | null>(null);
 
   const selectedConversation = conversations.find((conv) => conv.id === selectedConversationId);
+  const requestedUsername = searchParams.get("username");
+
+  const resetNewConversationModal = () => {
+    setShowNewChatModal(false);
+    setSearchUsername("");
+    setModalError(null);
+    setSearchResults([]);
+    setSearchLoading(false);
+  };
+
+  const selectConversation = useCallback((conversation: DirectConversation) => {
+    setConversations((prev) => {
+      const exists = prev.find((current) => current.id === conversation.id);
+      return exists ? prev : [conversation, ...prev];
+    });
+    setSelectedConversationId(conversation.id);
+  }, []);
+
+  const openConversation = useCallback(
+    async (targetUsername: string, shouldSelect = true) => {
+      const conversation = await createDirectConversation(targetUsername.trim());
+      if (shouldSelect) {
+        selectConversation(conversation);
+      }
+      return conversation;
+    },
+    [selectConversation]
+  );
 
   useEffect(() => {
     const fetchConversations = async () => {
@@ -73,26 +109,94 @@ export default function DirectMessagesPage() {
     fetchMessages();
   }, [selectedConversationId]);
 
+  useEffect(() => {
+    if (!requestedUsername || !currentUser) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const openConversationFromQuery = async () => {
+      try {
+        const newConv = await openConversation(requestedUsername, false);
+        if (!cancelled) {
+          selectConversation(newConv);
+          router.replace("/messages");
+        }
+      } catch (queryError) {
+        console.error("Erreur lors de l'ouverture auto de la conversation:", queryError);
+        if (!cancelled) {
+          setError("Impossible d'ouvrir la conversation privée.");
+          router.replace("/messages");
+        }
+      }
+    };
+
+    openConversationFromQuery();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, openConversation, requestedUsername, router, selectConversation]);
+
+  useEffect(() => {
+    if (!showNewChatModal) {
+      return;
+    }
+
+    const normalizedQuery = searchUsername.trim();
+
+    if (!normalizedQuery) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      setModalError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const users = await searchUsers(normalizedQuery);
+        if (!cancelled) {
+          setSearchResults(users);
+          setModalError(null);
+        }
+      } catch (searchError) {
+        console.error("Erreur lors de la recherche d'utilisateurs:", searchError);
+        if (!cancelled) {
+          setSearchResults([]);
+          setModalError("Impossible de rechercher des utilisateurs.");
+        }
+      } finally {
+        if (!cancelled) {
+          setSearchLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchUsername, showNewChatModal]);
+
   const handleStartConversation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchUsername.trim()) return;
+    const targetUsername =
+      searchResults.find((candidate) => candidate.username === searchUsername.trim())?.username ||
+      searchResults[0]?.username ||
+      searchUsername.trim();
+
+    if (!targetUsername) return;
 
     try {
-      const newConv = await createDirectConversation(searchUsername.trim());
-
-      setConversations((prev) => {
-        const exists = prev.find((c) => c.id === newConv.id);
-        return exists ? prev : [newConv, ...prev];
-      });
-
-      setSelectedConversationId(newConv.id);
-      setShowNewChatModal(false);
-      setSearchUsername("");
+      await openConversation(targetUsername);
+      resetNewConversationModal();
       setError(null);
-
-    } catch (error) {
-      console.error("Erreur technique lors du lancement de la conversation:", error);
-      setError("Utilisateur introuvable ou conversation impossible.");
+    } catch (conversationError) {
+      console.error("Erreur technique lors du lancement de la conversation:", conversationError);
+      setModalError("Utilisateur introuvable ou conversation impossible.");
     }
   };
 
@@ -214,7 +318,13 @@ export default function DirectMessagesPage() {
                 {messages.map((message) => (
                   <div key={message.id} className="flex flex-col gap-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-bold text-[#4fdfff]">{message.username}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPublicUserId(message.author_id)}
+                        className="text-sm font-bold text-[#4fdfff] hover:underline"
+                      >
+                        {message.username}
+                      </button>
                       <span className="text-[10px] text-white/30">
                         {new Date(message.created_at).toLocaleString()}
                       </span>
@@ -254,31 +364,97 @@ export default function DirectMessagesPage() {
       {/* ========== MODAL NOUVELLE CONVERSATION ========== */}
       {showNewChatModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowNewChatModal(false)} />
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={resetNewConversationModal} />
           <form onSubmit={handleStartConversation} className="relative bg-[rgba(20,20,20,0.98)] border-2 border-[#4fdfff] rounded-xl p-6 w-full max-w-md shadow-[0_0_40px_rgba(79,223,255,0.2)]">
             <h2 className="text-xl font-bold text-white mb-4">Nouvelle conversation</h2>
-            <p className="text-white/60 text-sm mb-4">Saisis le pseudo de ton contact pour initier un lien sécurisé.</p>
+            <p className="text-white/60 text-sm mb-4">Recherche ton contact puis sélectionne un pseudo fiable pour démarrer la conversation.</p>
             
             <input
               autoFocus
               type="text"
               value={searchUsername}
-              onChange={(e) => setSearchUsername(e.target.value)}
+              onChange={(e) => {
+                setSearchUsername(e.target.value);
+                setModalError(null);
+              }}
               placeholder="Pseudo (ex: CyberGhost)"
-              className="w-full bg-black/50 border border-[#4fdfff]/30 rounded-lg p-3 text-white outline-none focus:border-[#4fdfff] mb-6"
+              className="w-full bg-black/50 border border-[#4fdfff]/30 rounded-lg p-3 text-white outline-none focus:border-[#4fdfff]"
             />
 
+            {modalError && (
+              <p className="mt-3 text-sm text-[#ff3333]">{modalError}</p>
+            )}
+
+            <div className="mt-3 mb-6 rounded-lg border border-[#4fdfff]/20 bg-black/30 overflow-hidden">
+              {searchLoading && (
+                <p className="px-3 py-3 text-sm text-white/50">Recherche en cours...</p>
+              )}
+
+              {!searchLoading && searchUsername.trim() && searchResults.length === 0 && (
+                <p className="px-3 py-3 text-sm text-white/40">Aucun utilisateur correspondant.</p>
+              )}
+
+              {!searchLoading && searchResults.length > 0 && (
+                <div className="max-h-64 overflow-y-auto">
+                  {searchResults.map((user) => {
+                    const isSelected = searchUsername.trim() === user.username;
+
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => {
+                          setSearchUsername(user.username);
+                          setModalError(null);
+                        }}
+                        className={`flex w-full items-center gap-3 px-3 py-3 text-left transition-colors ${
+                          isSelected ? "bg-[#4fdfff]/15 text-white" : "text-white/75 hover:bg-white/5"
+                        }`}
+                      >
+                        <SmartImg
+                          src={normalizeAvatarUrl(user.avatar_url) || ""}
+                          alt={user.username}
+                          className="h-10 w-10 rounded-full border border-[#4fdfff]/30"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{user.username}</p>
+                          <p className="truncate text-[11px] uppercase text-white/35">
+                            {t(getStatusKey(user.status))}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-3">
-              <Button type="button" variant="outline" onClick={() => setShowNewChatModal(false)} className="flex-1">
+              <Button type="button" variant="outline" onClick={resetNewConversationModal} className="flex-1">
                 Annuler
               </Button>
-              <Button type="submit" className="flex-1 bg-[#4fdfff] text-black">
+              <Button type="submit" className="flex-1 bg-[#4fdfff] text-black" disabled={!searchUsername.trim() || searchLoading}>
                 Lancer
               </Button>
             </div>
           </form>
         </div>
       )}
+
+      {selectedPublicUserId && (
+        <PublicProfileCard
+          userId={selectedPublicUserId}
+          onClose={() => setSelectedPublicUserId(null)}
+        />
+      )}
     </main>
+  );
+}
+
+export default function DirectMessagesPage() {
+  return (
+    <Suspense fallback={<main className="flex w-full h-screen bg-[rgba(10,15,20,0.98)]" />}>
+      <DirectMessagesPageContent />
+    </Suspense>
   );
 }

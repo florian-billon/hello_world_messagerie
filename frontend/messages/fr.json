@@ -182,7 +182,18 @@
         "load": "Impossible de charger les membres",
         "kick": "Impossible d'expulser le membre",
         "ban": "Impossible de bannir le membre"
+      },
+      "friends": {
+        "load": "Impossible de charger les amis",
+        "add": "Impossible d'ajouter cet utilisateur en ami"
       }
     }
+  },
+  "friends": {
+    "title": "Amis",
+    "alreadyFriends": "Amis",
+    "add": "Ajouter en ami",
+    "openDm": "Ouvrir les MP",
+    "memberSince": "Inscrit depuis"
   }
 }

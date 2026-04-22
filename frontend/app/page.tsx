@@ -3,8 +3,9 @@ import { useRouter } from "next/navigation"; // Ajoute cette ligne avec les autr
 import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { logout } from "@/lib/auth/actions";
-import { useServers, useChannels, useMessages, useMembers, useAuth } from "@/hooks";
+import { useServers, useChannels, useMessages, useMembers, useAuth, useFriends } from "@/hooks";
 import ProfileCard from "@/components/ProfileCard";
+import PublicProfileCard from "@/components/PublicProfileCard";
 import InviteModal from "@/modals/InviteModal";
 import { User } from "@/lib/api-server";
 import { getAvatar, normalizeAvatarUrl } from "@/lib/avatar";
@@ -23,6 +24,7 @@ export default function Home() {
   const router = useRouter(); // Initialisation du router
   const { t, locale } = useTranslation();
   const { user } = useAuth();
+  const { friends, refreshFriends } = useFriends();
   const {
     servers,
     selectedServer,
@@ -61,6 +63,7 @@ export default function Home() {
   const [messageInput, setMessageInput] = useState("");
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [selectedPublicUserId, setSelectedPublicUserId] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showServerMenu, setShowServerMenu] = useState(false);
@@ -76,15 +79,12 @@ export default function Home() {
   const [leaveModalError, setLeaveModalError] = useState<string | null>(null);
   const typingStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const TYPING_STOP_DELAY_MS = 2000;
-  const viewerId = (currentUser || user)?.id;
+  const viewer = currentUser || user;
+  const viewerId = viewer?.id;
   const isServerOwner = selectedServer?.owner_id === viewerId;
   const transferCandidates = members.filter((member) => member.user_id !== viewerId);
   const viewerRole = members.find((member) => member.user_id === viewerId)?.role;
   const canManageChannels = viewerRole === "Owner" || viewerRole === "Admin";
-
-  if (user && !currentUser) {
-    setCurrentUser(user as User);
-  }
 
   const scheduleTypingStop = useCallback(() => {
     if (typingStopTimeoutRef.current) clearTimeout(typingStopTimeoutRef.current);
@@ -167,6 +167,17 @@ export default function Home() {
     setShowDeleteChannelConfirm(true);
   };
 
+  const openUserProfile = useCallback((userId: string) => {
+    const viewerId = viewer?.id;
+
+    if (viewerId && userId === viewerId) {
+      setShowProfile(true);
+      return;
+    }
+
+    setSelectedPublicUserId(userId);
+  }, [viewer]);
+
   const confirmDeleteChannel = async () => {
     if (!channelToDelete) return;
     await deleteChannel(channelToDelete.id);
@@ -217,8 +228,31 @@ export default function Home() {
 
         <div className="w-8 h-[2px] bg-[#4fdfff]/20 rounded-full" />
 
-        {/* Server list */}
+        {/* Friends + Server list */}
         <div className="flex-1 w-full overflow-y-auto flex flex-col items-center gap-2 py-2">
+          {friends.map((friend) => (
+            <button
+              key={`friend-${friend.id}`}
+              onClick={() => router.push(`/messages?username=${encodeURIComponent(friend.username)}`)}
+              className="w-12 h-12 rounded-[24px] bg-[rgba(15,40,30,0.8)] text-[#4fdfff] flex items-center justify-center hover:bg-[#4fdfff]/20 hover:rounded-xl transition-all relative group overflow-hidden"
+              title={`${t("friends.openDm")} ${friend.username}`}
+            >
+              {friend.avatar_url ? (
+                <SmartImg
+                  src={normalizeAvatarUrl(friend.avatar_url) || ""}
+                  alt={friend.username}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-lg font-bold">{friend.username.charAt(0).toUpperCase()}</span>
+              )}
+              <span className={`absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border border-[rgba(5,10,15,0.95)] ${getStatusColor(friend.status)}`} />
+              <span className="absolute left-0 w-1 h-0 bg-[#4fdfff] rounded-r transition-all group-hover:h-5" />
+            </button>
+          ))}
+
+          {friends.length > 0 && <div className="w-8 h-[2px] bg-[#4fdfff]/20 rounded-full my-1" />}
+
           {servers.map((server) => (
             <button
               key={server.id}
@@ -501,16 +535,26 @@ export default function Home() {
             <div className="space-y-4">
               {messages.map((msg) => (
                 <div key={msg.id} className="flex items-start gap-3 px-4 py-2 rounded hover:bg-white/5 transition-colors group">
-                  <SmartImg
-                    src={getAvatar(msg.author_id, currentUser || user)}
-                    alt={msg.username}
-                    className="w-10 h-10 rounded-full object-cover border border-[#4fdfff]/30 flex-shrink-0 group-hover:border-[#4fdfff]/50 transition-colors"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => openUserProfile(msg.author_id)}
+                    className="flex-shrink-0"
+                  >
+                    <SmartImg
+                      src={getAvatar(msg.author_id, currentUser || user)}
+                      alt={msg.username}
+                      className="w-10 h-10 rounded-full object-cover border border-[#4fdfff]/30 group-hover:border-[#4fdfff]/50 transition-colors"
+                    />
+                  </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2 mb-1">
-                      <span className="font-semibold text-white hover:text-[#4fdfff] transition-colors cursor-pointer">
+                      <button
+                        type="button"
+                        onClick={() => openUserProfile(msg.author_id)}
+                        className="font-semibold text-white hover:text-[#4fdfff] transition-colors cursor-pointer"
+                      >
                         {msg.username}
-                      </span>
+                      </button>
                       <span className="text-xs text-white/40">
                         {new Date(msg.created_at).toLocaleTimeString(locale === "fr" ? "fr-FR" : "en-US", {
                           hour: "2-digit",
@@ -691,6 +735,7 @@ export default function Home() {
                         return (
                           <div
                             key={member.user_id}
+                            onClick={() => openUserProfile(member.user_id)}
                             className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-white/5 cursor-pointer transition-colors"
                           >
                             <div className="relative">
@@ -736,6 +781,7 @@ export default function Home() {
                           return (
                             <div
                               key={member.user_id}
+                              onClick={() => openUserProfile(member.user_id)}
                               className="group flex items-center gap-2 py-1.5 px-2 rounded hover:bg-white/5 transition-colors"
                             >
                               <div className="relative flex-shrink-0">
@@ -760,7 +806,10 @@ export default function Home() {
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0">
                                   <button
                                     type="button"
-                                    onClick={() => kickMember(member.user_id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      kickMember(member.user_id);
+                                    }}
                                     className="text-white/30 hover:text-[#ff3333] transition-colors"
                                     title={t("members.kick", { username: member.username })}
                                   >
@@ -771,7 +820,10 @@ export default function Home() {
                                   {bannable && (
                                     <button
                                       type="button"
-                                      onClick={() => banMember(member.user_id)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        banMember(member.user_id);
+                                      }}
                                       className="text-white/30 hover:text-[#ff3333] transition-colors"
                                       title={t("members.ban", { username: member.username })}
                                     >
@@ -904,6 +956,14 @@ export default function Home() {
           user={(currentUser || user) as User}
           onClose={() => setShowProfile(false)}
           onUpdate={(updatedUser) => setCurrentUser(updatedUser)}
+        />
+      )}
+
+      {selectedPublicUserId && (
+        <PublicProfileCard
+          userId={selectedPublicUserId}
+          onClose={() => setSelectedPublicUserId(null)}
+          onFriendAdded={refreshFriends}
         />
       )}
 

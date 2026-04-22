@@ -58,6 +58,34 @@ impl From<User> for UserResponse {
     }
 }
 
+#[derive(Debug, Clone, Serialize, FromRow)]
+pub struct UserSearchResponse {
+    pub id: Uuid,
+    pub username: String,
+    pub avatar_url: Option<String>,
+    pub status: UserStatus,
+}
+
+#[derive(Debug, Clone, Serialize, FromRow)]
+pub struct FriendSummary {
+    pub id: Uuid,
+    pub username: String,
+    pub avatar_url: Option<String>,
+    pub status: UserStatus,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, FromRow)]
+pub struct PublicUserProfileResponse {
+    pub id: Uuid,
+    pub username: String,
+    pub avatar_url: Option<String>,
+    pub status: UserStatus,
+    pub created_at: DateTime<Utc>,
+    pub is_self: bool,
+    pub is_friend: bool,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct UpdateMePayload {
     pub username: Option<String>,

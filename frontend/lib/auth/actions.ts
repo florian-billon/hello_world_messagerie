@@ -49,12 +49,14 @@ export async function login(email: string, password: string) {
 }
 
 export async function signup(username: string, email: string, password: string) {
+  const normalizedUsername = username.trim();
+
   let res: Response;
   try {
     res = await fetch(`${API_URL}/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, email, password }),
+      body: JSON.stringify({ username: normalizedUsername, email, password }),
     });
   } catch {
     return { error: "Erreur de connexion. Vérifiez que le backend tourne (port 3001)." };

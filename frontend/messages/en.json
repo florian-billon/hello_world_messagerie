@@ -182,7 +182,18 @@
         "load": "Failed to load members",
         "kick": "Failed to kick member",
         "ban": "Failed to ban member"
+      },
+      "friends": {
+        "load": "Failed to load friends",
+        "add": "Failed to add this user as a friend"
       }
     }
+  },
+  "friends": {
+    "title": "Friends",
+    "alreadyFriends": "Friends",
+    "add": "Add friend",
+    "openDm": "Open DM",
+    "memberSince": "Member since"
   }
 }

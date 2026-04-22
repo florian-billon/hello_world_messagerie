@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    username VARCHAR(100) NOT NULL,
+    username VARCHAR(32) NOT NULL CHECK (username = trim(username)) CHECK (char_length(username) BETWEEN 1 AND 32),
     avatar_url VARCHAR(500),
     status user_status NOT NULL DEFAULT 'offline',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS invites (
 
 -- INDEXES (idempotent)
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username_normalized ON users (lower(trim(username)));
 CREATE INDEX IF NOT EXISTS idx_servers_owner ON servers(owner_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_servers_owner_name_normalized ON servers(owner_id, lower(trim(name)));
 CREATE INDEX IF NOT EXISTS idx_server_members_user ON server_members(user_id);
@@ -143,5 +144,20 @@ ON direct_messages (LEAST(user1_id, user2_id), GREATEST(user1_id, user2_id));
 
 CREATE INDEX IF NOT EXISTS idx_direct_messages_user1 ON direct_messages(user1_id);
 CREATE INDEX IF NOT EXISTS idx_direct_messages_user2 ON direct_messages(user2_id);
+
+-- FRIENDSHIPS
+CREATE TABLE IF NOT EXISTS friendships (
+    user1_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user2_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user1_id, user2_id),
+    CHECK (user1_id <> user2_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_friendships_user_pair
+ON friendships (LEAST(user1_id, user2_id), GREATEST(user1_id, user2_id));
+
+CREATE INDEX IF NOT EXISTS idx_friendships_user1 ON friendships(user1_id);
+CREATE INDEX IF NOT EXISTS idx_friendships_user2 ON friendships(user2_id);
 
 -- NOTE: Channel messages and direct message items are stored in MongoDB, not PostgreSQL

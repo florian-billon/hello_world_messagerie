@@ -11,6 +11,9 @@ impl IntoResponse for AuthError {
     fn into_response(self) -> axum::response::Response {
         let (status, message) = match self {
             AuthError::EmailExists => (StatusCode::CONFLICT, "Email already exists".to_string()),
+            AuthError::UsernameExists => {
+                (StatusCode::CONFLICT, "Username already exists".to_string())
+            }
             AuthError::InvalidCredentials => (
                 StatusCode::UNAUTHORIZED,
                 "Invalid email or password".to_string(),

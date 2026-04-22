@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod channels;
 pub mod dm;
+pub mod friends;
 pub mod invites;
 pub mod messages;
 pub mod servers;
