@@ -30,7 +30,7 @@ pub async fn upload_file(
             message: format!("Failed to create upload directory: {err}"),
         })?;
 
-    while let Some(field) = multipart
+    if let Some(field) = multipart
         .next_field()
         .await
         .map_err(|err| Error::BadRequest {
@@ -57,13 +57,13 @@ pub async fn upload_file(
                 message: format!("Failed to persist uploaded file: {err}"),
             })?;
 
-        return Ok(Json(UploadResponse {
+        Ok(Json(UploadResponse {
             url: format!("/files/{}", unique_name),
             filename: original_name,
-        }));
+        }))
+    } else {
+        Err(Error::BadRequest {
+            message: "Aucun fichier reçu".to_string(),
+        })
     }
-
-    Err(Error::BadRequest {
-        message: "Aucun fichier reçu".to_string(),
-    })
 }
