@@ -18,5 +18,5 @@ pub fn create_router() -> Router<AppState> {
         .merge(invites::routes())
         .merge(friends::routes())
         .merge(dm::routes())
-        .merge(upload::routes()) 
+        .merge(upload::routes())
 }

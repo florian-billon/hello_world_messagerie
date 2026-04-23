@@ -1,56 +1,69 @@
-use axum::{extract::{Multipart, State},Json,};
+use axum::{
+    extract::{Multipart, State},
+    Json,
+};
 use serde::Serialize;
 use std::path::PathBuf;
 use tokio::fs;
 use uuid::Uuid;
 
 use crate::ctx::Ctx;
+use crate::error::Error;
 use crate::error::Result;
 use crate::AppState;
 
 #[derive(Serialize)]
-pub struct UploadResponse { //class objet pour la réponse de l'upload
+pub struct UploadResponse {
     pub url: String,
     pub filename: String,
 }
 
-pub async fn upload_file( //pub = public , async = fonction asynchrone, upload_file = nom de la fonction
+pub async fn upload_file(
     State(_state): State<AppState>,
     _ctx: Ctx,
     mut multipart: Multipart,
 ) -> Result<Json<UploadResponse>> {
-    // Créer le dossier uploads s'il n'existe pas
-    let upload_dir = PathBuf::from("uploads"); //let = déclaration d'une variable immuable, upload_dir = nom de la variable, PathBuf::from("uploads") = chemin du dossier
-    fs::create_dir_all(&upload_dir).await.unwrap();
+    let upload_dir = PathBuf::from("uploads");
+    fs::create_dir_all(&upload_dir)
+        .await
+        .map_err(|err| Error::InternalError {
+            message: format!("Failed to create upload directory: {err}"),
+        })?;
 
-    while let Some(field) = multipart.next_field().await.unwrap() {
-        // Récupérer le nom original du fichier
-        let original_name = field
-            .file_name()
-            .unwrap_or("fichier")
-            .to_string();
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|err| Error::BadRequest {
+            message: format!("Invalid multipart payload: {err}"),
+        })?
+    {
+        let original_name = field.file_name().unwrap_or("fichier").to_string();
 
-        // Générer un nom unique pour éviter les conflits
         let extension = original_name
-            .split('.')
-            .last()
+            .rsplit('.')
+            .next()
+            .filter(|ext| !ext.is_empty())
             .unwrap_or("bin");
         let unique_name = format!("{}.{}", Uuid::new_v4(), extension);
 
-        // Lire le contenu du fichier
-        let data = field.bytes().await.unwrap();
+        let data = field.bytes().await.map_err(|err| Error::BadRequest {
+            message: format!("Invalid upload body: {err}"),
+        })?;
 
-        // Sauvegarder sur le disque
         let file_path = upload_dir.join(&unique_name);
-        fs::write(&file_path, &data).await.unwrap();
+        fs::write(&file_path, &data)
+            .await
+            .map_err(|err| Error::InternalError {
+                message: format!("Failed to persist uploaded file: {err}"),
+            })?;
 
-        // Retourner l'URL de téléchargement
         return Ok(Json(UploadResponse {
             url: format!("/files/{}", unique_name),
             filename: original_name,
         }));
     }
 
-    // Si aucun fichier reçu
-    Err(crate::error::Error::BadRequest { message: "Aucun fichier reçu".to_string() })
+    Err(Error::BadRequest {
+        message: "Aucun fichier reçu".to_string(),
+    })
 }

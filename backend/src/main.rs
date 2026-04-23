@@ -80,6 +80,10 @@ async fn main() {
         .await
         .expect("Failed to connect to PostgreSQL");
 
+    services::usernames::prepare_username_normalization(&pool)
+        .await
+        .expect("Failed to prepare legacy usernames for normalization migration");
+
     let mongodb_url =
         std::env::var("MONGODB_URL").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
     let mongo_client = MongoClient::with_uri_str(&mongodb_url)

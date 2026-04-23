@@ -5,6 +5,6 @@ pub mod friends;
 pub mod invites;
 pub mod messages;
 pub mod servers;
+pub mod upload;
 pub mod user;
 pub mod user_public;
-pub mod upload;
