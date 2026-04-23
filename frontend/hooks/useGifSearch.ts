@@ -9,7 +9,25 @@ interface GiphyGif {
   };
 }
 
-const API_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY ?? "";
+function sanitizePublicEnvValue(value?: string): string {
+  if (!value) {
+    return "";
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  return (
+    ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ? trimmed.slice(1, -1)
+      : trimmed)
+  ).trim();
+}
+
+const API_KEY = sanitizePublicEnvValue(process.env.NEXT_PUBLIC_GIPHY_API_KEY);
 const BASE_URL = "https://api.giphy.com/v1/gifs";
 
 export function useGifSearch() {

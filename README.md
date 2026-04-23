@@ -111,6 +111,7 @@ Créer `backend/.env` :
 DATABASE_URL=postgres://postgres:postgres@localhost:5433/helloworld
 MONGODB_URL=mongodb://localhost:27017
 JWT_SECRET=CHANGE_ME_generate_with_openssl_rand_base64_32
+ALLOWED_ORIGINS=http://localhost:3002,http://127.0.0.1:3002
 PORT=3001
 RUST_LOG=info
 ```
@@ -129,7 +130,7 @@ echo "NEXT_PUBLIC_API_URL=http://localhost:3001" > .env.local
 npm install && npm run dev
 ```
 
-L'application est disponible sur **http://localhost:3000**.
+L'application est disponible sur **http://localhost:3002**.
 
 ---
 
@@ -153,11 +154,16 @@ L'application est disponible sur **http://localhost:3000**.
 | `PORT` | Port du serveur (3001) |
 | `RUST_LOG` | Niveau de log (info) |
 
+Important :
+- Saisir les valeurs Render et Vercel sans guillemets autour des URLs ou secrets.
+- `NEXT_PUBLIC_API_URL` et `NEXT_PUBLIC_GIPHY_API_KEY` sont des variables frontend, à configurer sur Vercel plutôt que sur le service backend Render.
+
 **Variables d'environnement Vercel (frontend) :**
 
 | Variable | Description |
 |----------|-------------|
 | `NEXT_PUBLIC_API_URL` | URL du backend Render (`https://hello-world-messagerie-1.onrender.com`) |
+| `NEXT_PUBLIC_GIPHY_API_KEY` | Clé publique GIPHY utilisée par le sélecteur de GIF |
 
 Le déploiement est automatique sur push vers `main` (Render via `render.yaml`, Vercel via intégration GitHub).
 
