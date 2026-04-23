@@ -5,6 +5,7 @@ pub mod friends;
 pub mod invites;
 pub mod messages;
 pub mod servers;
+pub mod upload;
 
 use crate::AppState;
 use axum::Router;
@@ -17,4 +18,5 @@ pub fn create_router() -> Router<AppState> {
         .merge(invites::routes())
         .merge(friends::routes())
         .merge(dm::routes())
+        .merge(upload::routes()) 
 }
