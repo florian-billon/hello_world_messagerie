@@ -184,8 +184,47 @@ export interface User {
   created_at: string;
 }
 
+export interface UserSearchResult {
+  id: string;
+  username: string;
+  avatar_url?: string;
+  status: string;
+}
+
+export interface Friend {
+  id: string;
+  username: string;
+  avatar_url?: string;
+  status: string;
+  created_at: string;
+}
+
+export interface PublicUserProfile {
+  id: string;
+  username: string;
+  avatar_url?: string;
+  status: string;
+  created_at: string;
+  is_self: boolean;
+  is_friend: boolean;
+}
+
 export async function getMe(): Promise<User> {
   return fetchApi<User>("/me");
+}
+
+export async function getPublicUserProfile(userId: string): Promise<PublicUserProfile> {
+  return fetchApi<PublicUserProfile>(`/users/${userId}/profile`);
+}
+
+export async function listFriends(): Promise<Friend[]> {
+  return fetchApi<Friend[]>("/friends");
+}
+
+export async function addFriend(userId: string): Promise<void> {
+  return fetchApi<void>(`/friends/${userId}`, {
+    method: "POST",
+  });
 }
 
 export async function listServers(): Promise<Server[]> {
@@ -354,6 +393,15 @@ export async function createDirectConversation(targetUsername: string): Promise<
     method: "POST",
     body: JSON.stringify({ target_username: targetUsername }),
   });
+}
+
+export async function searchUsers(query: string, limit = 8): Promise<UserSearchResult[]> {
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(limit),
+  });
+
+  return fetchApi<UserSearchResult[]>(`/users/search?${params.toString()}`);
 }
 
 export async function listDirectMessages(conversationId: string, limit = 50): Promise<DirectMessage[]> {

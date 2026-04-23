@@ -5,20 +5,16 @@ use uuid::Uuid;
 
 /// Statut de présence utilisateur
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq, Default)]
-#[sqlx(type_name = "user_status")]
+#[sqlx(type_name = "user_status", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum UserStatus {
-    #[sqlx(rename = "Online")]
     Online,
 
-    #[sqlx(rename = "Offline")]
     #[default]
     Offline,
 
-    #[sqlx(rename = "Dnd")]
     Dnd,
 
-    #[sqlx(rename = "Invisible")]
     Invisible,
 }
 /// Modèle User (PostgreSQL)
@@ -56,6 +52,34 @@ impl From<User> for UserResponse {
             created_at: user.created_at,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, FromRow)]
+pub struct UserSearchResponse {
+    pub id: Uuid,
+    pub username: String,
+    pub avatar_url: Option<String>,
+    pub status: UserStatus,
+}
+
+#[derive(Debug, Clone, Serialize, FromRow)]
+pub struct FriendSummary {
+    pub id: Uuid,
+    pub username: String,
+    pub avatar_url: Option<String>,
+    pub status: UserStatus,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, FromRow)]
+pub struct PublicUserProfileResponse {
+    pub id: Uuid,
+    pub username: String,
+    pub avatar_url: Option<String>,
+    pub status: UserStatus,
+    pub created_at: DateTime<Utc>,
+    pub is_self: bool,
+    pub is_friend: bool,
 }
 
 #[derive(Debug, Deserialize)]

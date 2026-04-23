@@ -1,7 +1,15 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::{UpdateMePayload, User};
+use crate::models::{PublicUserProfileResponse, UpdateMePayload, User, UserSearchResponse};
+use crate::services::usernames::normalize_username;
+
+fn escape_like_pattern(input: &str) -> String {
+    input
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+}
 
 #[derive(Clone)]
 pub struct UserRepository {
@@ -62,11 +70,87 @@ impl UserRepository {
     }
 
     pub async fn get_by_username(&self, username: &str) -> sqlx::Result<Option<User>> {
-        let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE username = $1")
-            .bind(username)
-            .fetch_optional(&self.pool)
-            .await?;
+        let normalized = normalize_username(username);
+
+        let user = sqlx::query_as::<_, User>(
+            "SELECT id, email, password_hash, username, avatar_url, status, created_at
+             FROM users
+             WHERE lower(btrim(username)) = lower($1)",
+        )
+        .bind(normalized)
+        .fetch_optional(&self.pool)
+        .await?;
         Ok(user)
+    }
+
+    pub async fn search_users(
+        &self,
+        user_id: Uuid,
+        query: &str,
+        limit: i64,
+    ) -> sqlx::Result<Vec<UserSearchResponse>> {
+        let normalized = normalize_username(query);
+        if normalized.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let escaped = escape_like_pattern(&normalized);
+        let contains_pattern = format!("%{}%", escaped);
+        let prefix_pattern = format!("{}%", escaped);
+
+        sqlx::query_as::<_, UserSearchResponse>(
+            r#"
+            SELECT id, username, avatar_url, status
+            FROM users
+            WHERE id <> $1
+              AND lower(btrim(username)) LIKE lower($2) ESCAPE '\'
+            ORDER BY
+              CASE
+                WHEN lower(btrim(username)) = lower($3) THEN 0
+                WHEN lower(btrim(username)) LIKE lower($4) ESCAPE '\' THEN 1
+                ELSE 2
+              END,
+              lower(btrim(username)) ASC
+            LIMIT $5
+            "#,
+        )
+        .bind(user_id)
+        .bind(contains_pattern)
+        .bind(normalized)
+        .bind(prefix_pattern)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    pub async fn get_public_profile(
+        &self,
+        target_user_id: Uuid,
+        viewer_user_id: Uuid,
+    ) -> sqlx::Result<Option<PublicUserProfileResponse>> {
+        sqlx::query_as::<_, PublicUserProfileResponse>(
+            r#"
+            SELECT
+                u.id,
+                u.username,
+                u.avatar_url,
+                u.status,
+                u.created_at,
+                (u.id = $2) AS is_self,
+                EXISTS(
+                    SELECT 1
+                    FROM friendships f
+                    WHERE (f.user1_id = $2 AND f.user2_id = u.id)
+                       OR (f.user1_id = u.id AND f.user2_id = $2)
+                ) AS is_friend
+            FROM users u
+            WHERE u.id = $1
+            "#,
+        )
+        .bind(target_user_id)
+        .bind(viewer_user_id)
+        .fetch_optional(&self.pool)
+        .await
     }
 
     pub async fn update_profile(

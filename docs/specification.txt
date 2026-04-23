@@ -33,7 +33,6 @@ Core Entities (MongoDB):
   - channel_messages: channel_id (UUID), author_id (UUID), content,
     created_at, edited_at, deleted_at (Soft Delete).
 
---------------------------------------------------------------------------------
 3. BACKEND LOGIC (backend/src/)
 --------------------------------------------------------------------------------
 Built with Rust and the Axum framework for high concurrency.
@@ -48,14 +47,14 @@ REST Interface (API):
   - /channels/* : Hierarchical channel organization.
   - /messages/* : CRUD for historical data (PostgreSQL verification + Mongo ops).
 
-WebSocket Logic (realtime/):
+WebSocket Logic (backend/src/services/realtime/ and backend/src/web/ws/):
   - Handshake: JWT verification on upgrade.
   - Presence: In-memory state tracking for "Who is online".
   - Typing: Transient events (start/stop) debounced at the frontend layer.
   - Broadcast Engine: Multi-client fan-out based on channel/server IDs.
 
 --------------------------------------------------------------------------------
-4. FRONTEND LOGIC (frontend/src/)
+4. FRONTEND LOGIC (frontend/app/, frontend/components/, frontend/hooks/, frontend/lib/)
 --------------------------------------------------------------------------------
 Built with Next.js 16 and TypeScript for a modern, type-safe interface.
 

@@ -3,7 +3,27 @@
  */
 
 const defaultHost = typeof window !== "undefined" ? window.location.hostname : "localhost";
-const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+function sanitizePublicEnvValue(value?: string): string {
+  if (!value) {
+    return "";
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const unwrapped =
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ? trimmed.slice(1, -1).trim()
+      : trimmed;
+
+  return unwrapped.replace(/\/$/, "");
+}
+
+const configuredApiUrl = sanitizePublicEnvValue(process.env.NEXT_PUBLIC_API_URL);
 
 function resolveApiUrl(): string {
 	if (!configuredApiUrl) {

@@ -23,11 +23,17 @@ mod services;
 mod web;
 
 use repositories::{
-    ChannelRepository, DirectMessageRepository, DmRepository, InviteRepository, MessageRepository,
-    ServerRepository, UserRepository,
+    ChannelRepository, DirectMessageRepository, DmRepository, FriendshipRepository,
+    InviteRepository, MessageRepository, ServerRepository, UserRepository,
 };
 use web::MetricsSnapshot;
 use web::{WsHub, WsMetrics};
+
+const DEFAULT_DATABASE_URL: &str = "postgres://postgres:postgres@localhost:5433/helloworld";
+const DEFAULT_MONGODB_URL: &str = "mongodb://localhost:27017";
+const DEFAULT_ALLOWED_ORIGINS: &str =
+    "https://hello-world-messagerie-jfk7.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002";
+const DEFAULT_PORT: &str = "3001";
 
 #[derive(Clone)]
 pub struct AppState {
@@ -40,6 +46,7 @@ pub struct AppState {
     pub message_repo: MessageRepository,
     pub dm_message_repo: DirectMessageRepository,
     pub dm_repo: DmRepository,
+    pub friendship_repo: FriendshipRepository,
     pub invite_repo: InviteRepository,
     pub ws_hub: web::WsHub,
     pub ws_metrics: web::WsMetrics,
@@ -57,6 +64,53 @@ async fn get_ws_metrics(State(state): State<AppState>) -> Json<MetricsSnapshot> 
     Json(state.ws_metrics.get_metrics().await)
 }
 
+fn read_env_var(key: &str) -> Option<String> {
+    std::env::var(key)
+        .ok()
+        .map(|value| sanitize_env_var_value(&value))
+        .filter(|value| !value.is_empty())
+}
+
+fn env_var_or_default(key: &str, default: &str) -> String {
+    read_env_var(key).unwrap_or_else(|| default.to_string())
+}
+
+fn sanitize_env_var_value(value: &str) -> String {
+    let trimmed = value.trim();
+    let unwrapped = match (
+        trimmed
+            .strip_prefix('"')
+            .and_then(|value| value.strip_suffix('"')),
+        trimmed
+            .strip_prefix('\'')
+            .and_then(|value| value.strip_suffix('\'')),
+    ) {
+        (Some(double_quoted), _) => double_quoted,
+        (_, Some(single_quoted)) => single_quoted,
+        _ => trimmed,
+    };
+
+    unwrapped.trim().to_string()
+}
+
+fn parse_allowed_origins(raw_origins: &str) -> Vec<HeaderValue> {
+    raw_origins
+        .split(',')
+        .filter_map(|origin| {
+            let sanitized_origin = sanitize_env_var_value(origin);
+
+            if sanitized_origin.is_empty()
+                || (!sanitized_origin.starts_with("http://")
+                    && !sanitized_origin.starts_with("https://"))
+            {
+                None
+            } else {
+                sanitized_origin.parse::<HeaderValue>().ok()
+            }
+        })
+        .collect()
+}
+
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
@@ -68,10 +122,9 @@ async fn main() {
         )
         .init();
 
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5433/helloworld".to_string());
+    let database_url = env_var_or_default("DATABASE_URL", DEFAULT_DATABASE_URL);
     let jwt_secret =
-        std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
+        read_env_var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
 
     let pool = PgPoolOptions::new()
         .max_connections(10)
@@ -79,8 +132,11 @@ async fn main() {
         .await
         .expect("Failed to connect to PostgreSQL");
 
-    let mongodb_url =
-        std::env::var("MONGODB_URL").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
+    services::usernames::prepare_username_normalization(&pool)
+        .await
+        .expect("Failed to prepare legacy usernames for normalization migration");
+
+    let mongodb_url = env_var_or_default("MONGODB_URL", DEFAULT_MONGODB_URL);
     let mongo_client = MongoClient::with_uri_str(&mongodb_url)
         .await
         .expect("Failed to connect to MongoDB");
@@ -90,6 +146,7 @@ async fn main() {
     let server_repo = ServerRepository::new(pool.clone());
     let channel_repo = ChannelRepository::new(pool.clone());
     let dm_repo = DmRepository::new(pool.clone());
+    let friendship_repo = FriendshipRepository::new(pool.clone());
     let invite_repo = InviteRepository::new(pool.clone());
     let message_repo = MessageRepository::new(mongo_db.clone());
     let dm_message_repo = DirectMessageRepository::new(mongo_db.clone());
@@ -112,6 +169,7 @@ async fn main() {
         message_repo,
         dm_message_repo,
         dm_repo,
+        friendship_repo,
         invite_repo,
         ws_hub,
         ws_metrics,
@@ -125,12 +183,20 @@ async fn main() {
         }
     });
 
-    let allowed_origins = std::env::var("ALLOWED_ORIGINS")
-        .unwrap_or_else(|_| "https://hello-world-messagerie-jfk7.vercel.app".to_string());
-    let origins: Vec<HeaderValue> = allowed_origins
-        .split(',')
-        .filter_map(|s| s.trim().parse::<HeaderValue>().ok())
-        .collect();
+    let allowed_origins = env_var_or_default("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS);
+    let origins = {
+        let parsed_origins = parse_allowed_origins(&allowed_origins);
+
+        if parsed_origins.is_empty() {
+            tracing::warn!(
+                raw_allowed_origins = allowed_origins,
+                "No valid ALLOWED_ORIGINS values found, falling back to defaults",
+            );
+            parse_allowed_origins(DEFAULT_ALLOWED_ORIGINS)
+        } else {
+            parsed_origins
+        }
+    };
 
     let cors = CorsLayer::new()
         .allow_origin(origins)
@@ -154,6 +220,11 @@ async fn main() {
         .route(
             "/me",
             get(handlers::user::me).patch(handlers::user::update_me),
+        )
+        .route("/users/search", get(handlers::user_public::search_users))
+        .route(
+            "/users/{user_id}/profile",
+            get(handlers::user_public::get_public_profile),
         )
         .route("/auth/logout", post(handlers::auth::logout))
         .route_layer(middleware::from_fn_with_state(
@@ -182,7 +253,7 @@ async fn main() {
         .layer(cors)
         .with_state(state);
 
-    let port = std::env::var("PORT").unwrap_or_else(|_| "3001".to_string());
+    let port = env_var_or_default("PORT", DEFAULT_PORT);
     let addr = format!("0.0.0.0:{}", port);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
@@ -190,4 +261,38 @@ async fn main() {
     axum::serve(listener, app)
         .await
         .expect("Server failed to start");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_allowed_origins, sanitize_env_var_value};
+
+    #[test]
+    fn strips_wrapping_quotes_from_env_values() {
+        assert_eq!(
+            sanitize_env_var_value(r#""https://example.com""#),
+            "https://example.com"
+        );
+        assert_eq!(
+            sanitize_env_var_value("'mongodb://localhost:27017'"),
+            "mongodb://localhost:27017"
+        );
+    }
+
+    #[test]
+    fn keeps_unquoted_values_intact() {
+        assert_eq!(
+            sanitize_env_var_value("postgresql://user:pass@host/db?sslmode=require"),
+            "postgresql://user:pass@host/db?sslmode=require"
+        );
+    }
+
+    #[test]
+    fn parses_allowed_origins_and_skips_invalid_values() {
+        let origins = parse_allowed_origins(
+            r#""https://hello-world-messagerie-jfk7.vercel.app", invalid origin, http://localhost:3002"#,
+        );
+
+        assert_eq!(origins.len(), 2);
+    }
 }

@@ -3,6 +3,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::models::{AuthResponse, LoginPayload, SignupPayload, User, UserStatus};
+use crate::services::usernames::{is_username_unique_violation, validate_username};
 use crate::services::{create_token, hash_password, verify_password};
 
 /// Génère une URL d'avatar aléatoire parmi les 100 avatars
@@ -17,6 +18,8 @@ fn generate_random_avatar() -> String {
 pub enum AuthError {
     #[error("Email already exists")]
     EmailExists,
+    #[error("Username already exists")]
+    UsernameExists,
     #[error("Invalid credentials")]
     InvalidCredentials,
     #[error("{0}")]
@@ -31,14 +34,9 @@ pub enum AuthError {
 
 fn validate_signup(payload: &SignupPayload) -> Result<(), AuthError> {
     let email = payload.email.trim();
-    let username = payload.username.trim();
     let password = &payload.password;
 
-    if username.is_empty() || username.len() > 32 {
-        return Err(AuthError::Validation(
-            "Username must be between 1 and 32 characters".into(),
-        ));
-    }
+    validate_username(&payload.username).map_err(AuthError::Validation)?;
 
     if !email.contains('@') || email.len() < 5 || email.len() > 254 {
         return Err(AuthError::Validation("Invalid email address".into()));
@@ -66,6 +64,8 @@ pub async fn signup(
     jwt_secret: &str,
 ) -> Result<AuthResponse, AuthError> {
     validate_signup(&payload)?;
+    let normalized_username =
+        validate_username(&payload.username).map_err(AuthError::Validation)?;
 
     // Vérifier si l'email existe déjà
     let existing = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE email = $1")
@@ -94,11 +94,18 @@ pub async fn signup(
     .bind(Uuid::new_v4())
     .bind(&payload.email)
     .bind(&password_hash)
-    .bind(&payload.username)
+    .bind(&normalized_username)
     .bind(&avatar_url)
     .bind(UserStatus::Online)
     .fetch_one(pool)
-    .await?;
+    .await
+    .map_err(|err| {
+        if is_username_unique_violation(&err) {
+            AuthError::UsernameExists
+        } else {
+            AuthError::Database(err)
+        }
+    })?;
 
     // Générer le token
     let token = create_token(user.id, &user.email, jwt_secret)?;

@@ -59,7 +59,9 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
     setError(null);
     try {
       const payload: UpdateProfilePayload = {};
-      if (editData.username !== user.username) payload.username = editData.username;
+      const normalizedUsername = editData.username.trim();
+
+      if (normalizedUsername !== user.username) payload.username = normalizedUsername;
       if (editData.avatar_url !== (normalizeAvatarUrl(user.avatar_url) || "")) payload.avatar_url = editData.avatar_url || undefined;
       if (editData.status !== currentStatus) payload.status = editData.status;
 
@@ -125,6 +127,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
                   id="edit-username"
                   type="text"
                   label={t("profile.usernameLabel")}
+                  maxLength={32}
                   value={editData.username}
                   onChange={(e) => setEditData({ ...editData, username: e.target.value })}
                 />

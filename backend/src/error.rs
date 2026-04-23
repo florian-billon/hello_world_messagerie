@@ -19,6 +19,8 @@ pub enum Error {
     InvalidCredentials,
     #[error("Email already exists")]
     EmailAlreadyExists,
+    #[error("Username already exists")]
+    UsernameAlreadyExists,
     #[error("User not found")]
     UserNotFound,
     #[error("Server not found")]
@@ -84,6 +86,9 @@ impl IntoResponse for Error {
 
         // Ajouter le message détaillé pour DatabaseError et InternalError
         match &self {
+            Self::BadRequest { message } => {
+                body["details"] = serde_json::json!(message);
+            }
             Self::DatabaseError { message } => {
                 body["details"] = serde_json::json!(message);
             }
@@ -107,6 +112,7 @@ impl Error {
             Self::AuthFailTokenExpired => (StatusCode::UNAUTHORIZED, "Token expired"),
             Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
             Self::EmailAlreadyExists => (StatusCode::CONFLICT, "Email already exists"),
+            Self::UsernameAlreadyExists => (StatusCode::CONFLICT, "Username already exists"),
             Self::UserNotFound => (StatusCode::NOT_FOUND, "User not found"),
             Self::ServerNotFound => (StatusCode::NOT_FOUND, "Server not found"),
             Self::ServerAlreadyExists => (
