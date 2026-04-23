@@ -5,6 +5,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use mongodb::bson::doc;
 use tower_http::cors::CorsLayer;
 
 pub use self::error::{Error, Result};
@@ -34,6 +35,7 @@ const DEFAULT_MONGODB_URL: &str = "mongodb://localhost:27017";
 const DEFAULT_ALLOWED_ORIGINS: &str =
     "https://hello-world-messagerie-jfk7.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002";
 const DEFAULT_PORT: &str = "3001";
+const MONGODB_STARTUP_TIMEOUT_SECS: u64 = 15;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -125,22 +127,46 @@ async fn main() {
     let database_url = env_var_or_default("DATABASE_URL", DEFAULT_DATABASE_URL);
     let jwt_secret =
         read_env_var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
+    let port = env_var_or_default("PORT", DEFAULT_PORT);
+    let addr = format!("0.0.0.0:{}", port);
+    let listener = tokio::net::TcpListener::bind(&addr)
+        .await
+        .expect("Failed to bind TCP listener");
 
+    tracing::info!(addr = %addr, "TCP listener bound, continuing service startup");
+
+    tracing::info!("Connecting to PostgreSQL");
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&database_url)
         .await
         .expect("Failed to connect to PostgreSQL");
+    tracing::info!("PostgreSQL connection established");
 
+    tracing::info!("Preparing username normalization state");
     services::usernames::prepare_username_normalization(&pool)
         .await
         .expect("Failed to prepare legacy usernames for normalization migration");
+    tracing::info!("Username normalization preparation completed");
 
     let mongodb_url = env_var_or_default("MONGODB_URL", DEFAULT_MONGODB_URL);
-    let mongo_client = MongoClient::with_uri_str(&mongodb_url)
-        .await
-        .expect("Failed to connect to MongoDB");
+    tracing::info!("Initializing MongoDB client");
+    let mongo_client = tokio::time::timeout(
+        Duration::from_secs(MONGODB_STARTUP_TIMEOUT_SECS),
+        MongoClient::with_uri_str(&mongodb_url),
+    )
+    .await
+    .expect("Timed out while creating MongoDB client")
+    .expect("Failed to create MongoDB client");
     let mongo_db = mongo_client.database("helloworld");
+    tracing::info!("Pinging MongoDB");
+    tokio::time::timeout(Duration::from_secs(MONGODB_STARTUP_TIMEOUT_SECS), async {
+        mongo_db.run_command(doc! { "ping": 1 }).await
+    })
+    .await
+    .expect("Timed out while pinging MongoDB")
+    .expect("Failed to ping MongoDB");
+    tracing::info!("MongoDB connection established");
 
     let user_repo = UserRepository::new(pool.clone());
     let server_repo = ServerRepository::new(pool.clone());
@@ -154,10 +180,12 @@ async fn main() {
     let ws_hub = WsHub::new();
     let ws_metrics = WsMetrics::new();
 
+    tracing::info!("Running SQLx migrations");
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
         .expect("Failed to run database migrations");
+    tracing::info!("SQLx migrations completed");
 
     let state = AppState {
         db: pool,
@@ -252,10 +280,6 @@ async fn main() {
         ))
         .layer(cors)
         .with_state(state);
-
-    let port = env_var_or_default("PORT", DEFAULT_PORT);
-    let addr = format!("0.0.0.0:{}", port);
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
     println!("🚀 Server running on http://{}", addr);
     axum::serve(listener, app)
