@@ -267,7 +267,7 @@ Connexion : `WS /ws` avec JWT en paramètre. Une fois connecté, le client rejoi
 
 Les historiques de messages de canaux et de conversations privées sont stockés dans MongoDB pour permettre une scalabilité indépendante de l'historique de chat par rapport aux données relationnelles. PostgreSQL garde les conversations privées (`direct_messages`) afin de conserver les contraintes relationnelles et le contrôle d'accès.
 
-----
+---
 
 ## 7. Tests et qualité
 
