@@ -1,16 +1,74 @@
--- ============================================
--- Hello World - PostgreSQL Schema
--- ============================================
+-- ============================================================
+-- Hello World - PostgreSQL bootstrap schema snapshot
+-- This file is the single source of truth for PostgreSQL bootstrap.
+-- It must remain idempotent for both fresh databases and existing ones.
+-- ============================================================
 
 -- EXTENSIONS
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ENUM TYPES
 DO $$ BEGIN
-CREATE TYPE user_status AS ENUM ('online', 'offline', 'dnd', 'invisible');
+CREATE TYPE user_status AS ENUM ('Online', 'Offline', 'Dnd', 'Invisible');
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_type t
+        JOIN pg_enum e ON e.enumtypid = t.oid
+        WHERE t.typname = 'user_status'
+          AND e.enumlabel = 'online'
+    ) THEN
+        ALTER TYPE user_status RENAME VALUE 'online' TO 'Online';
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_type t
+        JOIN pg_enum e ON e.enumtypid = t.oid
+        WHERE t.typname = 'user_status'
+          AND e.enumlabel = 'offline'
+    ) THEN
+        ALTER TYPE user_status RENAME VALUE 'offline' TO 'Offline';
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_type t
+        JOIN pg_enum e ON e.enumtypid = t.oid
+        WHERE t.typname = 'user_status'
+          AND e.enumlabel = 'dnd'
+    ) THEN
+        ALTER TYPE user_status RENAME VALUE 'dnd' TO 'Dnd';
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_type t
+        JOIN pg_enum e ON e.enumtypid = t.oid
+        WHERE t.typname = 'user_status'
+          AND e.enumlabel = 'invisible'
+    ) THEN
+        ALTER TYPE user_status RENAME VALUE 'invisible' TO 'Invisible';
+    END IF;
+END;
+$$;
 
 DO $$ BEGIN
 CREATE TYPE member_role AS ENUM ('owner', 'admin', 'member');
@@ -25,7 +83,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     username VARCHAR(32) NOT NULL CHECK (username = trim(username)) CHECK (char_length(username) BETWEEN 1 AND 32),
     avatar_url VARCHAR(500),
-    status user_status NOT NULL DEFAULT 'offline',
+    status user_status NOT NULL DEFAULT 'Offline',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -70,11 +128,49 @@ CREATE TABLE IF NOT EXISTS invites (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+UPDATE users
+SET username = btrim(username)
+WHERE username <> btrim(username);
+
+ALTER TABLE users
+ALTER COLUMN username TYPE VARCHAR(32);
+
+ALTER TABLE users
+ALTER COLUMN status SET DEFAULT 'Offline';
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_users_username_trimmed'
+    ) THEN
+        ALTER TABLE users
+        ADD CONSTRAINT chk_users_username_trimmed
+        CHECK (username = btrim(username));
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_users_username_length'
+    ) THEN
+        ALTER TABLE users
+        ADD CONSTRAINT chk_users_username_length
+        CHECK (char_length(username) BETWEEN 1 AND 32);
+    END IF;
+END;
+$$;
+
 -- INDEXES (idempotent)
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username_normalized ON users (lower(trim(username)));
 CREATE INDEX IF NOT EXISTS idx_servers_owner ON servers(owner_id);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_servers_owner_name_normalized ON servers(owner_id, lower(trim(name)));
+CREATE INDEX IF NOT EXISTS idx_servers_owner_name_normalized ON servers(owner_id, lower(trim(name)));
 CREATE INDEX IF NOT EXISTS idx_server_members_user ON server_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_channels_server ON channels(server_id);
 CREATE INDEX IF NOT EXISTS idx_invites_code ON invites(code);
@@ -89,8 +185,6 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    NEW.name := trim(NEW.name);
-
     IF EXISTS (
         SELECT 1
         FROM servers s
@@ -103,6 +197,7 @@ BEGIN
                   CONSTRAINT = 'servers_owner_name_unique_live';
     END IF;
 
+    NEW.name := trim(NEW.name);
     RETURN NEW;
 END;
 $$;

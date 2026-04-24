@@ -3,7 +3,8 @@
 import { useEffect, useRef, useCallback } from "react";
 import { getGateway, ServerEvent } from "@/lib/gateway";
 import { API_URL } from "@/lib/config";
-import { getTokenForWs } from "@/lib/auth/actions";
+import { getTokenForWs } from "@/lib/auth/client";
+import { subscribeToTokenChanges } from "@/lib/token-storage";
 
 /**
  * Hook pour gérer la connexion WebSocket globale
@@ -16,24 +17,28 @@ export function useWebSocket() {
     const gateway = getGateway(API_URL);
     gatewayRef.current = gateway;
 
-    const connect = async () => {
+    const syncConnection = async () => {
       try {
         const token = await getTokenForWs();
 
         if (token) {
           gateway.connect(token);
         } else {
-          console.warn("[useWebSocket] No token found");
+          gateway.disconnect();
         }
       } catch (error) {
         console.error("[useWebSocket] Failed to initialize gateway token", error);
       }
     };
 
-    connect();
+    void syncConnection();
+
+    const unsubscribeToken = subscribeToTokenChanges(() => {
+      void syncConnection();
+    });
 
     return () => {
-      // Singleton partagé, pas de déconnexion ici
+      unsubscribeToken();
     };
   }, []);
 

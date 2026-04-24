@@ -33,7 +33,7 @@ use web::{WsHub, WsMetrics};
 const DEFAULT_DATABASE_URL: &str = "postgres://postgres:postgres@localhost:5433/helloworld";
 const DEFAULT_MONGODB_URL: &str = "mongodb://localhost:27017";
 const DEFAULT_ALLOWED_ORIGINS: &str =
-    "https://hello-world-messagerie-jfk7.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002";
+    "https://hello-world-messagerie-jfk7.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002,tauri://localhost,http://tauri.localhost,https://tauri.localhost";
 const DEFAULT_PORT: &str = "3001";
 const MONGODB_STARTUP_TIMEOUT_SECS: u64 = 15;
 
@@ -180,12 +180,11 @@ async fn main() {
     let ws_hub = WsHub::new();
     let ws_metrics = WsMetrics::new();
 
-    tracing::info!("Running SQLx migrations");
-    sqlx::migrate!("./migrations")
-        .run(&pool)
+    tracing::info!("Applying PostgreSQL bootstrap schema");
+    services::bootstrap::apply_postgres_bootstrap(&pool)
         .await
-        .expect("Failed to run database migrations");
-    tracing::info!("SQLx migrations completed");
+        .expect("Failed to apply PostgreSQL bootstrap schema");
+    tracing::info!("PostgreSQL bootstrap schema applied");
 
     let state = AppState {
         db: pool,

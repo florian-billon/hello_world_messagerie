@@ -11,7 +11,7 @@ import {
   leaveServer as apiLeaveServer,
   transferOwnership as apiTransferOwnership,
   Server,
-} from "@/lib/api-server";
+} from "@/lib/api-client";
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
 import { useTranslation } from "@/lib/i18n";
 
@@ -336,4 +336,3 @@ export function useServers() {
     refresh,
   };
 }
-

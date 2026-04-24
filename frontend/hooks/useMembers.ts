@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { banMember as apiBanMember, listMembers, kickMember as apiKickMember, ServerMember } from "@/lib/api-server";
+import { banMember as apiBanMember, listMembers, kickMember as apiKickMember, ServerMember } from "@/lib/api-client";
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
 import { useWebSocket } from "./useWebSocket";
 import { ServerEvent } from "@/lib/gateway";
@@ -127,4 +127,3 @@ export function useMembers(serverId: string | null) {
     banMember,
   };
 }
-

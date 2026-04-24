@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Friend, listFriends as apiListFriends } from "@/lib/api-server";
+import { Friend, listFriends as apiListFriends } from "@/lib/api-client";
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
 import { useTranslation } from "@/lib/i18n";
 

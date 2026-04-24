@@ -1,6 +1,6 @@
 "use client";
 
-import { Server, ServerMember, User } from "@/lib/api-server";
+import { Server, ServerMember, User } from "@/lib/api-client";
 import { getAvatar } from "@/lib/avatar";
 import SmartImg from "@/components/SmartImg";
 

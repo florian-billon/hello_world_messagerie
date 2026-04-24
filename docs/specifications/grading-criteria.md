@@ -1,101 +1,46 @@
-# Criteres de notation
+# Grading Criteria
 
-## Fonctionnalités techniques
+Canonical grading rubric for the project. This file now contains the exact
+criteria that were previously duplicated in `grading-brouillon.md`.
 
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `specs_server` | 1 | Le serveur utilise Rust et permet des connexions simultanées |
-| `specs_client` | 1 | Le client utilise Next.js et est connecté au serveur |
+## Rubric
 
-## Fonctionnalités serveurs
+| Criterion | Default status | Description |
+| --- | --- | --- |
+| `milestone_1` | `KO` | The first milestone is achieved and complete |
+| `milestone_2` | `KO` | The second milestone is achieved and complete |
+| `milestone_3` | `KO` | The third milestone is achieved and complete |
+| `web_server` | `KO` | The server uses NodeJS or Rust and allows simultaneous connections |
+| `web_client` | `KO` | The client uses ReactJS or NextJS and is connected to the server |
+| `web_core_features` | `KO` | ALL the core features (kick, bans temp and permanent, message editing) are completed and fully functional |
+| `web_multilingual` | `KO` | The web app interface can switch between at least two languages |
+| `web_api_integration` | `KO` | An external GIF API is properly integrated in the students' solution. |
+| `web_pm` | `KO` | The users can send private messages between each other |
+| `web_reactions` | `KO` | The users can react to others message with emojis |
+| `desktop_app` | `KO` | A runnable and functional desktop app is delivered |
+| `desktop_specs` | `KO` | The desktop application uses Tauri or ElectronJS and is connected to the server |
+| `desktop_multilingual` | `KO` | Desktop app is translated (at least 2 languages) |
+| `desktop_notifications` | `KO` | Desktop app contains notifications systems |
+| `tests_unit` | `KO` | At least 70% of the source code is tested |
+| `tests_sequence` | `KO` | A sequence of test is delivered and easily runnable. |
+| `tests_automation` | `KO` | A test sequence is automatically launched through the CI pipeline. |
+| `tests_coverage` | `KO` | An evaluation of the proportion of source code executed and tested is delivered. |
+| `repo_versioning` | `KO` | Students use a version control workflow with branching strategy, regular commits, descriptive messages, and a .gitignore file. |
+| `repo_secrets` | `KO` | Secrets (token, password, keys...) are not commit to git in clear-text and are not visible to not granted people. |
+| `repo_cicd` | `KO` | The project run automatically test and create build when a tag is created |
+| `repo_doc` | `KO` | A README is delivered and the project is documented to help newcomers easily understand it |
+| `code_style` | `KO` | Code follows the language's best practices and consistent coding standards. |
+| `code_maintainability` | `KO` | The code is easily maintainable (human readable names, atomicity of each functions, clear code structure, clean syntax) |
+| `proj_pres` | `KO` | The project is presented in a professional way using a relevant support (slides and/or demo) |
+| `proj_review` | `KO` | There is one features that is review during the presentation |
+| `proj_answers` | `KO` | Students can answer to questions asked during the presentation |
+| `proj_orga` | `KO` | Students can show proof of their working organization for the project (via a board with task assignations, or commits logs, or whatever). |
+| `extra_small` | `KO` | The students implemented at least 1 features not listed in the "Project Objectives" section |
+| `extra_medium` | `KO` | The students implemented at least 3 extra features which are not listed in the project |
+| `extra_large` | `KO` | The students implemented more than 5 extra features which are not listed in the project |
 
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `server_create` | 1 | Les utilisateurs peuvent créer un serveur |
-| `server_delete` | 1 | Les utilisateurs peuvent supprimer un serveur |
-| `server_join` | 1 | Les utilisateurs peuvent rejoindre un serveur |
-| `server_multiple` | 1 | Les utilisateurs peuvent rejoindre plusieurs serveurs |
-| `server_quit` | 1 | Les utilisateurs peuvent quitter un serveur |
+## Summary
 
-## Fonctionnalités canaux
-
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `chan_list` | 1 | Les utilisateurs peuvent lister les canaux d'un serveur |
-| `chan_create` | 1 | Les utilisateurs peuvent créer un canal |
-| `chan_delete` | 1 | Les utilisateurs peuvent supprimer un canal |
-| `chan_message` | 1 | Les utilisateurs peuvent envoyer un message via WebSocket |
-
-## Fonctionnalités utilisateurs
-
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `user_list` | 1 | Les utilisateurs peuvent voir qui a rejoint le serveur |
-| `user_management` | 1 | Différents rôles avec permissions différentes |
-
-## Temps réel
-
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `status_online` | 1 | Les utilisateurs peuvent voir qui est en ligne |
-| `status_typing` | 1 | Les utilisateurs peuvent voir qui tape dans un canal |
-
-## Persistance
-
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `persistency` | 1 | Serveurs, canaux et messages sont persistés |
-
-## Livraison
-
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `functional-delivery` | 1 | La livraison est fonctionnelle |
-
-## Interface utilisateur
-
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `ui_servers` | 1 | Interface de gestion des serveurs claire et intuitive |
-| `ui_chat` | 1 | Interface de chat claire et intuitive |
-| `ui_design` | 1 | Design élaboré et avancé |
-| `uiux_quality` | 1 | UX/UI de haute qualité et polie |
-
-## Qualité du code
-
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `versioning_basics` | 1 | Versioning avec workflow, branches, commits, gitignore |
-| `coding_style` | 1 | Code respectant un style commun |
-
-## Tests
-
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `tests_unit` | 1 | Au moins 70% du code testé |
-| `tests_automation` | 1 | Tests facilement exécutables |
-| `tests_coverage` | 1 | Couverture des branches, pas seulement du flux principal |
-
-## Documentation & Présentation
-
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `documentation` | 1 | README et documentation pour les nouveaux |
-| `presentation` | 1 | Présentation professionnelle (slides/démo) |
-
-## Bonus
-
-| Critère | Points | Description |
-|---------|--------|-------------|
-| `extra_small` | 1 | Au moins 1 feature non listée |
-| `extra_medium` | 1 | Au moins 3 features non listées |
-| `extra_large` | 1 | Plus de 4 features non listées |
-
----
-
-## Résumé
-
-- **Total critères** : 30
-- **Points par critère** : 1
-- **Score maximum** : 30 points
-
+- Total criteria: 31
+- Default status for each criterion: `KO`
+- Intended use: delivery checklist, grading review, README tracking

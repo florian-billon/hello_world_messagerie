@@ -124,13 +124,17 @@ jobs:
             ${{ runner.os }}-cargo-build-
             ${{ runner.os }}-cargo-
 
-      - name: Setup PostgreSQL (run migrations)
+      - name: Bootstrap PostgreSQL schema snapshot
         run: |
           PGPASSWORD=postgres psql \
             -h localhost -U postgres -d helloworld \
             -f backend/migrations/init.sql
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/helloworld
+
+      - name: Bootstrap MongoDB indexes
+        run: |
+          mongosh "mongodb://localhost:27017/helloworld" --file backend/migrations/init.mongo.js
 
       - name: Build backend
         working-directory: ./backend

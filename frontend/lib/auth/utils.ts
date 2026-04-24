@@ -1,6 +1,6 @@
 "use client";
 
-import { clearToken } from "./actions";
+import { clearToken } from "./client";
 
 /**
  * Redirige vers la page de login en supprimant le token
@@ -15,6 +15,7 @@ export async function handleAuthError() {
  */
 export function isAuthError(errorMessage: string): boolean {
   return (
+    errorMessage.includes("error.authRequired") ||
     errorMessage.includes("Authentication") ||
     errorMessage.includes("Invalid token") ||
     errorMessage.includes("Missing authorization")
@@ -27,4 +28,3 @@ export function isAuthError(errorMessage: string): boolean {
 export function getErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
-

@@ -3,16 +3,18 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth, useServers } from "@/hooks";
+import { useAuth, useFriends } from "@/hooks";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { useRouteGuard } from "@/lib/auth/guards";
 import { normalizeAvatarUrl, getAvatar } from "@/lib/avatar";
 import { getStatusColor, getStatusKey } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
 import MessageReactions from "@/components/chat/MessageReactions";
 import GifPicker from "@/components/chat/GifPicker";
+import ProfileCard from "@/components/ProfileCard";
 import PublicProfileCard from "@/components/PublicProfileCard";
 import SmartImg from "@/components/SmartImg";
-import { logout } from "@/lib/auth/actions";
+import { logout } from "@/lib/auth/client";
 import Button from "@/components/ui/Button";
 import {
   addDirectMessageReaction,
@@ -27,8 +29,9 @@ import {
   searchUsers,
   sendDirectMessage,
   updateDirectMessage,
+  User,
   UserSearchResult,
-} from "@/lib/api-server";
+} from "@/lib/api-client";
 
 const SCROLL_BOTTOM_THRESHOLD_PX = 80;
 
@@ -51,8 +54,9 @@ function isGifMessage(content: string): boolean {
 
 function DirectMessagesPageContent() {
   const { t, locale } = useTranslation();
+  const { ready: guardReady } = useRouteGuard("protected");
   const { user: currentUser } = useAuth();
-  const { servers, selectServer } = useServers();
+  const { friends } = useFriends();
   const { onEvent } = useWebSocket();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,6 +66,7 @@ function DirectMessagesPageContent() {
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [searchUsername, setSearchUsername] = useState("");
   const [messageInput, setMessageInput] = useState("");
+  const [showProfile, setShowProfile] = useState(false);
   const [conversations, setConversations] = useState<DirectConversation[]>([]);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -576,134 +581,165 @@ function DirectMessagesPageContent() {
     }
   };
 
+  if (!guardReady) {
+    return <main className="min-h-screen" />;
+  }
+
   return (
     <main className="flex w-full h-screen overflow-hidden">
-      {/* ========== SERVER SIDEBAR ========== */}
+      {/* ========== FRIENDS SIDEBAR ========== */}
       <aside className="w-[72px] bg-[rgba(0,0,0,0.95)] border-r border-[#4fdfff]/20 flex flex-col items-center py-3 gap-2">
         <button
           onClick={() => router.push("/")}
-          className="w-12 h-12 rounded-xl bg-[#4fdfff] text-black border border-[#4fdfff]/50 flex items-center justify-center mb-2 shadow-[0_0_12px_rgba(79,223,255,0.6)]"
+          className="w-12 h-12 flex items-center justify-center mb-2 cursor-pointer group bg-transparent border-0 shadow-none p-0"
+          title={t("common.appName")}
         >
-          <Image src="/logo.png" alt="HW" width={32} height={32} />
+          <Image
+            src="/logo.png"
+            alt="HW"
+            width={32}
+            height={32}
+            className="group-hover:scale-110 transition-transform"
+          />
         </button>
         <div className="w-8 h-[2px] bg-[#4fdfff]/20 rounded-full" />
         <div className="flex-1 w-full overflow-y-auto flex flex-col items-center gap-2 py-2">
-          {servers.map((server) => (
+          {friends.map((friend) => (
             <button
-              key={server.id}
-              onClick={() => { selectServer(server); router.push("/"); }}
-              className="w-12 h-12 rounded-[24px] bg-[rgba(20,30,40,0.8)] text-[#4fdfff] flex items-center justify-center text-lg font-bold hover:bg-[#4fdfff]/20 hover:rounded-xl transition-all"
+              key={`friend-${friend.id}`}
+              onClick={() => router.push(`/messages?username=${encodeURIComponent(friend.username)}`)}
+              className="w-12 h-12 rounded-[24px] bg-[rgba(15,40,30,0.8)] text-[#4fdfff] flex items-center justify-center hover:bg-[#4fdfff]/20 hover:rounded-xl transition-all relative overflow-hidden"
+              title={`${t("friends.openDm")} ${friend.username}`}
             >
-              {server.name.charAt(0).toUpperCase()}
+              {friend.avatar_url ? (
+                <SmartImg
+                  src={normalizeAvatarUrl(friend.avatar_url) || ""}
+                  alt={friend.username}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-lg font-bold">{friend.username.charAt(0).toUpperCase()}</span>
+              )}
+              <span
+                className={`absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border border-[rgba(5,10,15,0.95)] ${getStatusColor(friend.status)}`}
+              />
             </button>
           ))}
+        </div>
+ 
+        {/* Bottom Actions */}
+        <div className="mt-auto flex flex-col items-center gap-2 pb-2">
+          <button
+            onClick={() => router.push("/")}
+            className="w-12 h-12 rounded-[24px] bg-[rgba(20,30,40,0.8)] text-[#4fdfff] flex items-center justify-center hover:bg-[#4fdfff]/15 hover:border hover:border-[#4fdfff]/30 transition-all group"
+            title={t("channel.backToChannels")}
+          >
+            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3h7v7H3z" /><path d="M14 3h7v7h-7z" /><path d="M14 14h7v7h-7z" /><path d="M3 14h7v7H3z" />
+            </svg>
+          </button>
+
+          {/* Profil utilisateur */}
+          <button
+            onClick={() => setShowProfile(true)}
+            className="w-12 h-12 rounded-[24px] relative group border border-[#4fdfff]/30 hover:border-[#4fdfff] transition-all"
+            title={t("profile.title")}
+          >
+            <div className="w-full h-full rounded-[24px] overflow-hidden">
+              {currentUser?.avatar_url ? (
+                <SmartImg
+                  src={normalizeAvatarUrl(currentUser.avatar_url) || ''}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#4fdfff]/10 flex items-center justify-center">
+                  <span className="text-[#4fdfff] font-bold">
+                    {currentUser?.username?.charAt(0).toUpperCase() || "?"}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div 
+              className={`absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-[rgba(5,10,15,0.95)] rounded-full z-10 ${getStatusColor(currentUser?.status)}`} 
+            />
+          </button>
+
+          <button
+            onClick={() => logout()}
+            className="w-12 h-12 rounded-[24px] bg-[rgba(40,10,10,0.8)] flex items-center justify-center text-[#ff3333] hover:bg-[#ff3333]/20 hover:rounded-xl transition-all"
+            title={t("auth.logout")}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
         </div>
       </aside>
 
       {/* ========== DM SIDEBAR ========== */}
       <aside className="w-60 bg-[rgba(5,10,15,0.95)] border-r border-[#4fdfff]/20 flex flex-col min-h-0">
-        <div className="h-12 px-4 flex items-center border-b border-[#4fdfff]/30 bg-[rgba(0,0,0,0.3)]">
-           <div className="relative w-full">
-            <input 
-                type="text" 
-                placeholder="Trouver une conversation" 
-                className="w-full bg-black/40 border border-[#4fdfff]/20 rounded px-2 py-1 text-xs text-white outline-none focus:border-[#4fdfff]/50"
-            />
-           </div>
+        <div className="h-12 px-4 flex items-center justify-between border-b border-[#4fdfff]/30 shadow-lg bg-[rgba(0,0,0,0.3)]">
+          <h2 className="font-bold text-white truncate flex-1 uppercase tracking-widest text-[10px]">{t("dm.title")}</h2>
+          <button
+            onClick={() => setShowNewChatModal(true)}
+            className="text-[#4fdfff] hover:text-white transition-colors text-xl font-bold"
+            title={t("dm.newConversation")}
+          >
+            +
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-0">
-          <div className="px-2 mb-2 flex items-center justify-between">
-            <span className="text-[10px] font-bold text-white/50 tracking-widest uppercase">Messages Directs</span>
-            {/* BOUTON + POUR NOUVELLE CONVERSATION */}
-            <button 
-                onClick={() => setShowNewChatModal(true)}
-                className="text-white/50 hover:text-[#4fdfff] transition-colors"
-                title="Nouvelle conversation"
-            >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-            </button>
+        <div className="flex-1 overflow-y-auto p-2 min-h-0">
+          <div className="px-2 mb-3">
+            <input
+              type="text"
+              placeholder={t("dm.searchPlaceholder")}
+              className="w-full bg-black/40 border border-[#4fdfff]/20 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#4fdfff]/50"
+            />
           </div>
 
+
           {conversations.length === 0 && (
-            <p className="text-[11px] text-white/20 text-center mt-4 italic">Aucune conversation active</p>
+            null
           )}
 
-          {conversations.map((conv) => (
-            <button
-              key={conv.id}
-              onClick={() => selectConversation(conv)}
-              className={`w-full flex items-center gap-3 px-2 py-2 rounded transition-colors ${
-                selectedConversationId === conv.id
-                  ? "bg-[#4fdfff]/15 text-white"
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <div className="relative flex-shrink-0">
-                <SmartImg
-                  src={normalizeAvatarUrl(conv.avatar_url) || getAvatar(conv.recipient_id, currentUser)}
-                  alt={conv.username}
-                  className="w-8 h-8 rounded-full border border-[#4fdfff]/30 object-cover"
-                />
-                <span
-                  className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${getStatusColor(conv.status)}`}
-                />
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium truncate">{conv.username}</p>
-                <p className="text-[10px] uppercase text-white/35">{t(getStatusKey(conv.status))}</p>
-              </div>
-            </button>
-          ))}
+          <div className="space-y-[2px]">
+            {conversations.map((conv) => (
+              <button
+                key={conv.id}
+                onClick={() => selectConversation(conv)}
+                className={`w-full flex items-center gap-3 px-2 py-2 rounded transition-colors ${
+                  selectedConversationId === conv.id
+                    ? "bg-[#4fdfff]/15 text-white"
+                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <div className="relative flex-shrink-0">
+                  <SmartImg
+                    src={normalizeAvatarUrl(conv.avatar_url) || getAvatar(conv.recipient_id, currentUser)}
+                    alt={conv.username}
+                    className="w-8 h-8 rounded-full border border-[#4fdfff]/30 object-cover"
+                  />
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${getStatusColor(conv.status)}`}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium truncate">{conv.username}</p>
+                  <p className="text-[10px] uppercase text-white/35">{t(getStatusKey(conv.status))}</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* User Footer */}
-        <div className="h-14 px-2 flex items-center gap-2 bg-[rgba(0,0,0,0.5)] border-t border-[#4fdfff]/20">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-                <SmartImg src={getAvatar(currentUser?.id || "", currentUser)} alt="Avatar" className="w-8 h-8 rounded-full border border-[#4fdfff]/50" />
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{currentUser?.username}</p>
-                    <p className="text-[10px] text-[#4fdfff] font-mono uppercase">{t(getStatusKey(currentUser?.status))}</p>
-                </div>
-            </div>
-            <button onClick={() => logout()} className="p-2 text-[#ff3333] hover:bg-[#ff3333]/10 rounded-lg">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7" />
-                </svg>
-            </button>
-        </div>
       </aside>
 
       {/* ========== CHAT CENTER ========== */}
       <div className="flex-1 min-w-0 flex flex-col bg-[rgba(10,15,20,0.98)]">
         {selectedConversationId ? (
            <div className="flex-1 min-h-0 flex flex-col">
-              <header className="h-12 px-4 flex items-center border-b border-[#4fdfff]/20 bg-[rgba(0,0,0,0.3)] shadow-sm">
-                {selectedConversation ? (
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative flex-shrink-0">
-                      <SmartImg
-                        src={selectedConversationAvatar}
-                        alt={selectedConversation.username}
-                        className="w-8 h-8 rounded-full object-cover border border-[#4fdfff]/40"
-                      />
-                      <span
-                        className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(10,15,20,0.98)] rounded-full ${getStatusColor(selectedConversation.status)}`}
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">@{selectedConversation.username}</p>
-                      <p className="text-[10px] font-mono uppercase text-white/40">
-                        {t(getStatusKey(selectedConversation.status))}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <h1 className="text-white font-semibold text-sm">Conversation</h1>
-                )}
-              </header>
               <div
                 ref={messagesContainerRef}
                 onScroll={updateStickToBottom}
@@ -859,15 +895,17 @@ function DirectMessagesPageContent() {
            </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-            <div className="w-24 h-24 rounded-full bg-[#4fdfff]/10 border-2 border-[#4fdfff]/30 flex items-center justify-center mb-6">
-              <svg className="w-12 h-12 text-[#4fdfff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            <div className="w-32 h-32 rounded-full bg-[#4fdfff]/5 border-2 border-[#4fdfff]/20 flex items-center justify-center mb-8 mx-auto relative overflow-hidden group">
+              <div className="absolute inset-0 bg-[#4fdfff]/5 blur-xl group-hover:blur-2xl transition-all" />
+              <svg className="w-16 h-16 text-[#4fdfff] relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Tes Messages Privés</h2>
-            <p className="text-white/50 max-w-sm">Lance une nouvelle discussion avec un habitant de Night City en cliquant sur le +.</p>
-            <Button onClick={() => setShowNewChatModal(true)} variant="outline" className="mt-6 border-[#4fdfff] text-[#4fdfff]">
-                Démarrer une conversation
+            <h2 className="text-3xl font-bold text-white mb-2">{t("dm.welcomeTitle")}</h2>
+            <p className="text-white/40 max-w-sm">{t("dm.welcomeDescription")}</p>
+            <Button onClick={() => setShowNewChatModal(true)} variant="outline" className="mt-8 border-[#4fdfff] text-[#4fdfff] px-8 py-6 text-lg hover:bg-[#4fdfff]/10 transition-all">
+                {t("dm.startButton")}
             </Button>
           </div>
         )}
@@ -992,6 +1030,10 @@ function DirectMessagesPageContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {showProfile && currentUser && (
+        <ProfileCard user={currentUser as User} onClose={() => setShowProfile(false)} />
       )}
 
       {selectedPublicUserId && (

@@ -9,7 +9,7 @@ import {
   MessageReaction,
   removeMessageReaction as apiRemoveMessageReaction,
   updateMessage as apiUpdateMessage,
-} from "@/lib/api-server";
+} from "@/lib/api-client";
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
 import { useWebSocket } from "./useWebSocket";
 import { ServerEvent } from "@/lib/gateway";
@@ -419,4 +419,3 @@ export function useMessages(channelId: string | null, viewerId: string | null) {
     typingStop,
   };
 }
-

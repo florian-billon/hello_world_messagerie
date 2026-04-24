@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createInvite } from "@/lib/api-server";
+import { createInvite } from "@/lib/api-client";
 import { useTranslation } from "@/lib/i18n";
+import { getWindowOrigin } from "@/lib/runtime";
 
 type Props = {
   serverId: string;
@@ -18,7 +19,7 @@ export default function InviteModal({ serverId, serverName, onClose }: Props) {
 
   const inviteLink = useMemo(() => {
     if (!code) return null;
-    return `${window.location.origin}/invite/${code}`;
+    return `${getWindowOrigin()}/invite?code=${encodeURIComponent(code)}`;
   }, [code]);
 
   useEffect(() => {

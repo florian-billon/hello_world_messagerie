@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import SmartImg from "@/components/SmartImg";
-import { addFriend, getPublicUserProfile, PublicUserProfile } from "@/lib/api-server";
+import { addFriend, getPublicUserProfile, PublicUserProfile } from "@/lib/api-client";
 import { normalizeAvatarUrl } from "@/lib/avatar";
 import { getStatusColor, getStatusKey } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";

@@ -1,4 +1,4 @@
-import { User } from "@/lib/api-server";
+import { User } from "@/lib/api-client";
 
 /**
  * Normalise le chemin d'avatar (ancien format → nouveau format)

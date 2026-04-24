@@ -38,10 +38,11 @@
   },
   "chat": {
     "initializing": "INITIALIZING SYSTEM...",
-    "selectServer": "Select a server",
+    "selectServer": "Your channels",
     "selectChannel": "Select a channel",
-    "selectServerPrompt": "Choose a server to get started",
+    "selectServerPrompt": "Build your own community or join an existing server by clicking the button below.",
     "selectChannelPrompt": "Choose a channel to start chatting",
+    "createServerButton": "Create a server",
     "selectServerForChannels": "Select a server to see channels",
     "loadingMessages": "Loading messages...",
     "welcomeChannel": "Welcome to #{channelName}",
@@ -86,8 +87,11 @@
   },
   "channel": {
     "textChannels": "TEXT CHANNELS",
+    "searchPlaceholder": "Find a channel",
     "createTooltip": "Create a channel",
+    "backToChannels": "Back to channels",
     "deleteTooltip": "Delete channel",
+    "noResults": "No channel matches your search",
     "confirmDeleteTitle": "Delete channel",
     "confirmDeleteMessage": "Are you sure you want to permanently delete #{channelName}? This action is irreversible.",
     "createTitle": "CREATE CHANNEL",
@@ -195,5 +199,15 @@
     "add": "Add friend",
     "openDm": "Open DM",
     "memberSince": "Member since"
+  },
+  "dm": {
+    "title": "Messages",
+    "conversations": "Conversations",
+    "searchPlaceholder": "Find a conversation",
+    "newConversation": "New conversation",
+    "noConversation": "No active conversation",
+    "welcomeTitle": "Your Private Messages",
+    "welcomeDescription": "Start a new conversation with a Night City resident by clicking the button below.",
+    "startButton": "Start a conversation"
   }
 }

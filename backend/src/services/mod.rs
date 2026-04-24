@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod bootstrap;
 pub mod channels;
 pub mod invites;
 pub mod jwt;
