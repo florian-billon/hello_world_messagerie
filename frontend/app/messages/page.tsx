@@ -17,6 +17,7 @@ import Button from "@/components/ui/Button";
 import {
   addDirectMessageReaction,
   createDirectConversation,
+  deleteDirectMessage,
   DirectConversation,
   DirectMessage,
   listDirectConversations,
@@ -25,6 +26,7 @@ import {
   removeDirectMessageReaction,
   searchUsers,
   sendDirectMessage,
+  updateDirectMessage,
   UserSearchResult,
 } from "@/lib/api-server";
 
@@ -68,6 +70,10 @@ function DirectMessagesPageContent() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedPublicUserId, setSelectedPublicUserId] = useState<string | null>(null);
   const [showGifPicker, setShowGifPicker] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [showDeleteMessageConfirm, setShowDeleteMessageConfirm] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollBehaviorRef = useRef<ScrollBehavior | null>(null);
   const shouldStickToBottomRef = useRef(true);
@@ -292,11 +298,38 @@ function DirectMessagesPageContent() {
           );
           break;
         }
+        case "DIRECT_MESSAGE_UPDATE": {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === event.d.id && message.dm_id === event.d.dm_id
+                ? { ...message, content: event.d.content, edited_at: event.d.edited_at }
+                : message
+            )
+          );
+          break;
+        }
+        case "DIRECT_MESSAGE_DELETE": {
+          setMessages((prev) =>
+            prev.filter((message) => !(message.id === event.d.id && message.dm_id === event.d.dm_id))
+          );
+
+          if (editingMessageId === event.d.id) {
+            setEditingMessageId(null);
+            setEditContent("");
+          }
+
+          if (messageToDelete === event.d.id) {
+            setShowDeleteMessageConfirm(false);
+            setMessageToDelete(null);
+          }
+
+          break;
+        }
       }
     });
 
     return unsubscribe;
-  }, [currentUser?.id, onEvent, selectedConversationId]);
+  }, [currentUser?.id, editingMessageId, messageToDelete, onEvent, selectedConversationId]);
 
   useEffect(() => {
     if (!showNewChatModal) {
@@ -397,6 +430,82 @@ function DirectMessagesPageContent() {
     } catch (error) {
       console.error("Erreur lors de l'envoi du GIF privé:", error);
       setError("Impossible d'envoyer le GIF privé.");
+    }
+  };
+
+  const handleStartEdit = (message: DirectMessage) => {
+    setEditingMessageId(message.id);
+    setEditContent(message.content);
+    setError(null);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMessageId || !editContent.trim()) return;
+
+    const messageId = editingMessageId;
+    const nextContent = editContent.trim();
+    let previousMessages: DirectMessage[] = [];
+
+    try {
+      setError(null);
+
+      setMessages((prev) => {
+        previousMessages = [...prev];
+        return prev.map((message) =>
+          message.id === messageId
+            ? { ...message, content: nextContent, edited_at: new Date().toISOString() }
+            : message
+        );
+      });
+
+      setEditingMessageId(null);
+      setEditContent("");
+      await updateDirectMessage(messageId, nextContent);
+    } catch (editError) {
+      if (previousMessages.length > 0) {
+        setMessages(previousMessages);
+      }
+      console.error("Erreur lors de la modification du message privé:", editError);
+      setError("Impossible de modifier le message privé.");
+    }
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    setMessageToDelete(messageId);
+    setShowDeleteMessageConfirm(true);
+    setError(null);
+  };
+
+  const confirmDeleteMessage = async () => {
+    if (!messageToDelete) return;
+
+    const targetMessageId = messageToDelete;
+    let previousMessages: DirectMessage[] = [];
+
+    try {
+      setError(null);
+
+      setMessages((prev) => {
+        previousMessages = [...prev];
+        return prev.filter((message) => message.id !== targetMessageId);
+      });
+
+      if (editingMessageId === targetMessageId) {
+        setEditingMessageId(null);
+        setEditContent("");
+      }
+
+      setShowDeleteMessageConfirm(false);
+      setMessageToDelete(null);
+
+      await deleteDirectMessage(targetMessageId);
+    } catch (deleteError) {
+      if (previousMessages.length > 0) {
+        setMessages(previousMessages);
+      }
+      console.error("Erreur lors de la suppression du message privé:", deleteError);
+      setError("Impossible de supprimer le message privé.");
     }
   };
 
@@ -652,7 +761,22 @@ function DirectMessagesPageContent() {
                             )}
                           </span>
                         </div>
-                        {isGifMessage(message.content) ? (
+                        {editingMessageId === message.id ? (
+                          <form onSubmit={handleSaveEdit} className="mt-1">
+                            <input
+                              type="text"
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                              autoFocus
+                              onKeyDown={(e) => e.key === "Escape" && setEditingMessageId(null)}
+                              className="w-full px-3 py-1.5 bg-black/50 border border-[#4fdfff]/50 rounded text-white text-sm outline-none focus:border-[#4fdfff]"
+                            />
+                            <div className="flex gap-2 mt-2">
+                              <button type="submit" className="text-[10px] text-[#4fdfff] hover:underline font-bold uppercase">{t("chat.save")}</button>
+                              <button type="button" onClick={() => setEditingMessageId(null)} className="text-[10px] text-white/40 hover:underline font-bold uppercase">{t("common.cancel")}</button>
+                            </div>
+                          </form>
+                        ) : isGifMessage(message.content) ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={message.content}
@@ -666,14 +790,39 @@ function DirectMessagesPageContent() {
                           </p>
                         )}
 
-                        <MessageReactions
-                          messageId={message.id}
-                          reactions={message.reactions ?? []}
-                          viewerId={currentUser?.id}
-                          onToggleReaction={toggleDirectReaction}
-                          addReactionLabel={t("chat.addReaction")}
-                        />
+                        {!editingMessageId && (
+                          <MessageReactions
+                            messageId={message.id}
+                            reactions={message.reactions ?? []}
+                            viewerId={currentUser?.id}
+                            onToggleReaction={toggleDirectReaction}
+                            addReactionLabel={t("chat.addReaction")}
+                          />
+                        )}
                       </div>
+
+                      {!editingMessageId && message.author_id === currentUser?.id && (
+                        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2 transition-all ml-auto self-start">
+                          <button
+                            onClick={() => handleStartEdit(message)}
+                            className="p-1.5 text-white/40 hover:text-[#4fdfff] transition-colors"
+                            title={t("chat.edit")}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMessage(message.id)}
+                            className="p-1.5 text-white/40 hover:text-[#ff3333] transition-colors"
+                            title={t("chat.delete")}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -801,6 +950,47 @@ function DirectMessagesPageContent() {
               </Button>
             </div>
           </form>
+        </div>
+      )}
+
+      {showDeleteMessageConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => {
+              setShowDeleteMessageConfirm(false);
+              setMessageToDelete(null);
+            }}
+          />
+          <div className="relative bg-[rgba(20,20,20,0.98)] border-2 border-[#ff3333] rounded-xl p-6 w-full max-w-sm shadow-[0_0_40px_rgba(255,51,51,0.3)]">
+            <h2 className="text-xl font-bold text-center text-white mb-2">{t("chat.confirmDeleteTitle")}</h2>
+            <p className="text-center text-white/60 text-sm mb-6">
+              {t("chat.confirmDeleteMessage")}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => {
+                  setShowDeleteMessageConfirm(false);
+                  setMessageToDelete(null);
+                }}
+                className="flex-1"
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="md"
+                onClick={confirmDeleteMessage}
+                className="flex-1"
+              >
+                {t("chat.delete")}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

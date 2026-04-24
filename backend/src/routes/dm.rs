@@ -1,6 +1,9 @@
 use crate::handlers;
 use crate::AppState;
-use axum::{routing::get, Router};
+use axum::{
+    routing::{get, put},
+    Router,
+};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -11,6 +14,10 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/conversations/{dm_id}/messages",
             get(handlers::dm::list_messages).post(handlers::dm::create_message),
+        )
+        .route(
+            "/conversations/messages/{id}",
+            put(handlers::dm::update_message).delete(handlers::dm::delete_message),
         )
         .route(
             "/conversations/messages/{id}/reactions",

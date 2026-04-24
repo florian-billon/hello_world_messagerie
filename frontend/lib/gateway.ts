@@ -27,6 +27,8 @@ export type ServerEvent =
   | { op: "MESSAGE_DELETE"; d: { id: string; channel_id: string } }
   | { op: "MESSAGE_REACTION_UPDATE"; d: { id: string; channel_id: string; reactions: Message["reactions"] } }
   | { op: "DIRECT_MESSAGE_CREATE"; d: DirectMessage }
+  | { op: "DIRECT_MESSAGE_UPDATE"; d: { id: string; dm_id: string; content: string; edited_at: string } }
+  | { op: "DIRECT_MESSAGE_DELETE"; d: { id: string; dm_id: string } }
   | { op: "DIRECT_MESSAGE_REACTION_UPDATE"; d: { id: string; dm_id: string; reactions: DirectMessage["reactions"] } }
   | { op: "TYPING_START"; d: { channel_id: string; user_id: string; username: string } }
   | { op: "TYPING_STOP"; d: { channel_id: string; user_id: string } }

@@ -1,4 +1,5 @@
 use bson::{doc, Binary};
+use chrono::Utc;
 use futures::TryStreamExt;
 use mongodb::Database;
 use uuid::Uuid;
@@ -138,6 +139,51 @@ impl DirectMessageRepository {
                             "user_id": Self::uuid_to_binary(user_id),
                             "emoji": emoji,
                         }
+                    }
+                },
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn update_content(
+        &self,
+        message_id: Uuid,
+        content: &str,
+    ) -> mongodb::error::Result<()> {
+        self.collection()
+            .update_one(
+                doc! {
+                    "$and": [
+                        Self::uuid_filter("message_id", message_id),
+                        { "deleted_at": null },
+                    ]
+                },
+                doc! {
+                    "$set": {
+                        "content": content,
+                        "edited_at": Utc::now(),
+                    }
+                },
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn soft_delete(&self, message_id: Uuid) -> mongodb::error::Result<()> {
+        self.collection()
+            .update_one(
+                doc! {
+                    "$and": [
+                        Self::uuid_filter("message_id", message_id),
+                        { "deleted_at": null },
+                    ]
+                },
+                doc! {
+                    "$set": {
+                        "deleted_at": Utc::now(),
                     }
                 },
             )

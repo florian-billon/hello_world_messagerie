@@ -110,6 +110,19 @@ pub enum ServerEvent {
         reactions: Vec<MessageReactionPublic>,
     },
 
+    /// Message privé modifié
+    #[serde(rename = "DIRECT_MESSAGE_UPDATE")]
+    DirectMessageUpdate {
+        id: Uuid,
+        dm_id: Uuid,
+        content: String,
+        edited_at: DateTime<Utc>,
+    },
+
+    /// Message privé supprimé
+    #[serde(rename = "DIRECT_MESSAGE_DELETE")]
+    DirectMessageDelete { id: Uuid, dm_id: Uuid },
+
     /// Réactions d'un message privé mises à jour
     #[serde(rename = "DIRECT_MESSAGE_REACTION_UPDATE")]
     DirectMessageReactionUpdate {

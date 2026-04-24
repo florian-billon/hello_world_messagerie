@@ -1,11 +1,12 @@
 use crate::ctx::Ctx;
 use crate::models::{
     CreateDMMessagePayload, CreateDMPayload, DMWithRecipient, DirectMessageItem,
-    DirectMessageItemResponse, MessageReactionPayload, MessageReactionPublic,
+    DirectMessageItemResponse, MessageReactionPayload, MessageReactionPublic, UpdateMessagePayload,
 };
 use crate::{AppState, Error, Result};
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
     Json,
 };
 use serde::Deserialize;
@@ -219,6 +220,132 @@ pub async fn create_message(
     broadcast_to_dm_participants(&state, dm_id, &event).await?;
 
     Ok(Json(response))
+}
+
+pub async fn update_message(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UpdateMessagePayload>,
+) -> Result<Json<DirectMessageItemResponse>> {
+    let content = payload.content.trim();
+    if content.is_empty() {
+        return Err(Error::BadRequest {
+            message: "Message content cannot be empty".to_string(),
+        });
+    }
+
+    let message = state
+        .dm_message_repo
+        .find_by_id(id)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB query failed: {}", e),
+        })?
+        .ok_or(Error::MessageNotFound)?;
+
+    if !state
+        .dm_repo
+        .user_has_access(message.dm_id, ctx.user_id())
+        .await?
+    {
+        return Err(Error::MessageForbidden);
+    }
+
+    if message.author_id != ctx.user_id() {
+        return Err(Error::MessageForbidden);
+    }
+
+    if message.deleted_at.is_some() {
+        return Err(Error::MessageNotFound);
+    }
+
+    state
+        .dm_message_repo
+        .update_content(id, content)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB update failed: {}", e),
+        })?;
+
+    let username = state
+        .user_repo
+        .get_username(message.author_id)
+        .await?
+        .ok_or(Error::UserNotFound)?;
+
+    let edited_at = Some(chrono::Utc::now());
+    let response = DirectMessageItemResponse {
+        id: message.message_id,
+        dm_id: message.dm_id,
+        author_id: message.author_id,
+        username,
+        content: content.to_string(),
+        created_at: message.created_at,
+        edited_at,
+        reactions: to_public_reactions(message.reactions),
+    };
+
+    if let Some(edited_at) = response.edited_at {
+        let event = ServerEvent::DirectMessageUpdate {
+            id: response.id,
+            dm_id: response.dm_id,
+            content: response.content.clone(),
+            edited_at,
+        };
+
+        broadcast_to_dm_participants(&state, response.dm_id, &event).await?;
+    }
+
+    Ok(Json(response))
+}
+
+pub async fn delete_message(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode> {
+    let message = state
+        .dm_message_repo
+        .find_by_id(id)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB query failed: {}", e),
+        })?
+        .ok_or(Error::MessageNotFound)?;
+
+    if !state
+        .dm_repo
+        .user_has_access(message.dm_id, ctx.user_id())
+        .await?
+    {
+        return Err(Error::MessageForbidden);
+    }
+
+    if message.author_id != ctx.user_id() {
+        return Err(Error::MessageForbidden);
+    }
+
+    if message.deleted_at.is_some() {
+        return Err(Error::MessageNotFound);
+    }
+
+    state
+        .dm_message_repo
+        .soft_delete(id)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB update failed: {}", e),
+        })?;
+
+    let event = ServerEvent::DirectMessageDelete {
+        id,
+        dm_id: message.dm_id,
+    };
+
+    broadcast_to_dm_participants(&state, message.dm_id, &event).await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn add_reaction(

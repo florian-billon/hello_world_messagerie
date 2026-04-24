@@ -416,6 +416,19 @@ export async function sendDirectMessage(conversationId: string, content: string)
   });
 }
 
+export async function updateDirectMessage(id: string, content: string): Promise<DirectMessage> {
+  return fetchApi<DirectMessage>(`/conversations/messages/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function deleteDirectMessage(id: string): Promise<void> {
+  return fetchApi<void>(`/conversations/messages/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export async function addDirectMessageReaction(id: string, emoji: string): Promise<DirectMessage> {
   return fetchApi<DirectMessage>(`/conversations/messages/${id}/reactions`, {
     method: "POST",
