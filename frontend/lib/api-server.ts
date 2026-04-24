@@ -163,6 +163,7 @@ export interface DirectMessage {
   content: string;
   created_at: string;
   edited_at?: string;
+  reactions: MessageReaction[];
 }
 
 export interface ServerMember {
@@ -412,6 +413,20 @@ export async function sendDirectMessage(conversationId: string, content: string)
   return fetchApi<DirectMessage>(`/conversations/${conversationId}/messages`, {
     method: "POST",
     body: JSON.stringify({ content }),
+  });
+}
+
+export async function addDirectMessageReaction(id: string, emoji: string): Promise<DirectMessage> {
+  return fetchApi<DirectMessage>(`/conversations/messages/${id}/reactions`, {
+    method: "POST",
+    body: JSON.stringify({ emoji }),
+  });
+}
+
+export async function removeDirectMessageReaction(id: string, emoji: string): Promise<DirectMessage> {
+  return fetchApi<DirectMessage>(`/conversations/messages/${id}/reactions`, {
+    method: "DELETE",
+    body: JSON.stringify({ emoji }),
   });
 }
 

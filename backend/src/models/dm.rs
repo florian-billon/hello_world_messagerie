@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+use crate::models::message::{MessageReaction, MessageReactionPublic};
+
 mod uuid_compat_binary_generic {
     use super::*;
     use bson::Binary;
@@ -150,6 +152,9 @@ pub struct DirectMessageItem {
     #[serde(with = "datetime_compat::option")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub reactions: Vec<MessageReaction>,
 }
 
 #[derive(Debug, Serialize)]
@@ -161,4 +166,6 @@ pub struct DirectMessageItemResponse {
     pub content: String,
     pub created_at: DateTime<Utc>,
     pub edited_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub reactions: Vec<MessageReactionPublic>,
 }

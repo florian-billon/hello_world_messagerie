@@ -12,4 +12,8 @@ pub fn routes() -> Router<AppState> {
             "/conversations/{dm_id}/messages",
             get(handlers::dm::list_messages).post(handlers::dm::create_message),
         )
+        .route(
+            "/conversations/messages/{id}/reactions",
+            axum::routing::post(handlers::dm::add_reaction).delete(handlers::dm::remove_reaction),
+        )
 }

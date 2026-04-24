@@ -7,16 +7,21 @@ import { useAuth, useServers } from "@/hooks";
 import { normalizeAvatarUrl, getAvatar } from "@/lib/avatar";
 import { getStatusKey } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
+import MessageReactions from "@/components/chat/MessageReactions";
+import GifPicker from "@/components/chat/GifPicker";
 import PublicProfileCard from "@/components/PublicProfileCard";
 import SmartImg from "@/components/SmartImg";
 import { logout } from "@/lib/auth/actions";
 import Button from "@/components/ui/Button";
 import {
+  addDirectMessageReaction,
   createDirectConversation,
   DirectConversation,
   DirectMessage,
   listDirectConversations,
   listDirectMessages,
+  MessageReaction,
+  removeDirectMessageReaction,
   searchUsers,
   sendDirectMessage,
   UserSearchResult,
@@ -41,6 +46,7 @@ function DirectMessagesPageContent() {
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedPublicUserId, setSelectedPublicUserId] = useState<string | null>(null);
+  const [showGifPicker, setShowGifPicker] = useState(false);
 
   const selectedConversation = conversations.find((conv) => conv.id === selectedConversationId);
   const requestedUsername = searchParams.get("username");
@@ -98,7 +104,7 @@ function DirectMessagesPageContent() {
 
       try {
         const data = await listDirectMessages(selectedConversationId);
-        setMessages(data);
+        setMessages(data.map((message) => ({ ...message, reactions: message.reactions ?? [] })));
         setError(null);
       } catch (error) {
         console.error("Erreur lors du chargement des messages privés:", error);
@@ -206,12 +212,93 @@ function DirectMessagesPageContent() {
 
     try {
       const sentMessage = await sendDirectMessage(selectedConversationId, messageInput.trim());
-      setMessages((prev) => [...prev, sentMessage]);
+      setMessages((prev) => [...prev, { ...sentMessage, reactions: sentMessage.reactions ?? [] }]);
       setMessageInput("");
       setError(null);
     } catch (error) {
       console.error("Erreur lors de l'envoi du message privé:", error);
       setError("Impossible d'envoyer le message privé.");
+    }
+  };
+
+  const handleSendGif = async (gifUrl: string) => {
+    if (!selectedConversationId) return;
+
+    try {
+      const sentMessage = await sendDirectMessage(selectedConversationId, gifUrl);
+      setMessages((prev) => [...prev, { ...sentMessage, reactions: sentMessage.reactions ?? [] }]);
+      setError(null);
+      setShowGifPicker(false);
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du GIF privé:", error);
+      setError("Impossible d'envoyer le GIF privé.");
+    }
+  };
+
+  const toggleDirectReaction = async (messageId: string, emoji: string): Promise<boolean> => {
+    if (!currentUser?.id || !emoji.trim()) return false;
+
+    const normalizedEmoji = emoji.trim();
+    const normalizedViewerId = currentUser.id.toLowerCase();
+    const currentMessage = messages.find((message) => message.id === messageId);
+    if (!currentMessage) return false;
+
+    const currentReactions = currentMessage.reactions ?? [];
+    const hasReaction = currentReactions.some(
+      (reaction) => reaction.user_id.toLowerCase() === normalizedViewerId && reaction.emoji === normalizedEmoji
+    );
+
+    const previousMessages = messages;
+
+    try {
+      setError(null);
+
+      setMessages((prev) =>
+        prev.map((message) => {
+          if (message.id !== messageId) return message;
+
+          const reactions = message.reactions ?? [];
+
+          if (hasReaction) {
+            return {
+              ...message,
+              reactions: reactions.filter(
+                (reaction) =>
+                  !(reaction.user_id.toLowerCase() === normalizedViewerId && reaction.emoji === normalizedEmoji)
+              ),
+            };
+          }
+
+          const optimisticReaction: MessageReaction = {
+            user_id: currentUser.id,
+            emoji: normalizedEmoji,
+            created_at: new Date().toISOString(),
+          };
+
+          return {
+            ...message,
+            reactions: [
+              ...reactions.filter(
+                (reaction) => reaction.user_id.toLowerCase() !== normalizedViewerId
+              ),
+              optimisticReaction,
+            ],
+          };
+        })
+      );
+
+      if (hasReaction) {
+        await removeDirectMessageReaction(messageId, normalizedEmoji);
+      } else {
+        await addDirectMessageReaction(messageId, normalizedEmoji);
+      }
+
+      return true;
+    } catch (reactionError) {
+      setMessages(previousMessages);
+      console.error("Erreur lors de la reaction du message privé:", reactionError);
+      setError("Impossible de mettre a jour la reaction.");
+      return false;
     }
   };
 
@@ -316,7 +403,7 @@ function DirectMessagesPageContent() {
                   <p className="text-sm text-white/40">Aucun message pour le moment.</p>
                 )}
                 {messages.map((message) => (
-                  <div key={message.id} className="flex flex-col gap-1">
+                  <div key={message.id} className="group flex flex-col gap-1">
                     <div className="flex items-baseline gap-2">
                       <button
                         type="button"
@@ -329,21 +416,55 @@ function DirectMessagesPageContent() {
                         {new Date(message.created_at).toLocaleString()}
                       </span>
                     </div>
-                    <p className="text-sm text-white/80 whitespace-pre-wrap break-words">{message.content}</p>
+                    {message.content.includes("giphy.com") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={message.content}
+                        alt="GIF"
+                        className="mt-1 max-w-xs max-h-48 rounded-lg"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <p className="text-sm text-white/80 whitespace-pre-wrap break-words">{message.content}</p>
+                    )}
+                    <MessageReactions
+                      messageId={message.id}
+                      reactions={message.reactions ?? []}
+                      viewerId={currentUser?.id}
+                      onToggleReaction={toggleDirectReaction}
+                      addReactionLabel={t("chat.addReaction")}
+                    />
                   </div>
                 ))}
               </div>
-              <form onSubmit={handleSendDirectMessage} className="border-t border-[#4fdfff]/20 p-3 flex gap-2">
-                <input
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  placeholder={selectedConversation ? `Message @${selectedConversation.username}` : "Message"}
-                  className="flex-1 bg-black/40 border border-[#4fdfff]/20 rounded px-3 py-2 text-sm text-white outline-none focus:border-[#4fdfff]/50"
-                />
-                <Button type="submit" className="bg-[#4fdfff] text-black">
-                  Envoyer
-                </Button>
-              </form>
+              <div className="relative border-t border-[#4fdfff]/20 p-3">
+                {showGifPicker && (
+                  <GifPicker
+                    onSelect={handleSendGif}
+                    onClose={() => setShowGifPicker(false)}
+                    searchPlaceholder={t("chat.gifSearch")}
+                  />
+                )}
+                <form onSubmit={handleSendDirectMessage} className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowGifPicker((prev) => !prev)}
+                    className="px-2 py-2 text-xs font-bold text-[#4fdfff] border border-[#4fdfff]/40 rounded-lg hover:bg-[#4fdfff]/10 transition-colors flex-shrink-0"
+                    title={t("chat.gifTooltip")}
+                  >
+                    GIF
+                  </button>
+                  <input
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    placeholder={selectedConversation ? `Message @${selectedConversation.username}` : "Message"}
+                    className="flex-1 bg-black/40 border border-[#4fdfff]/20 rounded px-3 py-2 text-sm text-white outline-none focus:border-[#4fdfff]/50"
+                  />
+                  <Button type="submit" className="bg-[#4fdfff] text-black">
+                    Envoyer
+                  </Button>
+                </form>
+              </div>
            </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-4">

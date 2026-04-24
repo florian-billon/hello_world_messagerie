@@ -1,7 +1,7 @@
 use crate::ctx::Ctx;
 use crate::models::{
     CreateDMMessagePayload, CreateDMPayload, DMWithRecipient, DirectMessageItem,
-    DirectMessageItemResponse,
+    DirectMessageItemResponse, MessageReactionPayload, MessageReactionPublic,
 };
 use crate::{AppState, Error, Result};
 use axum::{
@@ -10,6 +10,32 @@ use axum::{
 };
 use serde::Deserialize;
 use uuid::Uuid;
+
+fn validate_reaction_emoji(emoji: &str) -> Result<()> {
+    let trimmed = emoji.trim();
+    if trimmed.is_empty() {
+        return Err(Error::BadRequest {
+            message: "Reaction emoji cannot be empty".to_string(),
+        });
+    }
+
+    if trimmed.chars().count() > 16 {
+        return Err(Error::BadRequest {
+            message: "Reaction emoji is too long".to_string(),
+        });
+    }
+
+    Ok(())
+}
+
+fn to_public_reactions(
+    reactions: Vec<crate::models::MessageReaction>,
+) -> Vec<MessageReactionPublic> {
+    reactions
+        .into_iter()
+        .map(MessageReactionPublic::from)
+        .collect()
+}
 
 fn to_response(message: DirectMessageItem, username: String) -> DirectMessageItemResponse {
     DirectMessageItemResponse {
@@ -20,6 +46,7 @@ fn to_response(message: DirectMessageItem, username: String) -> DirectMessageIte
         content: message.content,
         created_at: message.created_at,
         edited_at: message.edited_at,
+        reactions: to_public_reactions(message.reactions),
     }
 }
 
@@ -140,6 +167,7 @@ pub async fn create_message(
         created_at: chrono::Utc::now(),
         edited_at: None,
         deleted_at: None,
+        reactions: vec![],
     };
 
     state
@@ -157,4 +185,114 @@ pub async fn create_message(
         .ok_or(Error::UserNotFound)?;
 
     Ok(Json(to_response(message, username)))
+}
+
+pub async fn add_reaction(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<MessageReactionPayload>,
+) -> Result<Json<DirectMessageItemResponse>> {
+    validate_reaction_emoji(&payload.emoji)?;
+
+    let message = state
+        .dm_message_repo
+        .find_by_id(id)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB query failed: {}", e),
+        })?
+        .ok_or(Error::MessageNotFound)?;
+
+    if !state
+        .dm_repo
+        .user_has_access(message.dm_id, ctx.user_id())
+        .await?
+    {
+        return Err(Error::MessageForbidden);
+    }
+
+    if message.deleted_at.is_some() {
+        return Err(Error::MessageNotFound);
+    }
+
+    state
+        .dm_message_repo
+        .add_reaction(id, ctx.user_id(), payload.emoji.trim())
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB update failed: {}", e),
+        })?;
+
+    let updated = state
+        .dm_message_repo
+        .find_by_id(id)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB query failed: {}", e),
+        })?
+        .ok_or(Error::MessageNotFound)?;
+
+    let username = state
+        .user_repo
+        .get_username(updated.author_id)
+        .await?
+        .ok_or(Error::UserNotFound)?;
+
+    Ok(Json(to_response(updated, username)))
+}
+
+pub async fn remove_reaction(
+    State(state): State<AppState>,
+    ctx: Ctx,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<MessageReactionPayload>,
+) -> Result<Json<DirectMessageItemResponse>> {
+    validate_reaction_emoji(&payload.emoji)?;
+
+    let message = state
+        .dm_message_repo
+        .find_by_id(id)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB query failed: {}", e),
+        })?
+        .ok_or(Error::MessageNotFound)?;
+
+    if !state
+        .dm_repo
+        .user_has_access(message.dm_id, ctx.user_id())
+        .await?
+    {
+        return Err(Error::MessageForbidden);
+    }
+
+    if message.deleted_at.is_some() {
+        return Err(Error::MessageNotFound);
+    }
+
+    state
+        .dm_message_repo
+        .remove_reaction(id, ctx.user_id(), payload.emoji.trim())
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB update failed: {}", e),
+        })?;
+
+    let updated = state
+        .dm_message_repo
+        .find_by_id(id)
+        .await
+        .map_err(|e| Error::DatabaseError {
+            message: format!("MongoDB query failed: {}", e),
+        })?
+        .ok_or(Error::MessageNotFound)?;
+
+    let username = state
+        .user_repo
+        .get_username(updated.author_id)
+        .await?
+        .ok_or(Error::UserNotFound)?;
+
+    Ok(Json(to_response(updated, username)))
 }

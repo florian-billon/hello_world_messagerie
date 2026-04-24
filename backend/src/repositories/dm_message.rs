@@ -42,6 +42,15 @@ impl DirectMessageRepository {
         Ok(())
     }
 
+    pub async fn find_by_id(
+        &self,
+        message_id: Uuid,
+    ) -> mongodb::error::Result<Option<DirectMessageItem>> {
+        self.collection()
+            .find_one(Self::uuid_filter("message_id", message_id))
+            .await
+    }
+
     pub async fn list_by_dm(
         &self,
         dm_id: Uuid,
@@ -63,5 +72,77 @@ impl DirectMessageRepository {
         let mut messages: Vec<DirectMessageItem> = cursor.try_collect().await?;
         messages.reverse();
         Ok(messages)
+    }
+
+    pub async fn add_reaction(
+        &self,
+        message_id: Uuid,
+        user_id: Uuid,
+        emoji: &str,
+    ) -> mongodb::error::Result<()> {
+        let filter = doc! {
+            "$and": [
+                Self::uuid_filter("message_id", message_id),
+                { "deleted_at": null },
+            ]
+        };
+
+        self.collection()
+            .update_one(
+                filter.clone(),
+                doc! {
+                    "$pull": {
+                        "reactions": {
+                            "user_id": Self::uuid_to_binary(user_id),
+                        }
+                    }
+                },
+            )
+            .await?;
+
+        self.collection()
+            .update_one(
+                filter,
+                doc! {
+                    "$push": {
+                        "reactions": {
+                            "user_id": Self::uuid_to_binary(user_id),
+                            "emoji": emoji,
+                            "created_at": bson::DateTime::now(),
+                        }
+                    }
+                },
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn remove_reaction(
+        &self,
+        message_id: Uuid,
+        user_id: Uuid,
+        emoji: &str,
+    ) -> mongodb::error::Result<()> {
+        self.collection()
+            .update_one(
+                doc! {
+                    "$and": [
+                        Self::uuid_filter("message_id", message_id),
+                        { "deleted_at": null },
+                    ]
+                },
+                doc! {
+                    "$pull": {
+                        "reactions": {
+                            "user_id": Self::uuid_to_binary(user_id),
+                            "emoji": emoji,
+                        }
+                    }
+                },
+            )
+            .await?;
+
+        Ok(())
     }
 }
