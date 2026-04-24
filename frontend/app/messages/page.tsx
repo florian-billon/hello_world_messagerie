@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, useServers } from "@/hooks";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { normalizeAvatarUrl, getAvatar } from "@/lib/avatar";
-import { getStatusKey } from "@/lib/presence";
+import { getStatusColor, getStatusKey } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
 import MessageReactions from "@/components/chat/MessageReactions";
 import GifPicker from "@/components/chat/GifPicker";
@@ -28,8 +28,27 @@ import {
   UserSearchResult,
 } from "@/lib/api-server";
 
+const SCROLL_BOTTOM_THRESHOLD_PX = 80;
+
+function sortDirectMessagesChronologically(items: DirectMessage[]): DirectMessage[] {
+  return [...items].sort((left, right) => {
+    const leftTimestamp = new Date(left.created_at).getTime();
+    const rightTimestamp = new Date(right.created_at).getTime();
+
+    if (leftTimestamp !== rightTimestamp) {
+      return leftTimestamp - rightTimestamp;
+    }
+
+    return left.id.localeCompare(right.id);
+  });
+}
+
+function isGifMessage(content: string): boolean {
+  return content.includes("giphy.com");
+}
+
 function DirectMessagesPageContent() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { user: currentUser } = useAuth();
   const { servers, selectServer } = useServers();
   const { onEvent } = useWebSocket();
@@ -49,9 +68,33 @@ function DirectMessagesPageContent() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedPublicUserId, setSelectedPublicUserId] = useState<string | null>(null);
   const [showGifPicker, setShowGifPicker] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const pendingScrollBehaviorRef = useRef<ScrollBehavior | null>(null);
+  const shouldStickToBottomRef = useRef(true);
 
   const selectedConversation = conversations.find((conv) => conv.id === selectedConversationId);
   const requestedUsername = searchParams.get("username");
+  const selectedConversationAvatar =
+    normalizeAvatarUrl(selectedConversation?.avatar_url) ||
+    getAvatar(selectedConversation?.recipient_id || "", currentUser);
+
+  const scrollMessagesToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior,
+    });
+  }, []);
+
+  const updateStickToBottom = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    shouldStickToBottomRef.current = distanceToBottom <= SCROLL_BOTTOM_THRESHOLD_PX;
+  }, []);
 
   const resetNewConversationModal = () => {
     setShowNewChatModal(false);
@@ -98,6 +141,13 @@ function DirectMessagesPageContent() {
   }, [currentUser]);
 
   useEffect(() => {
+    shouldStickToBottomRef.current = true;
+    pendingScrollBehaviorRef.current = "auto";
+  }, [selectedConversationId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
     const fetchMessages = async () => {
       if (!selectedConversationId) {
         setMessages([]);
@@ -106,16 +156,58 @@ function DirectMessagesPageContent() {
 
       try {
         const data = await listDirectMessages(selectedConversationId);
-        setMessages(data.map((message) => ({ ...message, reactions: message.reactions ?? [] })));
-        setError(null);
+        if (!cancelled) {
+          setMessages(
+            sortDirectMessagesChronologically(
+              data.map((message) => ({ ...message, reactions: message.reactions ?? [] }))
+            )
+          );
+          setError(null);
+        }
       } catch (error) {
         console.error("Erreur lors du chargement des messages privés:", error);
-        setError("Impossible de charger les messages privés.");
+        if (!cancelled) {
+          setError("Impossible de charger les messages privés.");
+        }
       }
     };
 
-    fetchMessages();
+    void fetchMessages();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedConversationId]);
+
+  useEffect(() => {
+    if (!selectedConversationId || messages.length === 0) {
+      return;
+    }
+
+    if (!shouldStickToBottomRef.current && pendingScrollBehaviorRef.current === null) {
+      return;
+    }
+
+    const behavior = pendingScrollBehaviorRef.current ?? "smooth";
+    const animationFrame = window.requestAnimationFrame(() => {
+      scrollMessagesToBottom(behavior);
+      pendingScrollBehaviorRef.current = null;
+      shouldStickToBottomRef.current = true;
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [messages, scrollMessagesToBottom, selectedConversationId]);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    updateStickToBottom();
+  }, [messages.length, selectedConversationId, updateStickToBottom]);
 
   useEffect(() => {
     if (!requestedUsername || !currentUser) {
@@ -152,6 +244,7 @@ function DirectMessagesPageContent() {
       switch (event.op) {
         case "DIRECT_MESSAGE_CREATE": {
           const message = { ...event.d, reactions: event.d.reactions ?? [] };
+          const shouldAutoScroll = shouldStickToBottomRef.current || message.author_id === currentUser?.id;
 
           setMessages((prev) => {
             if (prev.some((current) => current.id === message.id)) {
@@ -159,7 +252,11 @@ function DirectMessagesPageContent() {
             }
 
             if (selectedConversationId && message.dm_id === selectedConversationId) {
-              return [...prev, message];
+              if (shouldAutoScroll) {
+                pendingScrollBehaviorRef.current = "smooth";
+              }
+
+              return sortDirectMessagesChronologically([...prev, message]);
             }
 
             return prev;
@@ -199,7 +296,7 @@ function DirectMessagesPageContent() {
     });
 
     return unsubscribe;
-  }, [onEvent, selectedConversationId]);
+  }, [currentUser?.id, onEvent, selectedConversationId]);
 
   useEffect(() => {
     if (!showNewChatModal) {
@@ -268,7 +365,13 @@ function DirectMessagesPageContent() {
 
     try {
       const sentMessage = await sendDirectMessage(selectedConversationId, messageInput.trim());
-      setMessages((prev) => [...prev, { ...sentMessage, reactions: sentMessage.reactions ?? [] }]);
+      pendingScrollBehaviorRef.current = "smooth";
+      setMessages((prev) =>
+        sortDirectMessagesChronologically([
+          ...prev,
+          { ...sentMessage, reactions: sentMessage.reactions ?? [] },
+        ])
+      );
       setMessageInput("");
       setError(null);
     } catch (error) {
@@ -282,7 +385,13 @@ function DirectMessagesPageContent() {
 
     try {
       const sentMessage = await sendDirectMessage(selectedConversationId, gifUrl);
-      setMessages((prev) => [...prev, { ...sentMessage, reactions: sentMessage.reactions ?? [] }]);
+      pendingScrollBehaviorRef.current = "smooth";
+      setMessages((prev) =>
+        sortDirectMessagesChronologically([
+          ...prev,
+          { ...sentMessage, reactions: sentMessage.reactions ?? [] },
+        ])
+      );
       setError(null);
       setShowGifPicker(false);
     } catch (error) {
@@ -359,7 +468,7 @@ function DirectMessagesPageContent() {
   };
 
   return (
-    <main className="flex w-full h-screen">
+    <main className="flex w-full h-screen overflow-hidden">
       {/* ========== SERVER SIDEBAR ========== */}
       <aside className="w-[72px] bg-[rgba(0,0,0,0.95)] border-r border-[#4fdfff]/20 flex flex-col items-center py-3 gap-2">
         <button
@@ -383,7 +492,7 @@ function DirectMessagesPageContent() {
       </aside>
 
       {/* ========== DM SIDEBAR ========== */}
-      <aside className="w-60 bg-[rgba(5,10,15,0.95)] border-r border-[#4fdfff]/20 flex flex-col">
+      <aside className="w-60 bg-[rgba(5,10,15,0.95)] border-r border-[#4fdfff]/20 flex flex-col min-h-0">
         <div className="h-12 px-4 flex items-center border-b border-[#4fdfff]/30 bg-[rgba(0,0,0,0.3)]">
            <div className="relative w-full">
             <input 
@@ -394,7 +503,7 @@ function DirectMessagesPageContent() {
            </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-0">
           <div className="px-2 mb-2 flex items-center justify-between">
             <span className="text-[10px] font-bold text-white/50 tracking-widest uppercase">Messages Directs</span>
             {/* BOUTON + POUR NOUVELLE CONVERSATION */}
@@ -416,14 +525,26 @@ function DirectMessagesPageContent() {
           {conversations.map((conv) => (
             <button
               key={conv.id}
-              onClick={() => setSelectedConversationId(conv.id)}
-              className={`w-full flex items-center gap-3 px-2 py-2 rounded transition-colors ${selectedConversationId === conv.id ? "bg-[#4fdfff]/15 text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}`}
+              onClick={() => selectConversation(conv)}
+              className={`w-full flex items-center gap-3 px-2 py-2 rounded transition-colors ${
+                selectedConversationId === conv.id
+                  ? "bg-[#4fdfff]/15 text-white"
+                  : "text-white/60 hover:bg-white/5 hover:text-white"
+              }`}
             >
-              <div className="w-8 h-8 rounded-full bg-[#4fdfff]/20 border border-[#4fdfff]/30 flex items-center justify-center text-xs font-bold">
-                {conv.username.charAt(0)}
+              <div className="relative flex-shrink-0">
+                <SmartImg
+                  src={normalizeAvatarUrl(conv.avatar_url) || getAvatar(conv.recipient_id, currentUser)}
+                  alt={conv.username}
+                  className="w-8 h-8 rounded-full border border-[#4fdfff]/30 object-cover"
+                />
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${getStatusColor(conv.status)}`}
+                />
               </div>
               <div className="flex-1 min-w-0 text-left">
                 <p className="text-sm font-medium truncate">{conv.username}</p>
+                <p className="text-[10px] uppercase text-white/35">{t(getStatusKey(conv.status))}</p>
               </div>
             </button>
           ))}
@@ -447,53 +568,118 @@ function DirectMessagesPageContent() {
       </aside>
 
       {/* ========== CHAT CENTER ========== */}
-      <div className="flex-1 flex flex-col bg-[rgba(10,15,20,0.98)]">
+      <div className="flex-1 min-w-0 flex flex-col bg-[rgba(10,15,20,0.98)]">
         {selectedConversationId ? (
-           <div className="flex-1 flex flex-col">
-              <header className="h-12 border-b border-[#4fdfff]/20 flex items-center px-4 text-white font-bold">
-                {selectedConversation ? `@${selectedConversation.username}` : "Conversation"}
-              </header>
-              <div className="flex-1 p-4 overflow-y-auto space-y-3">
-                {error && <p className="text-sm text-[#ff3333]">{error}</p>}
-                {messages.length === 0 && (
-                  <p className="text-sm text-white/40">Aucun message pour le moment.</p>
+           <div className="flex-1 min-h-0 flex flex-col">
+              <header className="h-12 px-4 flex items-center border-b border-[#4fdfff]/20 bg-[rgba(0,0,0,0.3)] shadow-sm">
+                {selectedConversation ? (
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative flex-shrink-0">
+                      <SmartImg
+                        src={selectedConversationAvatar}
+                        alt={selectedConversation.username}
+                        className="w-8 h-8 rounded-full object-cover border border-[#4fdfff]/40"
+                      />
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(10,15,20,0.98)] rounded-full ${getStatusColor(selectedConversation.status)}`}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">@{selectedConversation.username}</p>
+                      <p className="text-[10px] font-mono uppercase text-white/40">
+                        {t(getStatusKey(selectedConversation.status))}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <h1 className="text-white font-semibold text-sm">Conversation</h1>
                 )}
-                {messages.map((message) => (
-                  <div key={message.id} className="group flex flex-col gap-1">
-                    <div className="flex items-baseline gap-2">
+              </header>
+              <div
+                ref={messagesContainerRef}
+                onScroll={updateStickToBottom}
+                className="flex-1 min-h-0 overflow-y-auto p-4"
+              >
+                {error && <p className="text-sm text-[#ff3333]">{error}</p>}
+                {messages.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center px-4">
+                    <div className="w-20 h-20 rounded-full bg-[#4fdfff]/10 border-2 border-[#4fdfff]/30 flex items-center justify-center mb-4 overflow-hidden">
+                      <SmartImg
+                        src={selectedConversationAvatar}
+                        alt={selectedConversation?.username || "Conversation"}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h4 className="text-xl font-semibold text-white mb-2">
+                      {selectedConversation ? `@${selectedConversation.username}` : "Conversation"}
+                    </h4>
+                    <p className="text-white/50 text-sm">Aucun message pour le moment.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 pb-2">
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className="flex items-start gap-3 px-4 py-2 rounded hover:bg-white/5 transition-colors group"
+                      >
                       <button
                         type="button"
                         onClick={() => setSelectedPublicUserId(message.author_id)}
-                        className="text-sm font-bold text-[#4fdfff] hover:underline"
+                        className="flex-shrink-0"
                       >
-                        {message.username}
+                        <SmartImg
+                          src={getAvatar(message.author_id, currentUser)}
+                          alt={message.username}
+                          className="w-10 h-10 rounded-full object-cover border border-[#4fdfff]/30 group-hover:border-[#4fdfff]/50 transition-colors"
+                        />
                       </button>
-                      <span className="text-[10px] text-white/30">
-                        {new Date(message.created_at).toLocaleString()}
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPublicUserId(message.author_id)}
+                            className="font-semibold text-white hover:text-[#4fdfff] transition-colors cursor-pointer"
+                          >
+                            {message.username}
+                          </button>
+                          <span className="text-xs text-white/40">
+                            {new Date(message.created_at).toLocaleTimeString(locale === "fr" ? "fr-FR" : "en-US", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            {message.edited_at && (
+                              <span className="ml-1 text-[10px] text-white/20 italic">{t("chat.edited")}</span>
+                            )}
+                          </span>
+                        </div>
+                        {isGifMessage(message.content) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={message.content}
+                            alt="GIF"
+                            className="max-w-xs max-h-48 rounded-lg mt-1"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <p className="text-white/90 leading-relaxed break-all whitespace-pre-wrap">
+                            {message.content}
+                          </p>
+                        )}
+
+                        <MessageReactions
+                          messageId={message.id}
+                          reactions={message.reactions ?? []}
+                          viewerId={currentUser?.id}
+                          onToggleReaction={toggleDirectReaction}
+                          addReactionLabel={t("chat.addReaction")}
+                        />
+                      </div>
                     </div>
-                    {message.content.includes("giphy.com") ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={message.content}
-                        alt="GIF"
-                        className="mt-1 max-w-xs max-h-48 rounded-lg"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <p className="text-sm text-white/80 whitespace-pre-wrap break-words">{message.content}</p>
-                    )}
-                    <MessageReactions
-                      messageId={message.id}
-                      reactions={message.reactions ?? []}
-                      viewerId={currentUser?.id}
-                      onToggleReaction={toggleDirectReaction}
-                      addReactionLabel={t("chat.addReaction")}
-                    />
-                  </div>
-                ))}
+                  ))}
+                </div>
+                )}
               </div>
-              <div className="relative border-t border-[#4fdfff]/20 p-3">
+              <div className="relative px-4 py-3 border-t border-[#4fdfff]/20 bg-[rgba(0,0,0,0.2)]">
                 {showGifPicker && (
                   <GifPicker
                     onSelect={handleSendGif}
@@ -514,7 +700,7 @@ function DirectMessagesPageContent() {
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     placeholder={selectedConversation ? `Message @${selectedConversation.username}` : "Message"}
-                    className="flex-1 bg-black/40 border border-[#4fdfff]/20 rounded px-3 py-2 text-sm text-white outline-none focus:border-[#4fdfff]/50"
+                    className="flex-1 px-4 py-2.5 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white placeholder:text-white/40 outline-none focus:border-[#4fdfff] focus:bg-[rgba(20,20,20,0.95)] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
                   />
                   <Button type="submit" className="bg-[#4fdfff] text-black">
                     Envoyer
