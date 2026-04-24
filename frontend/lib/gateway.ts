@@ -1,7 +1,7 @@
 //! Client WebSocket Gateway
 //! Gère la connexion, reconnexion, heartbeat, et dispatch des événements
 
-import { Message } from "./api-server";
+import { DirectMessage, Message } from "./api-server";
 
 const HEARTBEAT_INTERVAL = 30000; // 30s
 const RECONNECT_DELAY_INITIAL = 1000; // 1s
@@ -26,6 +26,8 @@ export type ServerEvent =
   | { op: "MESSAGE_UPDATE"; d: { id: string; channel_id: string; content: string; edited_at: string } }
   | { op: "MESSAGE_DELETE"; d: { id: string; channel_id: string } }
   | { op: "MESSAGE_REACTION_UPDATE"; d: { id: string; channel_id: string; reactions: Message["reactions"] } }
+  | { op: "DIRECT_MESSAGE_CREATE"; d: DirectMessage }
+  | { op: "DIRECT_MESSAGE_REACTION_UPDATE"; d: { id: string; dm_id: string; reactions: DirectMessage["reactions"] } }
   | { op: "TYPING_START"; d: { channel_id: string; user_id: string; username: string } }
   | { op: "TYPING_STOP"; d: { channel_id: string; user_id: string } }
   | { op: "HEARTBEAT_ACK"; d: { seq?: number } }
@@ -268,4 +270,3 @@ export function getGateway(apiUrl: string): Gateway {
   }
   return gatewayInstance;
 }
-

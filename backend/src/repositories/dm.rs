@@ -114,4 +114,19 @@ impl DmRepository {
 
         Ok(conversation)
     }
+
+    pub async fn get_participants(&self, dm_id: Uuid) -> Result<Option<(Uuid, Uuid)>> {
+        let row = sqlx::query(
+            r#"
+            SELECT user1_id, user2_id
+            FROM direct_messages
+            WHERE id = $1
+            "#,
+        )
+        .bind(dm_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(|row| (row.get("user1_id"), row.get("user2_id"))))
+    }
 }

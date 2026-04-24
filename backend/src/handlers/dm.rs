@@ -11,6 +11,8 @@ use axum::{
 use serde::Deserialize;
 use uuid::Uuid;
 
+use crate::web::ws::protocol::ServerEvent;
+
 fn validate_reaction_emoji(emoji: &str) -> Result<()> {
     let trimmed = emoji.trim();
     if trimmed.is_empty() {
@@ -48,6 +50,23 @@ fn to_response(message: DirectMessageItem, username: String) -> DirectMessageIte
         edited_at: message.edited_at,
         reactions: to_public_reactions(message.reactions),
     }
+}
+
+async fn broadcast_to_dm_participants(
+    state: &AppState,
+    dm_id: Uuid,
+    event: &ServerEvent,
+) -> Result<()> {
+    let Some((user1_id, user2_id)) = state.dm_repo.get_participants(dm_id).await? else {
+        return Ok(());
+    };
+
+    state.ws_hub.send_to_user(user1_id, event).await;
+    if user2_id != user1_id {
+        state.ws_hub.send_to_user(user2_id, event).await;
+    }
+
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -184,7 +203,22 @@ pub async fn create_message(
         .await?
         .ok_or(Error::UserNotFound)?;
 
-    Ok(Json(to_response(message, username)))
+    let response = to_response(message, username.clone());
+
+    let event = ServerEvent::DirectMessageCreate {
+        id: response.id,
+        dm_id: response.dm_id,
+        author_id: response.author_id,
+        username,
+        content: response.content.clone(),
+        created_at: response.created_at,
+        edited_at: response.edited_at,
+        reactions: response.reactions.clone(),
+    };
+
+    broadcast_to_dm_participants(&state, dm_id, &event).await?;
+
+    Ok(Json(response))
 }
 
 pub async fn add_reaction(
@@ -239,7 +273,16 @@ pub async fn add_reaction(
         .await?
         .ok_or(Error::UserNotFound)?;
 
-    Ok(Json(to_response(updated, username)))
+    let response = to_response(updated, username);
+    let event = ServerEvent::DirectMessageReactionUpdate {
+        id: response.id,
+        dm_id: response.dm_id,
+        reactions: response.reactions.clone(),
+    };
+
+    broadcast_to_dm_participants(&state, response.dm_id, &event).await?;
+
+    Ok(Json(response))
 }
 
 pub async fn remove_reaction(
@@ -294,5 +337,14 @@ pub async fn remove_reaction(
         .await?
         .ok_or(Error::UserNotFound)?;
 
-    Ok(Json(to_response(updated, username)))
+    let response = to_response(updated, username);
+    let event = ServerEvent::DirectMessageReactionUpdate {
+        id: response.id,
+        dm_id: response.dm_id,
+        reactions: response.reactions.clone(),
+    };
+
+    broadcast_to_dm_participants(&state, response.dm_id, &event).await?;
+
+    Ok(Json(response))
 }

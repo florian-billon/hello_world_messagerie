@@ -97,6 +97,27 @@ pub enum ServerEvent {
         reactions: Vec<MessageReactionPublic>,
     },
 
+    /// Nouveau message privé reçu
+    #[serde(rename = "DIRECT_MESSAGE_CREATE")]
+    DirectMessageCreate {
+        id: Uuid,
+        dm_id: Uuid,
+        author_id: Uuid,
+        username: String,
+        content: String,
+        created_at: DateTime<Utc>,
+        edited_at: Option<DateTime<Utc>>,
+        reactions: Vec<MessageReactionPublic>,
+    },
+
+    /// Réactions d'un message privé mises à jour
+    #[serde(rename = "DIRECT_MESSAGE_REACTION_UPDATE")]
+    DirectMessageReactionUpdate {
+        id: Uuid,
+        dm_id: Uuid,
+        reactions: Vec<MessageReactionPublic>,
+    },
+
     /// Quelqu'un commence à taper
     #[serde(rename = "TYPING_START")]
     TypingStart {

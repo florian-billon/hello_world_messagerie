@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, useServers } from "@/hooks";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import { normalizeAvatarUrl, getAvatar } from "@/lib/avatar";
 import { getStatusKey } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
@@ -31,6 +32,7 @@ function DirectMessagesPageContent() {
   const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const { servers, selectServer } = useServers();
+  const { onEvent } = useWebSocket();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -144,6 +146,60 @@ function DirectMessagesPageContent() {
       cancelled = true;
     };
   }, [currentUser, openConversation, requestedUsername, router, selectConversation]);
+
+  useEffect(() => {
+    const unsubscribe = onEvent((event) => {
+      switch (event.op) {
+        case "DIRECT_MESSAGE_CREATE": {
+          const message = { ...event.d, reactions: event.d.reactions ?? [] };
+
+          setMessages((prev) => {
+            if (prev.some((current) => current.id === message.id)) {
+              return prev;
+            }
+
+            if (selectedConversationId && message.dm_id === selectedConversationId) {
+              return [...prev, message];
+            }
+
+            return prev;
+          });
+
+          setConversations((prev) => {
+            const existing = prev.find((conversation) => conversation.id === message.dm_id);
+            if (!existing) {
+              void listDirectConversations()
+                .then((data) => {
+                  setConversations(data);
+                })
+                .catch((conversationError) => {
+                  console.error(
+                    "Erreur lors du rafraichissement des conversations privees:",
+                    conversationError
+                  );
+                });
+              return prev;
+            }
+
+            return [existing, ...prev.filter((conversation) => conversation.id !== message.dm_id)];
+          });
+          break;
+        }
+        case "DIRECT_MESSAGE_REACTION_UPDATE": {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === event.d.id && message.dm_id === event.d.dm_id
+                ? { ...message, reactions: event.d.reactions ?? [] }
+                : message
+            )
+          );
+          break;
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [onEvent, selectedConversationId]);
 
   useEffect(() => {
     if (!showNewChatModal) {
