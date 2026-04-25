@@ -51,6 +51,7 @@ Le frontend a été préparé pour une migration desktop : il fonctionne désorm
 |-----------------|-------------|
 | Frontend        | Next.js 16, React 19, TypeScript, Tailwind CSS |
 | Backend         | Rust 1.91, Axum, Tokio, SQLx, driver MongoDB |
+| **Desktop**     | **Tauri v2 (Rust)** |
 | Base de données | PostgreSQL (relationnel via Neon), MongoDB (messages via Atlas) |
 | Auth            | JWT (jsonwebtoken), bcrypt |
 | Infra           | Render (backend), Vercel (frontend), GitHub Actions CI/CD |
@@ -160,6 +161,23 @@ npm run build
 ```
 
 Le build statique est généré dans **`frontend/out/`**.
+
+### Etape 5 — Desktop (Tauri)
+
+Pour lancer la version Desktop en mode développement :
+
+```bash
+cd frontend
+npx tauri dev
+```
+
+**Note pour les utilisateurs NixOS :**
+Un fichier `shell.nix` est disponible dans le dossier `frontend/`. Pour l'utiliser :
+```bash
+cd frontend
+nix-shell
+npx tauri dev
+```
 
 ---
 
@@ -457,9 +475,9 @@ Pré-remplissage au 24/04/2026 : cocher/décocher définitivement pendant le ren
 
 ### Desktop
 
-- [ ] `desktop_app` : application desktop livrable et fonctionnelle
-- [ ] `desktop_specs` : Tauri ou Electron connecté au serveur
-- [ ] `desktop_multilingual` : desktop traduit (au moins 2 langues)
+- [x] `desktop_app` : application desktop livrable et fonctionnelle
+- [x] `desktop_specs` : Tauri connecté au serveur
+- [x] `desktop_multilingual` : desktop traduit (FR/EN via le partage de code frontend)
 - [ ] `desktop_notifications` : notifications desktop
 
 ### Tests
