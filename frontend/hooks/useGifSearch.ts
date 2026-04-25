@@ -27,7 +27,6 @@ function sanitizePublicEnvValue(value?: string): string {
   ).trim();
 }
 
-const API_KEY = sanitizePublicEnvValue(process.env.NEXT_PUBLIC_GIPHY_API_KEY);
 const BASE_URL = "https://api.giphy.com/v1/gifs";
 
 export function useGifSearch() {
@@ -40,16 +39,37 @@ export function useGifSearch() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(async () => {
+      console.log("🔍 Giphy Search triggered for query:", query);
+      const key = sanitizePublicEnvValue(process.env.NEXT_PUBLIC_GIPHY_API_KEY);
+      
+      if (!key) {
+        setGifs([]);
+        return;
+      }
+
       setLoading(true);
       try {
         const endpoint = query.trim()
-          ? `${BASE_URL}/search?api_key=${API_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=g`
-          : `${BASE_URL}/trending?api_key=${API_KEY}&limit=20&rating=g`;
+          ? `${BASE_URL}/search?api_key=${key}&q=${encodeURIComponent(query)}&limit=20&rating=g`
+          : `${BASE_URL}/trending?api_key=${key}&limit=20&rating=g`;
 
-        const res = await fetch(endpoint);
+        const res = await fetch(endpoint, {
+          method: "GET",
+          headers: {
+            "Accept": "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          console.error(`Giphy API error: ${res.status} ${res.statusText}`);
+          setGifs([]);
+          return;
+        }
+
         const data = await res.json();
         setGifs(data.data ?? []);
-      } catch {
+      } catch (err) {
+        console.error("Giphy fetch network error:", err);
         setGifs([]);
       } finally {
         setLoading(false);
