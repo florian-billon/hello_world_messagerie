@@ -41,6 +41,7 @@ export function useGifSearch() {
     debounceRef.current = setTimeout(async () => {
       console.log("🔍 Giphy Search triggered for query:", query);
       const key = sanitizePublicEnvValue(process.env.NEXT_PUBLIC_GIPHY_API_KEY);
+      console.log("🔑 Giphy Key Check:", key ? "Key detected" : "KEY IS EMPTY/UNDEFINED");
       
       if (!key) {
         setGifs([]);
