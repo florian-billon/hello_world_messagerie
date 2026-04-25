@@ -14,12 +14,13 @@ type SmartImgProps = Omit<React.ImgHTMLAttributes<HTMLImageElement>, "alt"> & {
  * Utile pendant une transition (ex: WebP → PNG fallback).
  */
 export default function SmartImg({ src, alt, fallbackSrc, onError, ...props }: SmartImgProps) {
+  const [prevSrc, setPrevSrc] = React.useState(src);
   const [currentSrc, setCurrentSrc] = React.useState(src);
 
-  // Si le src change (re-render), on réinitialise la source courante.
-  React.useEffect(() => {
+  if (src !== prevSrc) {
+    setPrevSrc(src);
     setCurrentSrc(src);
-  }, [src]);
+  }
 
   return (
     <img
