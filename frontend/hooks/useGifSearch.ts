@@ -60,13 +60,15 @@ export function useGifSearch() {
           },
         });
 
+        const data = await res.json();
+        console.log("🎁 Giphy Response Data:", data);
+        
         if (!res.ok) {
-          console.error(`Giphy API error: ${res.status} ${res.statusText}`);
+          console.error(`Giphy API error: ${res.status} ${res.statusText}`, data);
           setGifs([]);
           return;
         }
 
-        const data = await res.json();
         setGifs(data.data ?? []);
       } catch (err) {
         console.error("Giphy fetch network error:", err);
