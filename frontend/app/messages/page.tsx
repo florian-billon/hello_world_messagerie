@@ -11,9 +11,9 @@ import { getStatusColor, getStatusKey } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
 import MessageReactions from "@/components/chat/MessageReactions";
 import GifPicker from "@/components/chat/GifPicker";
-import ProfileCard from "@/components/ProfileCard";
-import PublicProfileCard from "@/components/PublicProfileCard";
-import SmartImg from "@/components/SmartImg";
+import ProfileCard from "@/components/profile/ProfileCard";
+import PublicProfileCard from "@/components/profile/PublicProfileCard";
+import SmartImg from "@/components/ui/SmartImg";
 import { logout } from "@/lib/auth/client";
 import Button from "@/components/ui/Button";
 import {
