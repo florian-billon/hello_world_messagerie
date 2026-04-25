@@ -1,0 +1,24 @@
+{
+  "identifier": "com.florian.helloworldmessagerie",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": null
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "hello_world_messagerie",
+        "width": 1200,
+        "height": 800,
+        "resizable": true
+      }
+    ],
+    "withGlobalTauri": true
+  },
+  "bundle": {
+    "active": true,
+    "icon": ["icons/icon.ico"]
+  }
+}
