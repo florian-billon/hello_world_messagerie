@@ -38,10 +38,11 @@
   },
   "chat": {
     "initializing": "INITIALISATION DU SYSTÈME...",
-    "selectServer": "Sélectionnez un serveur",
+    "selectServer": "Vos canaux",
     "selectChannel": "Sélectionnez un canal",
-    "selectServerPrompt": "Choisissez un serveur pour commencer",
+    "selectServerPrompt": "Bâtissez votre propre communauté ou rejoignez un serveur existant en cliquant sur le bouton ci-dessous.",
     "selectChannelPrompt": "Choisissez un canal pour commencer à discuter",
+    "createServerButton": "Créer un serveur",
     "selectServerForChannels": "Sélectionnez un serveur pour voir les canaux",
     "loadingMessages": "Chargement des messages...",
     "welcomeChannel": "Bienvenue dans #{channelName}",
@@ -86,8 +87,11 @@
   },
   "channel": {
     "textChannels": "CHANNELS TEXTUELS",
+    "searchPlaceholder": "Trouver un channel",
     "createTooltip": "Créer un channel",
+    "backToChannels": "Retour aux channels",
     "deleteTooltip": "Supprimer le channel",
+    "noResults": "Aucun channel ne correspond à la recherche",
     "confirmDeleteTitle": "Supprimer le channel",
     "confirmDeleteMessage": "Es-tu sûr de vouloir supprimer définitivement #{channelName} ? Cette action est irréversible.",
     "createTitle": "CRÉER UN CHANNEL",
@@ -195,5 +199,15 @@
     "add": "Ajouter en ami",
     "openDm": "Ouvrir les MP",
     "memberSince": "Inscrit depuis"
+  },
+  "dm": {
+    "title": "Messages",
+    "conversations": "Conversations",
+    "searchPlaceholder": "Trouver une conversation",
+    "newConversation": "Nouvelle conversation",
+    "noConversation": "Aucune conversation active",
+    "welcomeTitle": "Vos Messages Privés",
+    "welcomeDescription": "Lancez une nouvelle discussion avec un habitant de Night City en cliquant sur le bouton ci-dessous.",
+    "startButton": "Démarrer une conversation"
   }
 }

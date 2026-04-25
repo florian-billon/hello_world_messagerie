@@ -24,7 +24,9 @@
 
 ## 1. Le projet
 
-**Hello World** est une application de messagerie temps réel (type Discord) avec un backend Rust (Axum) et un frontend Next.js. Les données relationnelles (utilisateurs, serveurs, canaux, membres, invitations) sont stockées dans PostgreSQL. L'historique des messages est dans MongoDB pour la scalabilité.
+**Hello World** est une application de messagerie temps réel inspirée de Discord avec un backend Rust (Axum) et un frontend Next.js/React. Les données relationnelles (utilisateurs, serveurs, canaux, membres, invitations, conversations privées) sont stockées dans PostgreSQL. Les historiques de messages sont stockés dans MongoDB.
+
+Le frontend a été préparé pour une migration desktop : il fonctionne désormais sans runtime serveur Next obligatoire et peut être exporté en statique via `npm run build` (`frontend/out/`).
 
 ### Fonctionnalités
 
@@ -33,12 +35,15 @@
 - Canaux texte avec ordre par position
 - Messagerie temps réel via WebSocket avec indicateur "en train d'écrire"
 - Messages privés entre utilisateurs
+- Réactions emoji sur messages de canaux et messages privés
+- GIF via intégration Giphy
+- Edition / suppression de messages dans les canaux et en MP
 - Profils utilisateur et statuts (Online / Offline / DND / Invisible)
+- Recherche d'utilisateurs et ajout d'amis
 - Gestion des membres : kick, ban (temporaire ou permanent), transfert de propriété
-- Edition de messages (fenêtre 5 minutes)
-- Emojis et Unicode
 - Système d'invitations avec expiration et limite d'utilisation
-- Cartes de profil et actions admin
+- Interface multilingue (FR / EN)
+- Export statique Next.js prêt pour intégration Tauri
 
 ### Tech Stack
 
@@ -54,12 +59,17 @@
 
 ## 2. Architecture
 
-Le frontend Next.js communique avec le backend Axum via REST (authentifié par JWT) et WebSocket (temps réel). Le backend accède à PostgreSQL pour les données relationnelles et à MongoDB pour les messages.
+Le frontend Next.js communique avec le backend Axum via REST (Bearer JWT) et WebSocket (temps réel). Le backend accède à PostgreSQL pour les données relationnelles et à MongoDB pour les messages.
 
 ```
 Browser (Next.js)  --->  REST + JWT  --->  Axum API  --->  PostgreSQL (Neon)
                    --->  WebSocket   --->             --->  MongoDB (Atlas)
 ```
+
+Depuis la refonte du frontend :
+- l'auth frontend repose sur un token stocké côté client
+- le middleware `proxy.ts` a été supprimé
+- le build Next est exportable statiquement (`output: "export"`)
 
 **Arborescence du projet :**
 
@@ -67,20 +77,28 @@ Browser (Next.js)  --->  REST + JWT  --->  Axum API  --->  PostgreSQL (Neon)
 ├── backend/
 │   ├── src/
 │   │   ├── main.rs              # Point d'entrée, config CORS, routes
-│   │   ├── handlers/            # auth, channels, invites, messages, servers, user
-│   │   ├── models/              # channel, invite, message, server, user
+│   │   ├── handlers/            # Auth, channels, invites, messages, direct messages, users
+│   │   ├── models/              # Modèles SQL / Mongo / WS
 │   │   ├── repositories/        # Couche d'accès aux données
-│   │   ├── services/            # Logique métier + realtime (typing, presence)
+│   │   ├── services/            # Logique métier + bootstrap + realtime
 │   │   ├── routes/              # Définition des routes Axum
 │   │   └── web/                 # Middleware auth, WebSocket (hub, handler, protocol)
-│   ├── migrations/              # init.sql (schéma PostgreSQL)
+│   ├── migrations/
+│   │   ├── init.sql             # Bootstrap PostgreSQL unique
+│   │   └── init.mongo.js        # Bootstrap MongoDB unique
 │   └── Dockerfile
 ├── frontend/
-│   ├── app/                     # Pages : login, register, invite/[code], home
-│   ├── components/              # ProfileCard, MemberSidebar, InviteModal, etc.
+│   ├── app/                     # Pages statiques : login, register, invite, home, messages
+│   ├── components/              # UI, profils, réactions, sidebar, chat
 │   ├── hooks/                   # useAuth, useChannels, useMessages, useWebSocket, etc.
-│   └── lib/                     # API client, auth actions, config, gateway WS
-├── docs/                        # Consignes, architecture, specifications, UML
+│   ├── lib/                     # api-client, auth client, token storage, runtime, gateway WS
+│   ├── messages/                # Traductions FR / EN
+│   └── public/                  # Assets frontend
+├── docs/                        # Consignes, spécifications, UML
+│   ├── pdf/                     # Consignes officielles PDF
+│   ├── specifications/          # Grading criteria et synthèse technique
+│   ├── uml/                     # Diagrammes de structure (PlantUML)
+│   └── cloc-report.md           # Statistiques de code
 ├── docker-compose.yml           # Bases de données locales (dev)
 ├── render.yaml                  # Configuration Render (production)
 └── .github/workflows/           # CI backend + frontend
@@ -101,6 +119,7 @@ Browser (Next.js)  --->  REST + JWT  --->  Axum API  --->  PostgreSQL (Neon)
 ```bash
 docker-compose up -d
 docker exec -i helloworld-postgres psql -U postgres -d helloworld < backend/migrations/init.sql
+mongosh "mongodb://localhost:27017/helloworld" --file backend/migrations/init.mongo.js
 ```
 
 ### Etape 2 — Backend
@@ -127,10 +146,20 @@ L'API est disponible sur **http://localhost:3001**.
 ```bash
 cd frontend
 echo "NEXT_PUBLIC_API_URL=http://localhost:3001" > .env.local
-npm install && npm run dev
+npm ci
+npm run dev
 ```
 
 L'application est disponible sur **http://localhost:3002**.
+
+### Etape 4 — Export statique
+
+```bash
+cd frontend
+npm run build
+```
+
+Le build statique est généré dans **`frontend/out/`**.
 
 ---
 
@@ -139,7 +168,7 @@ L'application est disponible sur **http://localhost:3002**.
 | Service    | Plateforme   | URL |
 |------------|-------------|-----|
 | Frontend   | Vercel      | `https://hello-world-messagerie-jfk7.vercel.app` |
-| Backend    | Render      | `https://hello-world-messagerie-1.onrender.com` |
+| Backend    | Render      | `https://hello-world-messagerie-d5p2.onrender.com` |
 | PostgreSQL | Neon        | Serverless Postgres managé |
 | MongoDB    | Atlas       | Cluster managé |
 
@@ -162,7 +191,7 @@ Important :
 
 | Variable | Description |
 |----------|-------------|
-| `NEXT_PUBLIC_API_URL` | URL du backend Render (`https://hello-world-messagerie-1.onrender.com`) |
+| `NEXT_PUBLIC_API_URL` | URL du backend Render (`https://hello-world-messagerie-d5p2.onrender.com`) |
 | `NEXT_PUBLIC_GIPHY_API_KEY` | Clé publique GIPHY utilisée par le sélecteur de GIF |
 
 Le déploiement est automatique sur push vers `main` (Render via `render.yaml`, Vercel via intégration GitHub).
@@ -173,6 +202,31 @@ Le déploiement est automatique sur push vers `main` (Render via `render.yaml`, 
 
 Toutes les routes sauf auth nécessitent un header `Authorization: Bearer <JWT>`.
 
+### Vue d'ensemble
+
+```mermaid
+flowchart LR
+    User[Utilisateur]
+    Web[Frontend Next.js / Vercel]
+    Desktop[Desktop Tauri]
+    API[Backend Rust / Render]
+    WS[WebSocket /ws]
+    PG[(PostgreSQL / Neon)]
+    MG[(MongoDB Atlas)]
+    GIF[GIPHY API]
+
+    User --> Web
+    User --> Desktop
+    Web --> API
+    Desktop --> API
+    Web --> WS
+    Desktop --> WS
+    API --> PG
+    API --> MG
+    Web --> GIF
+    Desktop --> GIF
+```
+
 ### Auth
 
 | Méthode | Endpoint         | Description |
@@ -182,6 +236,10 @@ Toutes les routes sauf auth nécessitent un header `Authorization: Bearer <JWT>`
 | POST    | `/auth/logout`   | Déconnexion (passe le statut offline) |
 | GET     | `/me`            | Profil de l'utilisateur connecté |
 | PATCH   | `/me`            | Mettre à jour son profil (username, avatar, statut) |
+| GET     | `/users/search`  | Recherche d'utilisateurs |
+| GET     | `/users/{id}/profile` | Profil public |
+| POST    | `/friends/{id}`  | Ajouter un ami |
+| GET     | `/friends`       | Liste des amis |
 
 ### Serveurs
 
@@ -220,6 +278,8 @@ Toutes les routes sauf auth nécessitent un header `Authorization: Bearer <JWT>`
 | POST    | `/channels/{id}/messages`   | Envoyer un message |
 | PUT     | `/messages/{id}`           | Modifier un message (auteur, fenêtre 5 min) |
 | DELETE  | `/messages/{id}`           | Supprimer un message |
+| POST    | `/messages/{id}/reactions` | Ajouter / basculer une réaction |
+| DELETE  | `/messages/{id}/reactions` | Retirer une réaction |
 
 ### Messages privés
 
@@ -229,30 +289,116 @@ Toutes les routes sauf auth nécessitent un header `Authorization: Bearer <JWT>`
 | POST    | `/conversations`                          | Créer ou récupérer une conversation privée (`target_username`) |
 | GET     | `/conversations/{id}/messages`            | Liste des messages privés d'une conversation |
 | POST    | `/conversations/{id}/messages`            | Envoyer un message privé |
+| PUT     | `/conversations/messages/{id}`            | Modifier un message privé |
+| DELETE  | `/conversations/messages/{id}`            | Supprimer un message privé |
+| POST    | `/conversations/messages/{id}/reactions`  | Ajouter une réaction en MP |
+| DELETE  | `/conversations/messages/{id}/reactions`  | Retirer une réaction en MP |
 
 ### Invitations
 
 | Méthode | Endpoint                      | Description |
 |---------|-------------------------------|-------------|
-| POST    | `/servers/{id}/invites`       | Créer une invitation |
-| GET     | `/servers/{id}/invites`       | Liste des invitations du serveur |
-| GET     | `/invites/{code}`             | Détail d'une invitation |
-| POST    | `/invites/{code}/accept`      | Accepter une invitation |
-| POST    | `/invites/join`               | Rejoindre via un code |
+| POST    | `/servers/{id}/invites`   | Créer une invitation |
+| GET     | `/servers/{id}/invites`   | Liste des invitations du serveur |
+| GET     | `/invites/{code}`         | Détail d'une invitation |
+| POST    | `/invites/{code}/accept`  | Accepter une invitation |
 
 ### WebSocket
 
 Connexion : `WS /ws` avec JWT en paramètre. Une fois connecté, le client rejoint des canaux et reçoit les événements en temps réel.
 
-Événements : `MESSAGE_CREATE`, `MESSAGE_UPDATE`, `MESSAGE_DELETE`, `TYPING_START`, `TYPING_STOP`, `PRESENCE_UPDATE`.
+Événements principaux :
+- `MESSAGE_CREATE`, `MESSAGE_UPDATE`, `MESSAGE_DELETE`, `MESSAGE_REACTION_UPDATE`
+- `DIRECT_MESSAGE_CREATE`, `DIRECT_MESSAGE_UPDATE`, `DIRECT_MESSAGE_DELETE`, `DIRECT_MESSAGE_REACTION_UPDATE`
+- `TYPING_START`, `TYPING_STOP`, `PRESENCE_UPDATE`
 
 ---
 
 ## 6. Base de données
 
+### Vue d'ensemble du modèle relationnel
+
+```mermaid
+erDiagram
+    users ||--o{ servers : owns
+    users ||--o{ server_members : joins
+    servers ||--o{ server_members : contains
+    servers ||--o{ channels : contains
+    users ||--o{ invites : creates
+    servers ||--o{ invites : exposes
+    users ||--o{ server_bans : targets
+    users ||--o{ server_bans : issues
+    servers ||--o{ server_bans : applies
+    users ||--o{ direct_messages : starts
+    users ||--o{ direct_messages : receives
+
+    users {
+        uuid id PK
+        string email
+        string password_hash
+        string username
+        string avatar_url
+        string status
+        timestamp created_at
+    }
+
+    servers {
+        uuid id PK
+        string name
+        uuid owner_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    server_members {
+        uuid server_id
+        uuid user_id
+        string role
+        timestamp joined_at
+    }
+
+    channels {
+        uuid id PK
+        uuid server_id FK
+        string name
+        int position
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    invites {
+        uuid id PK
+        uuid server_id FK
+        string code
+        uuid created_by FK
+        timestamp expires_at
+        int max_uses
+        int uses
+        bool revoked
+        timestamp created_at
+    }
+
+    server_bans {
+        uuid server_id
+        uuid user_id
+        uuid banned_by
+        string reason
+        timestamp expires_at
+        timestamp banned_at
+    }
+
+    direct_messages {
+        uuid id PK
+        uuid user_one_id FK
+        uuid user_two_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+```
+
 **PostgreSQL** (schéma complet dans `backend/migrations/init.sql`) :
 
-- **users** — id (UUID), email, password_hash, username, avatar_url, status (enum: online/offline/dnd/invisible), created_at
+- **users** — id (UUID), email, password_hash, username, avatar_url, status (enum: Online/Offline/Dnd/Invisible), created_at
 - **servers** — id (UUID), name, owner_id (FK users), created_at, updated_at
 - **server_members** — server_id + user_id (PK composite), role (enum: owner/admin/member), joined_at
 - **channels** — id (UUID), server_id (FK servers), name, position, created_at, updated_at
@@ -271,19 +417,84 @@ Les historiques de messages de canaux et de conversations privées sont stockés
 
 ## 7. Tests et qualité
 
+Commandes utiles :
+
 ```bash
 cd backend && cargo test
+cd frontend && npm run lint
+cd frontend && npm run build
 ```
 
 **CI/CD** (GitHub Actions sur push vers `main`) :
 - Backend : build Rust, tests, clippy, fmt, cargo-audit
-- Frontend : ESLint, build Next.js, npm audit
+- Frontend : ESLint, build Next.js statique, npm audit
 
 **Qualité de code** : `cargo fmt` + `cargo clippy` (Rust), ESLint (TypeScript).
 
-----
+---
 
-## 8. A propos
+## 8. Checklist De Notation
+
+Source : [docs/specifications/grading-criteria.md](docs/specifications/grading-criteria.md)
+
+Pré-remplissage au 24/04/2026 : cocher/décocher définitivement pendant le rendu avec preuve, démo ou livrable.
+
+### Milestones
+
+- [ ] `milestone_1` : First milestone achieved and complete
+- [ ] `milestone_2` : Second milestone achieved and complete
+- [ ] `milestone_3` : Third milestone achieved and complete
+
+### Web
+
+- [x] `web_server` : serveur NodeJS ou Rust avec connexions simultanées
+- [x] `web_client` : client ReactJS ou NextJS connecté au serveur
+- [x] `web_core_features` : kick, bans temporaires / permanents, édition de message
+- [x] `web_multilingual` : interface en au moins 2 langues
+- [x] `web_api_integration` : API GIF intégrée
+- [x] `web_pm` : messages privés entre utilisateurs
+- [x] `web_reactions` : réactions emoji sur les messages
+
+### Desktop
+
+- [ ] `desktop_app` : application desktop livrable et fonctionnelle
+- [ ] `desktop_specs` : Tauri ou Electron connecté au serveur
+- [ ] `desktop_multilingual` : desktop traduit (au moins 2 langues)
+- [ ] `desktop_notifications` : notifications desktop
+
+### Tests
+
+- [ ] `tests_unit` : au moins 70% du code testé
+- [ ] `tests_sequence` : séquence de test livrée et facile à lancer
+- [x] `tests_automation` : tests automatisés en CI
+- [ ] `tests_coverage` : mesure de couverture livrée
+
+### Repo
+
+- [x] `repo_versioning` : workflow Git, commits réguliers, messages descriptifs, `.gitignore`
+- [ ] `repo_secrets` : audit final des secrets à valider avant rendu
+- [ ] `repo_cicd` : build/tests automatiques sur création de tag
+- [x] `repo_doc` : README/documentation newcomer-friendly
+
+### Code
+
+- [ ] `code_style` : conformité aux bonnes pratiques et standards
+- [ ] `code_maintainability` : maintenabilité, lisibilité, atomicité, structure claire
+
+### Présentation
+
+- [ ] `proj_pres` : présentation professionnelle (slides/demo)
+- [ ] `proj_review` : une feature revue pendant la présentation
+- [ ] `proj_answers` : capacité à répondre aux questions
+- [ ] `proj_orga` : preuve d'organisation projet (board, commits, etc.)
+
+### Extras
+
+- [ ] `extra_small` : au moins 1 feature extra
+- [ ] `extra_medium` : au moins 3 features extra
+- [ ] `extra_large` : plus de 5 features extra
+
+## 9. A propos
 
 Projet pédagogique Epitech Pre-MSc.
 

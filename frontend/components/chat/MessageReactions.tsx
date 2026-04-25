@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import EmojiPicker, { SkinTones, Theme } from "emoji-picker-react";
-import { MessageReaction } from "@/lib/api-server";
+import { MessageReaction } from "@/lib/api-client";
 
 interface MessageReactionsProps {
   messageId: string;

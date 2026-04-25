@@ -19,7 +19,7 @@ skinparam arrow {
 }
 
 ' ================== POSTGRESQL ==================
-package "PostgreSQL (Source of Truth)" {
+package "PostgreSQL (Sourde de Vérité)" {
 
   entity "users" as users {
     + id : UUID <<PK>>
@@ -45,8 +45,18 @@ package "PostgreSQL (Source of Truth)" {
     + server_id : UUID <<PK, FK>>
     + user_id : UUID <<PK, FK>>
     --
-    role : ENUM(OWNER, ADMIN, MEMBER)
+    role : ENUM(owner, admin, member)
     joined_at : TIMESTAMP
+  }
+
+  entity "server_bans" as bans {
+    + server_id : UUID <<PK, FK>>
+    + user_id : UUID <<PK, FK>>
+    --
+    # banned_by : UUID <<FK>>
+    reason : VARCHAR?
+    expires_at : TIMESTAMP?
+    banned_at : TIMESTAMP
   }
 
   entity "channels" as channels {
@@ -67,7 +77,16 @@ package "PostgreSQL (Source of Truth)" {
     # created_by : UUID <<FK>>
     expires_at : TIMESTAMP?
     max_uses : INT?
-    uses_count : INT
+    uses : INT
+    revoked : BOOLEAN
+    created_at : TIMESTAMP
+  }
+
+  entity "direct_messages" as dms {
+    + id : UUID <<PK>>
+    --
+    # user1_id : UUID <<FK>>
+    # user2_id : UUID <<FK>>
     created_at : TIMESTAMP
   }
 
@@ -78,10 +97,13 @@ package "PostgreSQL (Source of Truth)" {
   servers ||--o{ channels : contains
   servers ||--o{ invites  : has
   users   ||--o{ invites  : creates
+  servers ||--o{ bans     : blacklists
+  users   ||--o{ bans     : is banned
+  users   ||--o{ dms      : participates
 }
 
 ' ================== MONGODB ==================
-package "MongoDB (Message History)" #553333 {
+package "MongoDB (Historique & Messages)" #553333 {
 
   entity "channel_messages" as ch_msg {
     + _id : ObjectId
@@ -91,10 +113,23 @@ package "MongoDB (Message History)" #553333 {
     server_id : UUID
     author_id : UUID
     content : TEXT
+    reactions : ARRAY
     created_at : TIMESTAMP
     edited_at : TIMESTAMP?
     deleted_at : TIMESTAMP?
     deleted_by : UUID?
+  }
+
+  entity "dm_messages" as dm_msg {
+    + _id : ObjectId
+    --
+    message_id : UUID <<UNIQUE>>
+    dm_id : UUID
+    author_id : UUID
+    content : TEXT
+    reactions : ARRAY
+    created_at : TIMESTAMP
+    deleted_at : TIMESTAMP?
   }
 }
 
@@ -102,5 +137,6 @@ package "MongoDB (Message History)" #553333 {
 channels ..> ch_msg : channel_id (logical)
 servers  ..> ch_msg : server_id (logical)
 users    ..> ch_msg : author_id (logical)
+dms      ..> dm_msg : dm_id (logical)
 
 @enduml

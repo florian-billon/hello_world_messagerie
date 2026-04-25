@@ -21,16 +21,16 @@ hide empty methods
 
 package "PostgreSQL" {
   enum UserStatus {
-    ONLINE
-    OFFLINE
-    DND
-    INVISIBLE
+    Online
+    Offline
+    Dnd
+    Invisible
   }
 
   enum MemberRole {
-    OWNER
-    ADMIN
-    MEMBER
+    owner
+    admin
+    member
   }
 
   class User {
@@ -58,6 +58,15 @@ package "PostgreSQL" {
     - joined_at: DateTime
   }
 
+  class ServerBan {
+    - server_id: UUID
+    - user_id: UUID
+    - banned_by: UUID
+    - reason: String?
+    - expires_at: DateTime?
+    - banned_at: DateTime
+  }
+
   class Channel {
     - id: UUID
     - server_id: UUID
@@ -74,7 +83,15 @@ package "PostgreSQL" {
     - created_by: UUID
     - expires_at: DateTime?
     - max_uses: Int?
-    - uses_count: Int
+    - uses: Int
+    - revoked: Boolean
+    - created_at: DateTime
+  }
+
+  class DirectMessage {
+    - id: UUID
+    - user1_id: UUID
+    - user2_id: UUID
     - created_at: DateTime
   }
 }
@@ -86,10 +103,22 @@ package "MongoDB" {
     - channel_id: UUID
     - author_id: UUID
     - content: String
+    - reactions: List<Emoji>
     - created_at: DateTime
     - edited_at: DateTime?
     - deleted_at: DateTime?
     - deleted_by: UUID?
+  }
+
+  class DMMessage {
+    - message_id: UUID
+    - dm_id: UUID
+    - author_id: UUID
+    - content: String
+    - reactions: List<Emoji>
+    - created_at: DateTime
+    - edited_at: DateTime?
+    - deleted_at: DateTime?
   }
 }
 
@@ -97,11 +126,18 @@ package "MongoDB" {
 User "1" <-- "0..*" Server : owner_id
 User "1" <-- "0..*" ServerMember
 Server "1" <-- "0..*" ServerMember
-Server "1" <-- "0..*" Channel
-Server "1" <-- "0..*" Invite
-User "1" <-- "0..*" Invite : created_by
+Server "1" <-- "1..*" ServerBan
+User "1" <-- "1..*" ServerBan : target
+Server "1" <-- "1..*" Channel
+Server "1" <-- "1..*" Invite
+User "1" <-- "1..*" Invite : created_by
 Channel "1" <-- "0..*" ChannelMessage
 Server "1" <-- "0..*" ChannelMessage
 User "1" <-- "0..*" ChannelMessage : author_id
+
+User "1" <-- "0..*" DirectMessage : user1
+User "1" <-- "0..*" DirectMessage : user2
+DirectMessage "1" <-- "0..*" DMMessage
+User "1" <-- "0..*" DMMessage : author
 
 @enduml

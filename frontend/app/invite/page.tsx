@@ -1,31 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getInvite, acceptInvite } from "@/lib/api-server";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { getInvite, acceptInvite } from "@/lib/api-client";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import Button from "@/components/ui/Button";
 
-interface InviteData {
-  code: string;
-  server_id: string;
-  max_uses: number | null;
-  uses: number;
-  expires_at: string | null;
-}
-
-export default function InvitePage({
-  params,
-}: {
-  params: Promise<{ code: string }>;
-}) {
+function InvitePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [invite, setInvite] = useState<InviteData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
-  const [code, setCode] = useState<string>("");
+  const code = searchParams.get("code")?.trim() || "";
 
   const isAuthRequiredError = (message: string) =>
     message === "error.authRequired" ||
@@ -41,16 +30,21 @@ export default function InvitePage({
   };
 
   useEffect(() => {
-    (async () => {
-      const { code: pCode } = await params;
-      setCode(pCode);
+    if (!code) {
+      setInvite(null);
+      setError(t("invite.invalidDescription"));
+      setLoading(false);
+      return;
+    }
+
+    void (async () => {
       try {
-        const data = await getInvite(pCode);
+        const data = await getInvite(code);
         setInvite(data);
       } catch (e: any) {
         const msg = String(e?.message || "");
         if (isAuthRequiredError(msg)) {
-          router.push(`/login?next=/invite/${pCode}`);
+          router.push(`/login?next=/invite?code=${encodeURIComponent(code)}`);
         } else {
           setError(t("invite.invalidDescription"));
         }
@@ -58,7 +52,7 @@ export default function InvitePage({
         setLoading(false);
       }
     })();
-  }, [params, router, t]);
+  }, [code, router, t]);
 
   const onJoin = async () => {
     if (!code) return;
@@ -69,7 +63,7 @@ export default function InvitePage({
     } catch (e: any) {
       const msg = String(e?.message || "");
       if (isAuthRequiredError(msg)) {
-        router.push(`/login?next=/invite/${code}`);
+        router.push(`/login?next=/invite?code=${encodeURIComponent(code)}`);
       } else if (msg.includes("Already a member")) {
         router.push("/");
       } else if (msg.includes("banned")) {
@@ -165,5 +159,21 @@ export default function InvitePage({
         </div>
       </div>
     </main>
+  );
+}
+
+interface InviteData {
+  code: string;
+  server_id: string;
+  max_uses: number | null;
+  uses: number;
+  expires_at: string | null;
+}
+
+export default function InvitePage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen" />}>
+      <InvitePageContent />
+    </Suspense>
   );
 }

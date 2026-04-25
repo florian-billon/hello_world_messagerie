@@ -5,7 +5,9 @@ use uuid::Uuid;
 const MIN_USERNAME_LENGTH: usize = 1;
 const MAX_USERNAME_LENGTH: usize = 32;
 const USERNAME_UNIQUE_CONSTRAINT: &str = "uq_users_username_normalized";
-const USERNAME_NORMALIZATION_MIGRATION_VERSION: i64 = 202604220001;
+const USERNAME_TRIMMED_CONSTRAINT: &str = "chk_users_username_trimmed";
+const USERNAME_LENGTH_CONSTRAINT: &str = "chk_users_username_length";
+const USERNAME_UNIQUE_INDEX: &str = "public.uq_users_username_normalized";
 const USERNAME_REPAIR_SEPARATOR: &str = "-";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,7 +41,7 @@ pub fn is_username_unique_violation(err: &SqlxError) -> bool {
 }
 
 pub async fn prepare_username_normalization(pool: &PgPool) -> Result<(), SqlxError> {
-    if !users_table_exists(pool).await? || username_normalization_migration_applied(pool).await? {
+    if !users_table_exists(pool).await? || username_normalization_schema_ready(pool).await? {
         return Ok(());
     }
 
@@ -80,22 +82,10 @@ async fn users_table_exists(pool: &PgPool) -> Result<bool, SqlxError> {
     table_exists(pool, "public.users").await
 }
 
-async fn username_normalization_migration_applied(pool: &PgPool) -> Result<bool, SqlxError> {
-    if !table_exists(pool, "public._sqlx_migrations").await? {
-        return Ok(false);
-    }
-
-    sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS (
-            SELECT 1
-            FROM _sqlx_migrations
-            WHERE version = $1
-              AND success
-        )",
-    )
-    .bind(USERNAME_NORMALIZATION_MIGRATION_VERSION)
-    .fetch_one(pool)
-    .await
+async fn username_normalization_schema_ready(pool: &PgPool) -> Result<bool, SqlxError> {
+    Ok(index_exists(pool, USERNAME_UNIQUE_INDEX).await?
+        && constraint_exists(pool, USERNAME_TRIMMED_CONSTRAINT).await?
+        && constraint_exists(pool, USERNAME_LENGTH_CONSTRAINT).await?)
 }
 
 async fn table_exists(pool: &PgPool, table_name: &str) -> Result<bool, SqlxError> {
@@ -103,6 +93,23 @@ async fn table_exists(pool: &PgPool, table_name: &str) -> Result<bool, SqlxError
         .bind(table_name)
         .fetch_one(pool)
         .await
+}
+
+async fn index_exists(pool: &PgPool, index_name: &str) -> Result<bool, SqlxError> {
+    table_exists(pool, index_name).await
+}
+
+async fn constraint_exists(pool: &PgPool, constraint_name: &str) -> Result<bool, SqlxError> {
+    sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = $1
+        )",
+    )
+    .bind(constraint_name)
+    .fetch_one(pool)
+    .await
 }
 
 fn plan_username_repairs(users: &[(Uuid, String)]) -> Vec<UsernameRepair> {

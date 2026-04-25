@@ -1,7 +1,7 @@
 //! Client WebSocket Gateway
 //! Gère la connexion, reconnexion, heartbeat, et dispatch des événements
 
-import { DirectMessage, Message } from "./api-server";
+import { DirectMessage, Message } from "./api-client";
 
 const HEARTBEAT_INTERVAL = 30000; // 30s
 const RECONNECT_DELAY_INITIAL = 1000; // 1s
@@ -102,11 +102,9 @@ export class Gateway {
       };
 
       this.ws.onerror = (error) => {
-        console.error("[Gateway] WebSocket error", {
-          url: wsUrl,
-          readyState: this.ws?.readyState,
-          eventType: (error as Event)?.type,
-        });
+        // En mode dev/navigateur, onerror ne donne pas de détails sur la raison (sécurité).
+        // On affiche donc un message clair sans l'objet Event qui s'affiche comme {}
+        console.warn(`[Gateway] WebSocket connection failed on ${wsUrl} (State: ${this.ws?.readyState})`);
       };
 
       this.ws.onclose = (event) => {

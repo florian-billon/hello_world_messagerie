@@ -1,7 +1,5 @@
-"use server";
-
-import { cookies } from "next/headers";
 import { API_URL } from "./config";
+import { getStoredToken } from "./token-storage";
 
 const RETRY_DELAY_MS = 300;
 
@@ -13,16 +11,12 @@ async function delay(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getToken(): Promise<string | null> {
-  const cookieStore = await cookies();
-  return cookieStore.get("token")?.value || null;
-}
-
 async function fetchApi<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  authenticate = true
 ): Promise<T> {
-  const token = await getToken();
+  const token = authenticate ? getStoredToken() : null;
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -54,20 +48,19 @@ async function fetchApi<T>(
       const errorText = await res.text();
       let errorMessage = `HTTP ${res.status}`;
       let errorDetails: string | undefined;
-      
+
       try {
         const errorData = JSON.parse(errorText);
         errorMessage = errorData.error || errorMessage;
         errorDetails = errorData.details;
-        
-        // Log pour debug (dev seulement)
-        if (process.env.NODE_ENV === 'development') {
-          console.error('[API Error]', {
+
+        if (process.env.NODE_ENV === "development") {
+          console.error("[API Error]", {
             endpoint,
             status: res.status,
             error: errorMessage,
             details: errorDetails,
-            fullResponse: errorData
+            fullResponse: errorData,
           });
         }
       } catch {
@@ -78,8 +71,7 @@ async function fetchApi<T>(
         errorMessage = "error.authRequired";
       }
 
-      // Construire le message d'erreur avec détails si disponibles
-      const fullErrorMessage = errorDetails 
+      const fullErrorMessage = errorDetails
         ? `${errorMessage}: ${errorDetails}`
         : errorMessage;
 
@@ -318,7 +310,7 @@ export async function kickMember(serverId: string, userId: string): Promise<void
 
 export interface BanMemberPayload {
   reason?: string | null;
-  expires_at?: string | null; // ISO string
+  expires_at?: string | null;
 }
 
 export interface ServerBan {
@@ -330,7 +322,11 @@ export interface ServerBan {
   banned_at: string;
 }
 
-export async function banMember(serverId: string, userId: string, payload: BanMemberPayload = {}): Promise<ServerBan> {
+export async function banMember(
+  serverId: string,
+  userId: string,
+  payload: BanMemberPayload = {}
+): Promise<ServerBan> {
   return fetchApi<ServerBan>(`/servers/${serverId}/members/${userId}/ban`, {
     method: "POST",
     body: JSON.stringify(payload),

@@ -8,7 +8,7 @@ import {
   updateChannel as apiUpdateChannel,
   deleteChannel as apiDeleteChannel,
   Channel,
-} from "@/lib/api-server";
+} from "@/lib/api-client";
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
 import { useTranslation } from "@/lib/i18n";
 
@@ -232,4 +232,3 @@ export function useChannels(serverId: string | null) {
     deleteChannel,
   };
 }
-

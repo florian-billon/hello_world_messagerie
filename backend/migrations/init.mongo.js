@@ -1,3 +1,6 @@
+// Canonical MongoDB bootstrap indexes for local/CI environments.
+// Keep this file aligned with the collections queried by the backend.
+
 db.channel_messages.createIndex(
   { "channel_id": 1, "created_at": -1 },
   { name: "idx_channel_messages_channel_created" }
@@ -27,6 +30,11 @@ db.channel_messages.createIndex(
 db.direct_message_items.createIndex(
   { "dm_id": 1, "created_at": -1 },
   { name: "idx_direct_message_items_dm_created" }
+);
+
+db.direct_message_items.createIndex(
+  { "dm_id": 1, "deleted_at": 1, "created_at": -1 },
+  { name: "idx_direct_message_items_dm_deleted_created" }
 );
 
 db.direct_message_items.createIndex(

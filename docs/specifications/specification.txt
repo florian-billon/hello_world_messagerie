@@ -1,0 +1,62 @@
+================================================================================
+hello-world-rtc — Technical Specification & Logic Dictionary (UPDATED)
+================================================================================
+Project: Full-Stack Real-Time Messaging System
+Tech Stack: Rust (Axum) + Next.js (React) + PostgreSQL + MongoDB
+
+--------------------------------------------------------------------------------
+1. CORE ARCHITECTURE
+--------------------------------------------------------------------------------
+- Clean Architecture implementation: Handlers (API) -> Services (Logic) -> Repositories (Data).
+- Separation of Concerns: 
+    - PostgreSQL: Strict relational data (Users, Servers, RBAC, Invites, DMs meta).
+    - MongoDB: High-volume unstructured data (Channel/DM message history, Reactions).
+- Auth: JWT based. Claims: sub (UUID), email (String), exp, iat.
+
+--------------------------------------------------------------------------------
+2. DATABASE MODELS (PostgreSQL)
+--------------------------------------------------------------------------------
+- users: id (UUID), username, email, password_hash, status (enum), avatar_url.
+- servers: id, name, owner_id (FK -> users).
+- server_members: server_id, user_id, role (OWNER/ADMIN/MEMBER).
+- server_bans: server_id, user_id, banned_by, reason, expires_at (NULL = Permanent).
+- channels: id, server_id, name, position.
+- invites: id, code (Unique), server_id, created_by, max_uses, uses, revoked (Bool).
+- direct_messages: id, user1_id, user2_id (Ordering: user1 < user2).
+
+--------------------------------------------------------------------------------
+3. DATABASE MODELS (MongoDB)
+--------------------------------------------------------------------------------
+- channel_messages: 
+    - Fields: message_id (UUID), channel_id, server_id, author_id, content, reactions (List), created_at, edited_at, deleted_at (Soft Delete).
+- dm_messages:
+    - Fields: message_id (UUID), dm_id, author_id, content, reactions, created_at, deleted_at.
+
+--------------------------------------------------------------------------------
+4. WEBSOCKET PROTOCOL
+--------------------------------------------------------------------------------
+- Structure: { "op": "EVENT_NAME", "d": { "payload_data" } }
+- Key Server Events:
+    - READY: Post-IDENTIFY success.
+    - MESSAGE_CREATE: Real-time broadcast.
+    - MESSAGE_UPDATE / MESSAGE_DELETE: Sync message state.
+    - PRESENCE_UPDATE: User status changes.
+    - TYPING_START / TYPING_STOP: Transient user signals.
+- Key Client Operations:
+    - IDENTIFY: Handshake with JWT.
+    - SUBSCRIBE: Join a channel room.
+    - HEARTBEAT: Connection stability.
+
+--------------------------------------------------------------------------------
+5. BUSINESS LOGIC RULES
+--------------------------------------------------------------------------------
+- RBAC: 
+    - OWNER: Full control, cannot leave (must transfer first).
+    - ADMIN: Manage channels, kick/ban members, delete any message.
+    - MEMBER: Chat, join/leave, delete own messages.
+- Cross-DB Consistency: Resolved via business logic layer; no cross-DB transactions.
+- Soft Delete: Messages are flagged with `deleted_at` across all store types.
+- **Tauri Readiness**: Frontend is a pure static export (No Next.js server runtime required).
+- **Internationalization**: Fully localized (FR/EN) with flag-based toggle on the client.
+
+EOF

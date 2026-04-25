@@ -3,19 +3,27 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { login } from "@/lib/auth/actions";
+import { useRouter } from "next/navigation";
+import { login } from "@/lib/auth/client";
+import { useRouteGuard } from "@/lib/auth/guards";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { useTranslation } from "@/lib/i18n";
 
 export default function LoginPage() {
+  const router = useRouter();
   const { t } = useTranslation();
+  const { ready } = useRouteGuard("guest");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+
+  if (!ready) {
+    return <main className="min-h-screen" />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +38,9 @@ export default function LoginPage() {
         return;
       }
 
+      const params = new URLSearchParams(window.location.search);
+      const redirectTarget = params.get("redirect") || params.get("next") || "/";
+      router.replace(redirectTarget);
       return;
     } catch {
       setError(t("auth.login.error"));

@@ -2,12 +2,13 @@
 import { useRouter } from "next/navigation"; // Ajoute cette ligne avec les autres imports
 import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
-import { logout } from "@/lib/auth/actions";
+import { logout } from "@/lib/auth/client";
+import { useRouteGuard } from "@/lib/auth/guards";
 import { useServers, useChannels, useMessages, useMembers, useAuth, useFriends } from "@/hooks";
 import ProfileCard from "@/components/ProfileCard";
 import PublicProfileCard from "@/components/PublicProfileCard";
 import InviteModal from "@/modals/InviteModal";
-import { User } from "@/lib/api-server";
+import { User } from "@/lib/api-client";
 import { getAvatar, normalizeAvatarUrl } from "@/lib/avatar";
 import { getStatusColor, getStatusKey, normalizeStatus } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
@@ -23,6 +24,7 @@ import GifPicker from "@/components/chat/GifPicker";
 export default function Home() {
   const router = useRouter(); // Initialisation du router
   const { t, locale } = useTranslation();
+  const { ready: guardReady } = useRouteGuard("protected");
   const { user } = useAuth();
   const { friends, refreshFriends } = useFriends();
   const {
@@ -60,6 +62,10 @@ export default function Home() {
   const [newServerName, setNewServerName] = useState("");
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
+  const [channelSearchState, setChannelSearchState] = useState<{ serverId: string | null; value: string }>({
+    serverId: null,
+    value: "",
+  });
   const [messageInput, setMessageInput] = useState("");
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -85,6 +91,11 @@ export default function Home() {
   const transferCandidates = members.filter((member) => member.user_id !== viewerId);
   const viewerRole = members.find((member) => member.user_id === viewerId)?.role;
   const canManageChannels = viewerRole === "Owner" || viewerRole === "Admin";
+  const channelSearch = selectedServer?.id && channelSearchState.serverId === selectedServer.id ? channelSearchState.value : "";
+  const normalizedChannelSearch = channelSearch.trim().toLowerCase();
+  const visibleChannels = normalizedChannelSearch
+    ? channels.filter((channel) => channel.name.toLowerCase().includes(normalizedChannelSearch))
+    : channels;
 
   const scheduleTypingStop = useCallback(() => {
     if (typingStopTimeoutRef.current) clearTimeout(typingStopTimeoutRef.current);
@@ -193,7 +204,7 @@ export default function Home() {
     setMessageToDelete(null);
   };
 
-  if (serversLoading) {
+  if (!guardReady || serversLoading) {
     return (
       <main className="flex w-full h-screen gap-2 p-2 items-center justify-center">
         <div className="text-center">
@@ -214,7 +225,7 @@ export default function Home() {
         {/* Logo */}
         <button
           onClick={() => selectServer(null)}
-          className="w-12 h-12 rounded-2xl bg-[#4fdfff]/10 border border-[#4fdfff]/50 flex items-center justify-center mb-2 hover:rounded-xl hover:bg-[#4fdfff]/20 transition-all cursor-pointer group"
+          className="w-12 h-12 flex items-center justify-center mb-2 cursor-pointer group bg-transparent border-0 shadow-none p-0"
           title={t("common.appName")}
         >
           <Image
@@ -247,7 +258,6 @@ export default function Home() {
                 <span className="text-lg font-bold">{friend.username.charAt(0).toUpperCase()}</span>
               )}
               <span className={`absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border border-[rgba(5,10,15,0.95)] ${getStatusColor(friend.status)}`} />
-              <span className="absolute left-0 w-1 h-0 bg-[#4fdfff] rounded-r transition-all group-hover:h-5" />
             </button>
           ))}
 
@@ -264,260 +274,236 @@ export default function Home() {
               title={server.name}
             >
               {server.name.charAt(0).toUpperCase()}
-              {/* Indicator bar */}
-              <span
-                className={`absolute left-0 w-1 bg-[#4fdfff] rounded-r transition-all ${selectedServer?.id === server.id ? "h-10" : "h-0 group-hover:h-5"
-                  }`}
-              />
             </button>
           ))}
         </div>
 
-        {/* Add server button */}
-        <button
-          onClick={() => setShowCreateServer(true)}
-          className="w-12 h-12 rounded-[24px] bg-[rgba(20,30,40,0.8)] border border-dashed border-[#4fdfff]/30 flex items-center justify-center text-[#4fdfff] hover:bg-[#4fdfff]/10 hover:border-[#4fdfff] hover:rounded-xl transition-all group"
-          title={t("server.createTooltip")}
-        >
-          <span className="text-2xl group-hover:rotate-90 transition-transform">+</span>
-        </button>
+        {/* Bottom Actions */}
+        <div className="mt-auto flex flex-col items-center gap-2 pb-2">
+          <button
+            onClick={() => router.push('/messages')}
+            className="w-12 h-12 rounded-[24px] bg-[rgba(20,30,40,0.8)] text-[#4fdfff] flex items-center justify-center hover:bg-[#4fdfff]/15 hover:border hover:border-[#4fdfff]/30 transition-all group"
+            title={t("dm.title")}
+          >
+            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </button>
 
-        {/* Logout */}
-        <button
-          onClick={() => logout()}
-          className="w-12 h-12 rounded-[24px] bg-[rgba(40,10,10,0.8)] flex items-center justify-center text-[#ff3333] hover:bg-[#ff3333]/20 hover:rounded-xl transition-all mt-2"
-          title={t("auth.logout")}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-        </button>
+          {/* Profil utilisateur */}
+          <button
+            onClick={() => setShowProfile(true)}
+            className="w-12 h-12 rounded-[24px] relative group border border-[#4fdfff]/30 hover:border-[#4fdfff] transition-all"
+            title={t("profile.title")}
+          >
+            <div className="w-full h-full rounded-[24px] overflow-hidden">
+              {user?.avatar_url ? (
+                <SmartImg
+                  src={normalizeAvatarUrl(user.avatar_url) || ''}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#4fdfff]/10 flex items-center justify-center">
+                  <span className="text-[#4fdfff] font-bold">
+                    {user?.username?.charAt(0).toUpperCase() || "?"}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div
+              className={`absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-[rgba(5,10,15,0.95)] rounded-full z-10 ${getStatusColor(user?.status)}`}
+            />
+          </button>
+
+          <button
+            onClick={() => logout()}
+            className="w-12 h-12 rounded-[24px] bg-[rgba(40,10,10,0.8)] flex items-center justify-center text-[#ff3333] hover:bg-[#ff3333]/20 hover:rounded-xl transition-all"
+            title={t("auth.logout")}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
+        </div>
       </aside>
 
-     {/* ========== CHANNEL SIDEBAR (240px) ========== */}
-<aside className="w-60 bg-[rgba(5,10,15,0.95)] border-r border-[#4fdfff]/20 flex flex-col">
-  {selectedServer ? (
-    <>
-      {/* Server header avec dropdown */}
-      <div className="relative h-12 px-4 flex items-center border-b border-[#4fdfff]/30 shadow-lg bg-[rgba(0,0,0,0.3)]">
-        <h2 className="font-bold text-white truncate flex-1">{selectedServer.name}</h2>
-        <button
-          type="button"
-          onClick={() => setShowServerMenu((v) => !v)}
-          className="text-[#4fdfff] text-xs font-mono hover:text-white transition-colors px-1"
-          title={t("server.options")}
-        >
-          ▼
-        </button>
-        {/* ... menu déroulant du serveur ... */}
-        {showServerMenu && (
+      {/* ========== CHANNEL SIDEBAR (240px) ========== */}
+      <aside className="w-60 bg-[rgba(5,10,15,0.95)] border-r border-[#4fdfff]/20 flex flex-col min-h-0">
+        {selectedServer ? (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setShowServerMenu(false)} />
-            <div className="absolute top-12 right-2 z-50 bg-[rgba(15,20,25,0.98)] border border-[#4fdfff]/30 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.8)] py-1 min-w-[180px]">
-              {!isServerOwner && (
+            {/* Server header avec bouton channel (+) et Delete Server (si owner) */}
+            <div className="h-12 px-4 flex items-center justify-between border-b border-[#4fdfff]/30 shadow-lg bg-[rgba(0,0,0,0.3)]">
+              <h2 className="font-bold text-white truncate flex-1 uppercase tracking-widest text-[10px]">channels</h2>
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowServerMenu(false);
-                    setLeaveModalError(null);
-                    setNewOwnerIdForLeave("");
-                    setShowLeaveConfirm(true);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-[#ff3333] hover:bg-[#ff3333]/10 transition-colors"
+                  onClick={() => setShowCreateChannel(true)}
+                  className="text-[#4fdfff] hover:text-white transition-colors text-xl font-bold"
+                  title={t("channel.createTooltip")}
                 >
-                  {t("server.leave")}
+                  +
                 </button>
-              )}
-              {isServerOwner && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowServerMenu(false);
-                    setLeaveModalError(null);
-                    setNewOwnerIdForLeave(transferCandidates[0]?.user_id || "");
-                    setShowLeaveConfirm(true);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-[#ff3333] hover:bg-[#ff3333]/10 transition-colors"
-                >
-                  {t("server.leave")}
-                </button>
-              )}
-              {isServerOwner && (
-                <button
-                  type="button"
-                  onClick={() => { setShowServerMenu(false); setShowDeleteConfirm(true); }}
-                  className="w-full text-left px-4 py-2 text-sm text-[#ff3333]/70 hover:bg-[#ff3333]/10 transition-colors"
-                >
-                  {t("server.delete")}
-                </button>
-              )}
+              </div>
+            </div>
+
+            {/* Channels */}
+            <div className="flex-1 overflow-y-auto p-2 min-h-0">
+              <div className="px-2 mb-3">
+                <input
+                  type="text"
+                  value={channelSearch}
+                  onChange={(e) =>
+                    setChannelSearchState({
+                      serverId: selectedServer?.id ?? null,
+                      value: e.target.value,
+                    })
+                  }
+                  placeholder={t("channel.searchPlaceholder")}
+                  className="w-full bg-black/40 border border-[#4fdfff]/20 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#4fdfff]/50"
+                />
+              </div>
+
+              <div className="flex items-center justify-between px-2 mb-2">
+                {/* CREATE CHANNEL BUTTON MOVED TO HEADER */}
+              </div>
+
+              <div className="space-y-[2px]">
+                {/* ... liste des canaux ... */}
+                {channelsLoading ? (
+                  <div className="px-2 py-2 text-white/40 text-sm">{t("common.loading")}</div>
+                ) : channelsError ? (
+                  <div className="px-2 py-2 text-[#ff3333] text-sm">{channelsError}</div>
+                ) : channels.length === 0 ? (
+                  <div className="px-2 py-2 text-white/40 text-sm italic">{t("chat.noChannel")}</div>
+                ) : visibleChannels.length === 0 ? (
+                  <div className="px-2 py-2 text-white/40 text-sm italic">{t("channel.noResults")}</div>
+                ) : (
+                  visibleChannels.map((channel) => (
+                    <div
+                      key={channel.id}
+                      className={`group w-full flex items-center rounded transition-colors ${selectedChannel?.id === channel.id
+                        ? "bg-[#4fdfff]/15"
+                        : "hover:bg-white/5"
+                        }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => selectChannel(channel)}
+                        className={`flex-1 text-left px-2 py-1.5 flex items-center gap-2 ${selectedChannel?.id === channel.id
+                          ? "text-white"
+                          : "text-white/60 group-hover:text-white"
+                          }`}
+                      >
+                        <svg className="w-4 h-4 text-white/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" /><line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" />
+                        </svg>
+                        <span className="truncate text-sm">{channel.name}</span>
+                      </button>
+
+                      {/* Actions Server & Channel sur hover */}
+                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2 pr-2 transition-all">
+                        {/* Leave Server (Icon Logout) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLeaveModalError(null);
+                            if (isServerOwner) {
+                              setNewOwnerIdForLeave(transferCandidates[0]?.user_id || "");
+                            } else {
+                              setNewOwnerIdForLeave("");
+                            }
+                            setShowLeaveConfirm(true);
+                          }}
+                          className="text-white/30 hover:text-[#ff3333] transition-colors"
+                          title={t("server.leave")}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                        </button>
+
+                        {/* Delete Channel (Manager only) */}
+                        {canManageChannels && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteChannel(channel.id, channel.name);
+                            }}
+                            className="text-white/20 hover:text-[#ff3333] transition-colors"
+                            title={t("channel.deleteTooltip")}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Header Bandeau Channels (Home) */}
+            <div className="h-12 px-4 flex items-center justify-between border-b border-[#4fdfff]/30 shadow-lg bg-[rgba(0,0,0,0.3)]">
+              <h2 className="font-bold text-white truncate flex-1 uppercase tracking-widest text-[10px]">channels</h2>
+              <button
+                onClick={() => setShowCreateServer(true)}
+                className="text-[#4fdfff] hover:text-white transition-colors text-xl font-bold"
+                title={t("server.createTooltip")}
+              >
+                +
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2 min-h-0">
+              <div className="px-2 mb-3">
+                <input
+                  type="text"
+                  value=""
+                  placeholder={t("channel.searchPlaceholder")}
+                  disabled
+                  readOnly
+                  className="w-full bg-black/40 border border-[#4fdfff]/20 rounded px-2 py-1.5 text-xs text-white outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+                />
+              </div>
             </div>
           </>
         )}
-      </div>
+      </aside>
 
-      {/* Channels */}
-      <div className="flex-1 overflow-y-auto p-2">
-        <div className="flex items-center justify-between px-2 mb-2">
-          <span className="text-[10px] font-bold text-white/50 tracking-widest uppercase">
-            {t("channel.textChannels")}
-          </span>
-          <button
-            onClick={() => setShowCreateChannel(true)}
-            className="text-white/50 hover:text-[#4fdfff] transition-colors text-lg font-bold"
-            title={t("channel.createTooltip")}
-          >
-            +
-          </button>
-        </div>
-
-        <div className="space-y-[2px]">
-          {/* ... liste des canaux ... */}
-          {channelsLoading ? (
-            <div className="px-2 py-2 text-white/40 text-sm">{t("common.loading")}</div>
-          ) : channelsError ? (
-            <div className="px-2 py-2 text-[#ff3333] text-sm">{channelsError}</div>
-          ) : channels.length === 0 ? (
-            <div className="px-2 py-2 text-white/40 text-sm italic">{t("chat.noChannel")}</div>
-          ) : (
-            channels.map((channel) => (
-              <div
-                key={channel.id}
-                className={`group w-full flex items-center rounded transition-colors ${selectedChannel?.id === channel.id
-                  ? "bg-[#4fdfff]/15"
-                  : "hover:bg-white/5"
-                  }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => selectChannel(channel)}
-                  className={`flex-1 text-left px-2 py-1.5 flex items-center gap-2 ${selectedChannel?.id === channel.id
-                    ? "text-white"
-                    : "text-white/60 group-hover:text-white"
-                    }`}
-                >
-                  <span className="text-white/40">#</span>
-                  <span className="truncate text-sm">{channel.name}</span>
-                </button>
-                {canManageChannels && (
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteChannel(channel.id, channel.name)}
-                    className="opacity-0 group-hover:opacity-100 pr-2 text-white/30 hover:text-[#ff3333] transition-all"
-                    title={t("channel.deleteTooltip")}
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </>
-  ) : (
-    <div className="flex-1 flex flex-col items-center justify-center">
-      <p className="text-white/20 text-xs text-center px-4 italic">
-        {t("chat.selectServerForChannels")}
-      </p>
-    </div>
-  )}
-  
-  {/* User info footer (Toujours visible) */}
-    <div className="h-14 px-2 flex items-center gap-2 bg-[rgba(0,0,0,0.5)] border-t border-[#4fdfff]/20">
-      {/* BLOC PROFIL */}
-      <button
-        onClick={() => setShowProfile(true)}
-        className="flex items-center gap-2 flex-1 min-w-0 hover:bg-white/5 rounded p-1 transition-colors text-left"
-      >
-        <div className="relative flex-shrink-0">
-          {(currentUser || user)?.avatar_url ? (
-            <SmartImg
-              src={normalizeAvatarUrl((currentUser || user)?.avatar_url) || ''}
-              alt="Avatar"
-              className="w-8 h-8 rounded-full object-cover border border-[#4fdfff]/50"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-[#4fdfff]/20 border border-[#4fdfff]/50 flex items-center justify-center">
-              <span className="text-[#4fdfff] text-xs font-bold">
-                {(currentUser || user)?.username?.charAt(0).toUpperCase() || "?"}
-              </span>
-            </div>
-          )}
-          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[rgba(5,10,15,0.95)] rounded-full ${getStatusColor((currentUser || user)?.status)}`} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white truncate">
-            {(currentUser || user)?.username || t("chat.guest")}
-          </p>
-          <p className="text-[10px] text-[#4fdfff] font-mono uppercase">
-            {t(getStatusKey((currentUser || user)?.status))}
-          </p>
-        </div>
-      </button>
-
-      {/* ----- NOUVEAU BOUTON MP (Placé à droite du profil) ----- */}
-      <button
-        onClick={() => router.push('/messages')}
-        className="p-2 text-[#4fdfff] hover:bg-[#4fdfff]/10 rounded-lg transition-all group"
-        title="Messages Privés"
-      >
-        <svg 
-          className="w-5 h-5 group-hover:scale-110 transition-transform" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" 
-          />
-        </svg>
-      </button>
-    </div>
-  </aside>
       {/* ========== CHAT CENTER ========== */}
       <div className="flex-1 flex flex-col bg-[rgba(10,15,20,0.98)]">
         {/* Header */}
-        <header className="h-12 px-4 flex items-center border-b border-[#4fdfff]/20 bg-[rgba(0,0,0,0.3)] shadow-sm">
-          <h1 className="text-white font-semibold text-sm flex items-center gap-2">
-            {selectedChannel ? (
-              <>
-                <span className="text-white/40">#</span>
-                <span>{selectedChannel.name}</span>
-              </>
-            ) : selectedServer ? (
-              <>
-                <span className="text-[#4fdfff]">{selectedServer.name}</span>
-                <span className="text-white/40 text-xs font-normal">- {t("chat.selectChannel")}</span>
-              </>
-            ) : (
-              <>
-                <span className="text-[#4fdfff]">{t("common.appName")}</span>
-                <span className="text-white/40 text-xs font-normal">- {t("chat.selectServer")}</span>
-              </>
-            )}
-          </h1>
-        </header>
 
         {/* Messages area */}
         <div className="flex-1 overflow-y-auto p-4">
           {!selectedChannel ? (
             <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-24 h-24 rounded-full bg-[#4fdfff]/10 border-2 border-[#4fdfff]/30 flex items-center justify-center mb-6 mx-auto">
-                  <span className="text-5xl text-[#4fdfff]">#</span>
+              <div className="text-center group">
+                <div className="w-32 h-32 rounded-full bg-[#4fdfff]/5 border-2 border-[#4fdfff]/20 flex items-center justify-center mb-8 mx-auto relative overflow-hidden">
+                  <div className="absolute inset-0 bg-[#4fdfff]/5 blur-xl group-hover:blur-2xl transition-all" />
+                  <svg className="w-16 h-16 text-[#4fdfff] relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 3h7v7H3z" /><path d="M14 3h7v7h-7z" /><path d="M14 14h7v7h-7z" /><path d="M3 14h7v7H3z" />
+                  </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  {selectedServer ? t("chat.selectChannel") : t("chat.selectServer")}
-                </h2>
-                <p className="text-white/50 text-sm">
-                  {selectedServer ? t("chat.selectChannelPrompt") : t("chat.selectServerPrompt")}
-                </p>
+                <div className="flex flex-col items-center">
+                  <h2 className="text-3xl font-bold text-white mb-2">{t("chat.selectServer")}</h2>
+                  <p className="text-white/40 text-sm max-w-sm mx-auto leading-relaxed">{t("chat.selectServerPrompt")}</p>
+                  <Button 
+                    onClick={() => setShowCreateServer(true)} 
+                    variant="outline" 
+                    className="mt-8 border-[#4fdfff] text-[#4fdfff] px-8 py-6 text-lg hover:bg-[#4fdfff]/10 transition-all font-bold mx-auto"
+                  >
+                    {t("chat.createServerButton")}
+                  </Button>
+                </div>
               </div>
             </div>
           ) : messagesLoading ? (
@@ -631,8 +617,11 @@ export default function Home() {
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center px-4">
-              <div className="w-20 h-20 rounded-full bg-[#4fdfff]/10 border-2 border-[#4fdfff]/30 flex items-center justify-center mb-4">
-                <span className="text-4xl text-[#4fdfff]">#</span>
+              <div className="w-32 h-32 rounded-full bg-[#4fdfff]/5 border-2 border-[#4fdfff]/20 flex items-center justify-center mb-8 mx-auto relative overflow-hidden group">
+                <div className="absolute inset-0 bg-[#4fdfff]/5 blur-xl group-hover:blur-2xl transition-all" />
+                <svg className="w-16 h-16 text-[#4fdfff] relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" /><line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" />
+                </svg>
               </div>
               <h4 className="text-xl font-semibold text-white mb-2">
                 {t("chat.welcomeChannel", { channelName: selectedChannel.name })}
@@ -684,15 +673,19 @@ export default function Home() {
                 >
                   GIF
                 </button>
-                <input
-                  type="text"
-                  value={messageInput}
-                  onChange={handleInputChange}
-                  onFocus={handleInputFocus}
-                  onBlur={handleInputBlur}
-                  placeholder={t("chat.messagePlaceholder", { channelName: selectedChannel.name })}
-                  className="flex-1 px-4 py-2.5 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white placeholder:text-white/40 outline-none focus:border-[#4fdfff] focus:bg-[rgba(20,20,20,0.95)] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
-                />
+                <div className="relative flex-1">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" /><line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" />
+                    </svg>
+                  </div>
+                  <input
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    placeholder={selectedChannel ? `Message #${selectedChannel.name}` : t("chat.messagePlaceholder")}
+                    className="w-full pl-10 pr-4 py-2.5 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white placeholder:text-white/40 outline-none focus:border-[#4fdfff] focus:bg-[rgba(20,20,20,0.95)] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
+                  />
+                </div>
               </form>
             </div>
           </footer>
@@ -700,7 +693,7 @@ export default function Home() {
       </div>
 
       {/* ========== MEMBERS SIDEBAR (240px) ========== */}
-      {selectedServer ? (
+      {selectedServer && (
         <aside className="w-60 bg-[rgba(5,10,15,0.95)] border-l border-[#4fdfff]/20 flex flex-col">
           {/* Header */}
           <div className="h-12 px-4 flex items-center justify-between border-b border-[#4fdfff]/20 bg-[rgba(0,0,0,0.3)]">
@@ -844,10 +837,6 @@ export default function Home() {
             )}
           </div>
         </aside>
-      ) : (
-        <aside className="w-60 bg-[rgba(5,10,15,0.95)] border-l border-[#4fdfff]/20 flex flex-col items-center justify-center">
-          <p className="text-white/40 text-sm text-center px-4">{t("chat.selectServer")}</p>
-        </aside>
       )}
 
       {/* ========== MODAL CREATE SERVER ========== */}
@@ -951,11 +940,10 @@ export default function Home() {
       )}
 
       {/* ========== MODAL PROFILE CARD ========== */}
-      {showProfile && (currentUser || user) && (
+      {showProfile && user && (
         <ProfileCard
-          user={(currentUser || user) as User}
+          user={user as User}
           onClose={() => setShowProfile(false)}
-          onUpdate={(updatedUser) => setCurrentUser(updatedUser)}
         />
       )}
 

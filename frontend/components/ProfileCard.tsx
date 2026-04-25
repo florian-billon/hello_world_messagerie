@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, updateMe, UpdateProfilePayload } from "@/lib/api-server";
-import { logout } from "@/lib/auth/actions";
+import { User, updateMe, UpdateProfilePayload } from "@/lib/api-client";
+import { logout } from "@/lib/auth/client";
 import { normalizeAvatarUrl } from "@/lib/avatar";
 import { UserStatus, getStatusColor, getStatusKey, normalizeStatus } from "@/lib/presence";
 import { useTranslation } from "@/lib/i18n";
@@ -43,8 +43,7 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
 
   const handleLogout = async () => {
     await logout();
-    router.push("/login");
-    router.refresh();
+    router.replace("/login");
   };
 
   const currentStatus = normalizeStatus(user.status);
@@ -87,6 +86,26 @@ export default function ProfileCard({ user, onClose, onUpdate }: ProfileCardProp
       <div className="relative w-full max-w-[420px] bg-[rgba(5,10,15,0.98)] border border-[#4fdfff]/30 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden animate-[fadeIn_0.2s_ease]">
 
         <div className="relative bg-gradient-to-br from-[#4fdfff]/10 to-[#ff3333]/5 p-6 pb-16">
+          <button
+            onClick={() => setLocale(locale === "fr" ? "en" : "fr")}
+            className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center border border-[#4fdfff]/30 hover:border-[#4fdfff] transition-all group overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.5)]"
+            title={locale === "fr" ? "Switch to English" : "Passer en Français"}
+          >
+            {locale === "fr" ? (
+              <img 
+                src="https://flagcdn.com/w80/gb.png" 
+                alt="English"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+              />
+            ) : (
+              <img 
+                src="https://flagcdn.com/w80/fr.png" 
+                alt="Français"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+              />
+            )}
+          </button>
+
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center text-white/60 hover:text-white transition-colors"
