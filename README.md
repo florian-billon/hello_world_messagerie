@@ -128,30 +128,30 @@ mongosh "mongodb://localhost:27017/helloworld" --file backend/migrations/init.mo
 Créer `backend/.env` :
 
 ```bash
-DATABASE_URL=postgres://postgres:postgres@localhost:5433/helloworld
-MONGODB_URL=mongodb://localhost:27017
-JWT_SECRET=CHANGE_ME_generate_with_openssl_rand_base64_32
-ALLOWED_ORIGINS=http://localhost:3002,http://127.0.0.1:3002
-PORT=3001
-RUST_LOG=info
-```
-
-```bash
-cd backend && cargo run
-```
-
-L'API est disponible sur **http://localhost:3001**.
-
-### Etape 3 — Frontend
-
-```bash
-cd frontend
-echo "NEXT_PUBLIC_API_URL=http://localhost:3001" > .env.local
-npm ci
-npm run dev
-```
-
-L'application est disponible sur **http://localhost:3002**.
+    DATABASE_URL=postgres://postgres:postgres@localhost:5433/helloworld
+    MONGODB_URL=mongodb://localhost:27017
+    JWT_SECRET=CHANGE_ME_generate_with_openssl_rand_base64_32
+    ALLOWED_ORIGINS=http://localhost:3002,http://127.0.0.1:3002
+    PORT=3005
+    RUST_LOG=info
+    ```
+    
+    ```bash
+    cd backend && cargo run
+    ```
+    
+    L'API est disponible sur **http://localhost:3005**.
+    
+    ### Etape 3 — Frontend
+    
+    ```bash
+    cd frontend
+    echo "NEXT_PUBLIC_API_URL=http://localhost:3005" > .env.local
+    npm ci
+    npm run dev
+    ```
+    
+    L'application est disponible sur **http://localhost:3002**.
 
 ### Etape 4 — Export statique
 
