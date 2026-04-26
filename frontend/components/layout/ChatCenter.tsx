@@ -35,7 +35,7 @@ type Props = {
   onEditContentChange: (val: string) => void;
   onDeleteMessage: (id: string) => void;
   onOpenUserProfile: (userId: string) => void;
-  onToggleReaction: (messageId: string, emoji: string) => void;
+  onToggleReaction: (messageId: string, emoji: string) => Promise<boolean>;
 };
 
 export default function ChatCenter({
@@ -114,7 +114,7 @@ export default function ChatCenter({
       <div className="space-y-4">
         {messages.map((msg) => (
           <div key={msg.id} className="flex items-start gap-3 px-4 py-2 rounded hover:bg-white/5 transition-colors group">
-            <button type="button" onClick={() => onOpenUserProfile(msg.author_id)} className="flex-shrink-0">
+            <button type="button" onClick={() => onOpenUserProfile(msg.author_id)} className="flex-shrink-0" title={msg.username}>
               <SmartImg
                 src={getAvatar(msg.author_id, userForAvatar)}
                 alt={msg.username}
@@ -139,6 +139,8 @@ export default function ChatCenter({
                     onChange={(e) => onEditContentChange(e.target.value)}
                     autoFocus
                     onKeyDown={(e) => e.key === "Escape" && onCancelEdit()}
+                    placeholder={t("chat.editPlaceholder")}
+                    aria-label={t("chat.editPlaceholder")}
                     className="w-full px-3 py-1.5 bg-black/50 border border-[#4fdfff]/50 rounded text-white text-sm outline-none focus:border-[#4fdfff]"
                   />
                   <div className="flex gap-2 mt-2">
