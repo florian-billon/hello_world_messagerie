@@ -141,24 +141,24 @@ Créer `backend/.env` :
     ALLOWED_ORIGINS=http://localhost:3002,http://127.0.0.1:3002
     PORT=3005
     RUST_LOG=info
-    ```
+```
     
-    ```bash
-    cd backend && cargo run
-    ```
+```bash
+cd backend && cargo run
+```
     
-    L'API est disponible sur **http://localhost:3005**.
-    
-    ### Etape 3 — Frontend
-    
-    ```bash
-    cd frontend
-    echo "NEXT_PUBLIC_API_URL=http://localhost:3005" > .env.local
-    npm ci
-    npm run dev
-    ```
-    
-    L'application est disponible sur **http://localhost:3002**.
+L'API est disponible sur **http://localhost:3005**.
+
+### Etape 3 — Frontend
+
+```bash
+cd frontend
+echo "NEXT_PUBLIC_API_URL=http://localhost:3005" > .env.local
+npm ci
+npm run dev
+```
+
+L'application est disponible sur **http://localhost:3002**.
 
 ### Etape 4 — Export statique
 
