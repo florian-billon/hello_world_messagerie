@@ -41,9 +41,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v1.0.0
-          releaseName: "Hello World v1.0.0"
-          releaseBody: "Production build for Hello World Messaging Platform. Binary artifacts for Windows, macOS and Linux."
-          releaseDraft: true
+          tagName: ${{ github.ref_name }}
+          releaseName: "Hello World ${{ github.ref_name }}"
+          releaseBody: "Technical Release: Build artifacts for Linux, Windows and macOS."
+          releaseDraft: false
           prerelease: false
           projectPath: ./frontend
