@@ -59,3 +59,12 @@ node_modules/
 backend/.env
 frontend/.env
 frontend/.env.local
+.env.local
+
+# Uploads
+backend/uploads/
+uploads/
+
+# OS Junk
+.DS_Store
+Thumbs.db

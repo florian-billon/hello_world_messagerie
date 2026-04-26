@@ -1,8 +1,9 @@
 "use client";
+
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useRouteGuard } from "@/lib/auth/guards";
-import { useServers, useChannels, useMessages, useMembers, useAuth, useFriends } from "@/hooks";
+import { useChat } from "@/components/providers/ChatProvider";
 import ProfileCard from "@/components/profile/ProfileCard";
 import PublicProfileCard from "@/components/profile/PublicProfileCard";
 import InviteModal from "@/components/modals/InviteModal";
@@ -24,53 +25,44 @@ export default function Home() {
   const router = useRouter();
   const { t } = useTranslation();
   const { ready: guardReady } = useRouteGuard("protected");
-  const { user } = useAuth();
-  const { friends, refreshFriends } = useFriends();
-
+  
   const {
+    user, friends, refreshFriends,
     servers, selectedServer, selectServer, createServer, creatingServer,
     leaveServer, deleteServer, transferOwnership,
-    loading: serversLoading, error: serversError,
-  } = useServers();
-
-  const {
+    serversLoading, serversError,
     channels, selectedChannel, selectChannel, createChannel, deleteChannel,
-    loading: channelsLoading, error: channelsError,
-  } = useChannels(selectedServer?.id ?? null);
-
-  const {
+    channelsLoading, channelsError,
     messages, sendMessage, updateMessage, deleteMessage, toggleReaction,
-    loading: messagesLoading, error: messagesError, typingUsers, typingStart, typingStop,
-  } = useMessages(selectedChannel?.id ?? null, user?.id ?? null);
+    messagesLoading, messagesError, typingUsers, typingStart, typingStop,
+    members, kickMember, banMember,
+    showProfile, setShowProfile,
+    selectedPublicUserId, setSelectedPublicUserId,
+    showCreateServer, setShowCreateServer,
+    showCreateChannel, setShowCreateChannel,
+    showDeleteConfirm, setShowDeleteConfirm,
+    showLeaveConfirm, setShowLeaveConfirm,
+    showDeleteMessageConfirm, setShowDeleteMessageConfirm,
+    showDeleteChannelConfirm, setShowDeleteChannelConfirm,
+    showInviteModal, setShowInviteModal,
+    showGifPicker, setShowGifPicker,
+  } = useChat();
 
-  const { members, kickMember, banMember } = useMembers(selectedServer?.id ?? null);
-
-  const [showCreateServer, setShowCreateServer] = useState(false);
   const [newServerName, setNewServerName] = useState("");
-  const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
   const [channelSearchState, setChannelSearchState] = useState<{ serverId: string | null; value: string }>({ serverId: null, value: "" });
   const [messageInput, setMessageInput] = useState("");
-  const [showGifPicker, setShowGifPicker] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [selectedPublicUserId, setSelectedPublicUserId] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
-  const [showDeleteMessageConfirm, setShowDeleteMessageConfirm] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
-  const [showDeleteChannelConfirm, setShowDeleteChannelConfirm] = useState(false);
   const [channelToDelete, setChannelToDelete] = useState<{ id: string; name: string } | null>(null);
   const [newOwnerIdForLeave, setNewOwnerIdForLeave] = useState("");
   const [leaveModalError, setLeaveModalError] = useState<string | null>(null);
+  
   const typingStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const TYPING_STOP_DELAY_MS = 2000;
-  const viewer = currentUser || user;
-  const viewerId = viewer?.id;
+
+  const viewerId = user?.id;
   const isServerOwner = selectedServer?.owner_id === viewerId;
   const transferCandidates = members.filter((m) => m.user_id !== viewerId);
   const viewerRole = members.find((m) => m.user_id === viewerId)?.role;
@@ -143,7 +135,7 @@ export default function Home() {
   const openUserProfile = useCallback((userId: string) => {
     if (viewerId && userId === viewerId) { setShowProfile(true); return; }
     setSelectedPublicUserId(userId);
-  }, [viewerId]);
+  }, [viewerId, setShowProfile, setSelectedPublicUserId]);
 
   const confirmDeleteChannel = async () => {
     if (!channelToDelete) return;
@@ -233,7 +225,6 @@ export default function Home() {
         editContent={editContent}
         typingUsers={typingUsers}
         user={user}
-        currentUser={currentUser}
         viewerId={viewerId}
         onCreateServer={() => setShowCreateServer(true)}
         onCreateChannel={() => setShowCreateChannel(true)}
@@ -258,7 +249,6 @@ export default function Home() {
           selectedChannel={selectedChannel}
           members={members}
           user={user}
-          currentUser={currentUser}
           typingUsers={typingUsers}
           viewerId={viewerId}
           onInvite={() => setShowInviteModal(true)}

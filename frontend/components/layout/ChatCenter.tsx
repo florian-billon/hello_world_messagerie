@@ -6,6 +6,8 @@ import SmartImg from "@/components/ui/SmartImg";
 import Button from "@/components/ui/Button";
 import MessageReactions from "@/components/chat/MessageReactions";
 import GifPicker from "@/components/chat/GifPicker";
+import { useState, useRef } from "react";
+import { uploadFile } from "@/lib/api-client";
 
 type Props = {
   selectedServer: Server | null;
@@ -19,7 +21,7 @@ type Props = {
   editContent: string;
   typingUsers: Map<string, string>;
   user: User | null;
-  currentUser: User | null;
+  currentUser?: User | null;
   viewerId: string | undefined;
   onCreateServer: () => void;
   onCreateChannel: () => void;
@@ -48,7 +50,46 @@ export default function ChatCenter({
   onDeleteMessage, onOpenUserProfile, onToggleReaction,
 }: Props) {
   const { t, locale } = useTranslation();
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const userForAvatar = currentUser || user;
+
+  const handleFileUpload = async () => {
+    if (!selectedChannel) return;
+    
+    try {
+      // On utilise le dialogue natif de Tauri qui ne crashe pas !
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const { readFile } = await import("@tauri-apps/plugin-fs");
+      
+      const selected = await open({
+        multiple: false,
+        filters: [{
+          name: 'Files',
+          extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'md', 'txt']
+        }]
+      });
+
+      if (!selected) return;
+      
+      setIsUploading(true);
+      const filePath = selected as string;
+      const fileData = await readFile(filePath);
+      const fileName = filePath.split('/').pop() || 'file';
+      
+      // Conversion pour l'upload
+      const file = new File([fileData], fileName);
+      
+      const res = await uploadFile(file);
+      await onSendMessage({ preventDefault: () => {} } as any);
+      await onSendGif(res.url);
+    } catch (err) {
+      console.error("Upload failed", err);
+      // alert(t("error.uploadFailed") || "Upload failed");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const renderEmpty = () => (
     <div className="h-full flex items-center justify-center">
@@ -148,9 +189,22 @@ export default function ChatCenter({
                     <button type="button" onClick={onCancelEdit} className="text-[10px] text-white/40 hover:underline font-bold uppercase">{t("common.cancel")}</button>
                   </div>
                 </form>
-              ) : msg.content.includes("giphy.com") ? (
+              ) : msg.content.includes("giphy.com") || msg.content.includes("/files/") ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={msg.content} alt="GIF" className="max-w-xs max-h-48 rounded-lg mt-1" loading="lazy" />
+                <div className="mt-1 relative group/file">
+                  {msg.content.match(/\.(jpg|jpeg|png|gif|webp)$/i) || msg.content.includes("giphy.com") ? (
+                    <img src={msg.content.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL}${msg.content}` : msg.content} alt="Attachment" className="max-w-xs max-h-64 rounded-lg border border-white/10 hover:border-[#4fdfff]/50 transition-colors cursor-pointer" loading="lazy" />
+                  ) : (
+                    <a href={msg.content.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL}${msg.content}` : msg.content} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors w-fit">
+                      <div className="w-10 h-10 bg-[#4fdfff]/10 rounded flex items-center justify-center">
+                        <svg className="w-6 h-6 text-[#4fdfff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <span className="text-sm text-white/80 font-mono truncate max-w-[200px]">{msg.content.split("/").pop()}</span>
+                    </a>
+                  )}
+                </div>
               ) : (
                 <p className="text-white/90 leading-relaxed break-all whitespace-pre-wrap">{msg.content}</p>
               )}
@@ -216,6 +270,21 @@ export default function ChatCenter({
               />
             )}
             <form onSubmit={onSendMessage} className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleFileUpload}
+                disabled={isUploading}
+                className="px-2 py-2 text-white/40 hover:text-[#4fdfff] transition-colors flex-shrink-0 disabled:opacity-50"
+                title={t("chat.uploadTooltip")}
+              >
+                {isUploading ? (
+                  <div className="w-5 h-5 border-2 border-[#4fdfff] border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                )}
+              </button>
               <button
                 type="button"
                 onClick={onToggleGifPicker}

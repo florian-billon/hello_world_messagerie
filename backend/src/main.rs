@@ -5,6 +5,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use tower_http::services::ServeDir;
 use mongodb::bson::doc;
 use tower_http::cors::CorsLayer;
 
@@ -25,7 +26,7 @@ mod web;
 
 use repositories::{
     ChannelRepository, DirectMessageRepository, DmRepository, FriendshipRepository,
-    InviteRepository, MessageRepository, ServerRepository, UserRepository,
+    InviteRepository, MessageRepository, ServerRepository, UserRepository, AttachmentRepository
 };
 use web::MetricsSnapshot;
 use web::{WsHub, WsMetrics};
@@ -34,7 +35,7 @@ const DEFAULT_DATABASE_URL: &str = "postgres://postgres:postgres@localhost:5433/
 const DEFAULT_MONGODB_URL: &str = "mongodb://localhost:27017";
 const DEFAULT_ALLOWED_ORIGINS: &str =
     "https://hello-world-messagerie-jfk7.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002,tauri://localhost,http://tauri.localhost,https://tauri.localhost";
-const DEFAULT_PORT: &str = "3001";
+const DEFAULT_PORT: &str = "3005";
 const MONGODB_STARTUP_TIMEOUT_SECS: u64 = 15;
 
 #[derive(Clone)]
@@ -50,6 +51,7 @@ pub struct AppState {
     pub dm_repo: DmRepository,
     pub friendship_repo: FriendshipRepository,
     pub invite_repo: InviteRepository,
+    pub attachment_repo: AttachmentRepository,
     pub ws_hub: web::WsHub,
     pub ws_metrics: web::WsMetrics,
 }
@@ -174,6 +176,7 @@ async fn main() {
     let dm_repo = DmRepository::new(pool.clone());
     let friendship_repo = FriendshipRepository::new(pool.clone());
     let invite_repo = InviteRepository::new(pool.clone());
+    let attachment_repo = AttachmentRepository::new(pool.clone());
     let message_repo = MessageRepository::new(mongo_db.clone());
     let dm_message_repo = DirectMessageRepository::new(mongo_db.clone());
 
@@ -198,6 +201,7 @@ async fn main() {
         dm_repo,
         friendship_repo,
         invite_repo,
+        attachment_repo,
         ws_hub,
         ws_metrics,
     };
@@ -271,6 +275,7 @@ async fn main() {
         .merge(routes::auth::routes());
 
     let app = Router::new()
+        .nest_service("/files", ServeDir::new("./uploads"))
         .merge(routes_public)
         .merge(routes_protected)
         .layer(middleware::from_fn_with_state(

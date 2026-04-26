@@ -14,11 +14,12 @@
         "title": "HELLO WORLD",
         "width": 1200,
         "height": 800,
-        "resizable": true
+        "resizable": true,
+        "shadow": false
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost https://*.giphy.com https://media.giphy.com https://flagcdn.com https://raw.githubusercontent.com data: blob:; connect-src 'self' https://*.giphy.com https://api.giphy.com ws://localhost:3002 ws://localhost:3005 http://localhost:3005;"
     }
   },
   "bundle": {

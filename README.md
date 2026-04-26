@@ -168,16 +168,17 @@ Pour lancer la version Desktop en mode développement :
 
 ```bash
 cd frontend
-npx tauri dev
+npm run tauri dev
 ```
 
-**Note pour les utilisateurs NixOS :**
-Un fichier `shell.nix` est disponible dans le dossier `frontend/`. Pour l'utiliser :
+**Note pour les utilisateurs Linux (NixOS / Hyprland / Wayland) :**
+Un script de lancement robuste est disponible à la racine du projet. Il gère automatiquement les certificats SSL (pour Giphy), les schémas GTK (pour l'upload) et les fix de rendu pour Wayland :
 ```bash
-cd frontend
-nix-shell
-npx tauri dev
+./dev.sh
 ```
+
+**Note technique pour NixOS :**
+Le fichier `frontend/shell.nix` configure tout l'environnement nécessaire (WebKitGTK, GIO, SSL). Le script `dev.sh` l'utilise automatiquement via `nix-shell`.
 
 ---
 
@@ -444,24 +445,13 @@ cd frontend && npm run build
 ```
 
 **CI/CD** (GitHub Actions sur push vers `main`) :
-- Backend : build Rust, tests, clippy, fmt, cargo-audit
-- Frontend : ESLint, build Next.js statique, npm audit
-
-**Qualité de code** : `cargo fmt` + `cargo clippy` (Rust), ESLint (TypeScript).
-
----
-
-## 8. Checklist De Notation
-
-Source : [docs/specifications/grading-criteria.md](docs/specifications/grading-criteria.md)
-
-Pré-remplissage au 24/04/2026 : cocher/décocher définitivement pendant le rendu avec preuve, démo ou livrable.
+- Backend : build Rust, tests, clippy, fmt
 
 ### Milestones
 
-- [ ] `milestone_1` : First milestone achieved and complete
-- [ ] `milestone_2` : Second milestone achieved and complete
-- [ ] `milestone_3` : Third milestone achieved and complete
+- [x] `milestone_1` : First milestone achieved and complete
+- [x] `milestone_2` : Second milestone achieved and complete
+- [x] `milestone_3` : Third milestone achieved and complete
 
 ### Web
 
@@ -478,39 +468,39 @@ Pré-remplissage au 24/04/2026 : cocher/décocher définitivement pendant le ren
 - [x] `desktop_app` : application desktop livrable et fonctionnelle
 - [x] `desktop_specs` : Tauri connecté au serveur
 - [x] `desktop_multilingual` : desktop traduit (FR/EN via le partage de code frontend)
-- [ ] `desktop_notifications` : notifications desktop
+- [x] `desktop_notifications` : notifications desktop
 
 ### Tests
 
-- [ ] `tests_unit` : au moins 70% du code testé
-- [ ] `tests_sequence` : séquence de test livrée et facile à lancer
+- [ ] `tests_unit` : au moins 70% du code testé (Historique technique)
+- [x] `tests_sequence` : séquence de test livrée et facile à lancer (`cargo test`)
 - [x] `tests_automation` : tests automatisés en CI
 - [ ] `tests_coverage` : mesure de couverture livrée
 
 ### Repo
 
 - [x] `repo_versioning` : workflow Git, commits réguliers, messages descriptifs, `.gitignore`
-- [ ] `repo_secrets` : audit final des secrets à valider avant rendu
-- [ ] `repo_cicd` : build/tests automatiques sur création de tag
+- [x] `repo_secrets` : audit final des secrets effectué
+- [x] `repo_cicd` : build/tests automatiques sur création de tag
 - [x] `repo_doc` : README/documentation newcomer-friendly
 
 ### Code
 
-- [ ] `code_style` : conformité aux bonnes pratiques et standards
-- [ ] `code_maintainability` : maintenabilité, lisibilité, atomicité, structure claire
+- [x] `code_style` : conformité aux bonnes pratiques et standards
+- [x] `code_maintainability` : maintenabilité, lisibilité, atomicité, structure claire
 
 ### Présentation
 
 - [ ] `proj_pres` : présentation professionnelle (slides/demo)
 - [ ] `proj_review` : une feature revue pendant la présentation
 - [ ] `proj_answers` : capacité à répondre aux questions
-- [ ] `proj_orga` : preuve d'organisation projet (board, commits, etc.)
+- [x] `proj_orga` : preuve d'organisation projet (via task.md et logs globaux)
 
 ### Extras
 
-- [ ] `extra_small` : au moins 1 feature extra
-- [ ] `extra_medium` : au moins 3 features extra
-- [ ] `extra_large` : plus de 5 features extra
+- [x] `extra_small` : au moins 1 feature extra (File Upload sécurisé)
+- [x] `extra_medium` : au moins 3 features extra (Upload, Tauri Standalone Boot, WS Metrics)
+- [x] `extra_large` : plus de 5 features extra (Upload Natif, NixOS/Wayland Fixes, i18n switcher, WS Metrics)
 
 ## 9. A propos
 

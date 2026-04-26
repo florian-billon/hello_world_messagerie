@@ -10,6 +10,7 @@ use uuid::Uuid;
 use crate::ctx::Ctx;
 use crate::error::Error;
 use crate::error::Result;
+use crate::models::AttachmentCreate;
 use crate::AppState;
 
 #[derive(Serialize)]
@@ -19,8 +20,8 @@ pub struct UploadResponse {
 }
 
 pub async fn upload_file(
-    State(_state): State<AppState>,
-    _ctx: Ctx,
+    State(state): State<AppState>,
+    ctx: Ctx,
     mut multipart: Multipart,
 ) -> Result<Json<UploadResponse>> {
     let upload_dir = PathBuf::from("uploads");
@@ -38,6 +39,7 @@ pub async fn upload_file(
         })?
     {
         let original_name = field.file_name().unwrap_or("fichier").to_string();
+        let content_type = field.content_type().map(|s| s.to_string());
 
         let extension = original_name
             .rsplit('.')
@@ -47,8 +49,10 @@ pub async fn upload_file(
         let unique_name = format!("{}.{}", Uuid::new_v4(), extension);
 
         let data = field.bytes().await.map_err(|err| Error::BadRequest {
-            message: format!("Invalid upload body: {err}"),
+            message: format!("File too large or invalid upload body: {err}"),
         })?;
+
+        let file_size = data.len() as i64;
 
         let file_path = upload_dir.join(&unique_name);
         fs::write(&file_path, &data)
@@ -56,6 +60,15 @@ pub async fn upload_file(
             .map_err(|err| Error::InternalError {
                 message: format!("Failed to persist uploaded file: {err}"),
             })?;
+
+        // Stockage des métadonnées en base de données (PostgreSQL)
+        let _attachment = state.attachment_repo.create(AttachmentCreate {
+            sender_id: ctx.user_id(),
+            filename: original_name.clone(),
+            file_path: unique_name.clone(),
+            content_type,
+            file_size: Some(file_size),
+        }).await?;
 
         Ok(Json(UploadResponse {
             url: format!("/files/{}", unique_name),

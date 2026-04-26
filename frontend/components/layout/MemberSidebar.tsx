@@ -10,7 +10,7 @@ type Props = {
   selectedChannel: Channel | null;
   members: ServerMember[];
   user: User | null;
-  currentUser: User | null;
+  currentUser?: User | null;
   typingUsers: Map<string, string>;
   viewerId: string | undefined;
   onInvite: () => void;

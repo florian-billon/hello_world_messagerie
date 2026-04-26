@@ -14,6 +14,12 @@ import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils"
 import { useWebSocket } from "./useWebSocket";
 import { ServerEvent } from "@/lib/gateway";
 import { useTranslation } from "@/lib/i18n";
+import { isTauriWindow } from "@/lib/runtime";
+import { 
+  isPermissionGranted, 
+  requestPermission, 
+  sendNotification 
+} from "@tauri-apps/plugin-notification";
 
 /**
  * Hook pour gérer les messages d'un channel
@@ -105,6 +111,23 @@ export function useMessages(channelId: string | null, viewerId: string | null) {
               }
               return [...prev, { ...event.d, reactions: event.d.reactions ?? [] }];
             });
+
+            // Desktop notification
+            if (isTauriWindow() && event.d.author_id !== viewerId) {
+              (async () => {
+                let permission = await isPermissionGranted();
+                if (!permission) {
+                  const permissionResult = await requestPermission();
+                  permission = permissionResult === "granted";
+                }
+                if (permission) {
+                  sendNotification({ 
+                    title: `${event.d.username} (#${channelId})`, 
+                    body: event.d.content.length > 50 ? `${event.d.content.substring(0, 50)}...` : event.d.content,
+                  });
+                }
+              })();
+            }
           }
           break;
 

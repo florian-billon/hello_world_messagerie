@@ -13,6 +13,7 @@ import {
   Server,
 } from "@/lib/api-client";
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
+import { hasStoredToken } from "@/lib/token-storage";
 import { useTranslation } from "@/lib/i18n";
 
 export function useServers() {
@@ -33,6 +34,10 @@ export function useServers() {
   }, [t]);
 
   const loadServers = useCallback(async () => {
+    if (!hasStoredToken()) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);

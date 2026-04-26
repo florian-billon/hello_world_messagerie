@@ -62,7 +62,10 @@
     "confirmDeleteTitle": "Delete Message",
     "confirmDeleteMessage": "Are you sure you want to delete this message? This action cannot be undone.",
     "gifTooltip": "Send a GIF",
-    "gifSearch": "Search GIFs..."
+    "gifSearch": "Search GIFs...",
+    "uploadTooltip": "Upload a file",
+    "uploadFailed": "Failed to upload file",
+    "uploadSuccess": "File uploaded!"
   },
   "server": {
     "createTitle": "CREATE SERVER",

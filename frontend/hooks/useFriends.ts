@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Friend, listFriends as apiListFriends } from "@/lib/api-client";
 import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils";
+import { hasStoredToken } from "@/lib/token-storage";
 import { useTranslation } from "@/lib/i18n";
 
 export function useFriends() {
@@ -10,6 +11,7 @@ export function useFriends() {
   const [friends, setFriends] = useState<Friend[]>([]);
 
   const refreshFriends = useCallback(async () => {
+    if (!hasStoredToken()) return;
     try {
       const data = await apiListFriends();
       setFriends(data);

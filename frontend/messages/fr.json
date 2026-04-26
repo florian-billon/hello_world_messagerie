@@ -62,7 +62,10 @@
     "confirmDeleteTitle": "Supprimer le message",
     "confirmDeleteMessage": "Es-tu sûr de vouloir supprimer ce message ? Cette action est irréversible.",
     "gifTooltip": "Envoyer un GIF",
-    "gifSearch": "Rechercher des GIFs..."
+    "gifSearch": "Rechercher des GIFs...",
+    "uploadTooltip": "Envoyer un fichier",
+    "uploadFailed": "Échec de l'envoi du fichier",
+    "uploadSuccess": "Fichier envoyé !"
   },
   "server": {
     "createTitle": "CRÉER UN SERVEUR",

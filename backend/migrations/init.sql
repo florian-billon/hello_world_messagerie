@@ -256,3 +256,16 @@ CREATE INDEX IF NOT EXISTS idx_friendships_user1 ON friendships(user1_id);
 CREATE INDEX IF NOT EXISTS idx_friendships_user2 ON friendships(user2_id);
 
 -- NOTE: Channel messages and direct message items are stored in MongoDB, not PostgreSQL
+
+-- ATTACHMENTS (catalogue des fichiers uploadés)
+CREATE TABLE IF NOT EXISTS attachments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    filename VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL, -- UUID-based storage name
+    content_type VARCHAR(100),
+    file_size BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_sender ON attachments(sender_id);

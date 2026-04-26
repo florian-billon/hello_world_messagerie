@@ -7,7 +7,12 @@ import { clearToken } from "./client";
  */
 export async function handleAuthError() {
   await clearToken();
-  window.location.href = "/login";
+  // Éviter la boucle de redirection si on est déjà sur une page d'auth
+  if (typeof window !== "undefined" && 
+      !window.location.pathname.includes("/login") && 
+      !window.location.pathname.includes("/register")) {
+    window.location.href = "/login";
+  }
 }
 
 /**

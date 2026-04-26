@@ -19,10 +19,14 @@ async function fetchApi<T>(
   const token = authenticate ? getStoredToken() : null;
 
   const headers: HeadersInit = {
-    "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
+
+  // Skip default Content-Type if body is FormData to let the browser set the boundary correctly
+  if (!(options.body instanceof FormData)) {
+    (headers as any)["Content-Type"] = "application/json";
+  }
 
   const request = () =>
     fetch(`${API_URL}${endpoint}`, {
@@ -145,6 +149,11 @@ export interface DirectConversation {
   avatar_url?: string;
   status: string;
   created_at: string;
+}
+
+export interface UploadResponse {
+  url: string;
+  filename: string;
 }
 
 export interface DirectMessage {
@@ -479,4 +488,14 @@ export async function getInvite(code: string): Promise<InviteResponse> {
 
 export async function acceptInvite(code: string): Promise<void> {
   await fetchApi<void>(`/invites/${code}/accept`, { method: "POST" });
+}
+
+export async function uploadFile(file: File): Promise<UploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return fetchApi<UploadResponse>("/upload", {
+    method: "POST",
+    body: formData,
+  });
 }
