@@ -58,7 +58,7 @@ Le frontend a été préparé pour une migration desktop : il fonctionne désorm
 |-----------------|-------------|
 | Frontend        | Next.js 16, React 19, TypeScript, Tailwind CSS |
 | Backend         | Rust 1.91, Axum, Tokio, SQLx, driver MongoDB |
-| **Desktop**     | **Tauri v2 (Rust)** |
+| Desktop         | Tauri 2.0 (Rust) |
 | Base de données | PostgreSQL (relationnel via Neon), MongoDB (messages via Atlas) |
 | Auth            | JWT (jsonwebtoken), bcrypt |
 | Infra           | Render (backend), Vercel (frontend), GitHub Actions CI/CD |
