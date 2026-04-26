@@ -23,6 +23,10 @@ frontend/out/
 
 # misc
 .DS_Store
+dist/
+*.deb
+*.tar.gz
+*.exe
 *.pem
 
 # Windows Zone.Identifier files (created automatically by Windows)

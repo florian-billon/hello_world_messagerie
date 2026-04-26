@@ -41,9 +41,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__ # the action will replace this with the app version
-          releaseName: "Hello World Desktop v__VERSION__"
-          releaseBody: "Automated release from GitHub Actions."
+          tagName: v1.0.0
+          releaseName: "Hello World v1.0.0"
+          releaseBody: "Production build for Hello World Messaging Platform. Binary artifacts for Windows, macOS and Linux."
           releaseDraft: true
           prerelease: false
           projectPath: ./frontend
