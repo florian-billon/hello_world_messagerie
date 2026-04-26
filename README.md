@@ -16,6 +16,13 @@
 <p>
   <a href="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/actions/workflows/backend-ci.yml"><img src="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/actions/workflows/backend-ci.yml/badge.svg?branch=main" alt="Backend CI" /></a>
   <a href="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/actions/workflows/frontend-ci.yml"><img src="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/actions/workflows/frontend-ci.yml/badge.svg?branch=main" alt="Frontend CI" /></a>
+  <a href="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/releases"><img src="https://img.shields.io/github/v/release/EpitechMscProPromo2028/T-DEV-600-PAR_27?style=flat-square&color=blue" alt="Latest Release" /></a>
+</p>
+
+<p>
+  <a href="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/releases/latest">
+    <strong>Télécharger la dernière version (v1.0.0)</strong>
+  </a>
 </p>
 
 </div>
