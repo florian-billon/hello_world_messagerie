@@ -41,9 +41,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Hello World ${{ github.ref_name }}"
-          releaseBody: "Technical Release: Build artifacts for Linux, Windows and macOS."
+          tagName: v__VERSION__
+          releaseName: "Hello World v__VERSION__"
+          releaseBody: "Technical Release v__VERSION__: Build artifacts for Linux, Windows and macOS."
           releaseDraft: false
           prerelease: false
           projectPath: ./frontend
