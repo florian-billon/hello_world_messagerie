@@ -78,14 +78,14 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const { friends, refreshFriends } = useFriends();
+  const { friends, refreshFriends } = useFriends(user?.id);
   const { t } = useTranslation();
 
   const {
     servers, selectedServer, selectServer, createServer, creatingServer,
     leaveServer, deleteServer, transferOwnership,
     loading: serversLoading, error: serversError,
-  } = useServers();
+  } = useServers(user?.id);
 
   const {
     channels, selectedChannel, selectChannel, createChannel, deleteChannel,

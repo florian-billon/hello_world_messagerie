@@ -16,7 +16,7 @@ import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils"
 import { hasStoredToken } from "@/lib/token-storage";
 import { useTranslation } from "@/lib/i18n";
 
-export function useServers() {
+export function useServers(userId: string | null = null) {
   const { t } = useTranslation();
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
@@ -35,6 +35,7 @@ export function useServers() {
 
   const loadServers = useCallback(async () => {
     if (!hasStoredToken()) {
+      setServers([]);
       setLoading(false);
       return;
     }
@@ -60,8 +61,7 @@ export function useServers() {
 
   useEffect(() => {
     loadServers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadServers, userId]);
 
   const selectServer = useCallback((server: Server | null) => {
     setSelectedServer(server);

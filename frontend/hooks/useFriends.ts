@@ -6,7 +6,7 @@ import { handleAuthError, isAuthError, getErrorMessage } from "@/lib/auth/utils"
 import { hasStoredToken } from "@/lib/token-storage";
 import { useTranslation } from "@/lib/i18n";
 
-export function useFriends() {
+export function useFriends(userId: string | null = null) {
   const { t } = useTranslation();
   const [friends, setFriends] = useState<Friend[]>([]);
 
@@ -28,12 +28,8 @@ export function useFriends() {
   }, [t]);
 
   useEffect(() => {
-    async function loadInitialFriends() {
-      await refreshFriends();
-    }
-
-    loadInitialFriends();
-  }, [refreshFriends]);
+    refreshFriends();
+  }, [refreshFriends, userId]);
 
   return {
     friends,
