@@ -14,6 +14,7 @@ export function isTauriWindow(): boolean {
   if (!isBrowser()) return false;
 
   return (
+    (window as any).__TAURI__ !== undefined ||
     window.location.protocol === "tauri:" ||
     window.location.hostname === "tauri.localhost" ||
     window.location.hostname.endsWith(".tauri.localhost")

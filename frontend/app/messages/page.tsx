@@ -31,7 +31,9 @@ import {
   updateDirectMessage,
   User,
   UserSearchResult,
+  uploadFile,
 } from "@/lib/api-client";
+import { isTauriWindow } from "@/lib/runtime";
 
 const SCROLL_BOTTOM_THRESHOLD_PX = 80;
 
@@ -79,6 +81,8 @@ function DirectMessagesPageContent() {
   const [editContent, setEditContent] = useState("");
   const [showDeleteMessageConfirm, setShowDeleteMessageConfirm] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollBehaviorRef = useRef<ScrollBehavior | null>(null);
   const shouldStickToBottomRef = useRef(true);
@@ -516,6 +520,58 @@ function DirectMessagesPageContent() {
     }
   };
 
+  const handleFileUpload = async () => {
+    if (!selectedConversationId) return;
+
+    if (isTauriWindow()) {
+      try {
+        const { open } = await import("@tauri-apps/plugin-dialog");
+        const { readFile } = await import("@tauri-apps/plugin-fs");
+
+        const selected = await open({
+          multiple: false,
+          filters: [{
+            name: 'Files',
+            extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'md', 'txt']
+          }]
+        });
+
+        if (!selected) return;
+
+        setIsUploading(true);
+        const filePath = selected as string;
+        const fileData = await readFile(filePath);
+        const fileName = filePath.split('/').pop() || 'file';
+        const file = new File([fileData], fileName);
+
+        const res = await uploadFile(file);
+        await handleSendGif(res.url);
+      } catch (err) {
+        console.error("Tauri DM upload failed", err);
+      } finally {
+        setIsUploading(false);
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleWebFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedConversationId) return;
+
+    try {
+      setIsUploading(true);
+      const res = await uploadFile(file);
+      await handleSendGif(res.url);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err) {
+      console.error("Web DM upload failed", err);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const toggleDirectReaction = async (messageId: string, emoji: string): Promise<boolean> => {
     if (!currentUser?.id || !emoji.trim()) return false;
 
@@ -866,34 +922,57 @@ function DirectMessagesPageContent() {
                 </div>
                 )}
               </div>
-              <div className="relative px-4 py-3 border-t border-[#4fdfff]/20 bg-[rgba(0,0,0,0.2)]">
-                {showGifPicker && (
-                  <GifPicker
-                    onSelect={handleSendGif}
-                    onClose={() => setShowGifPicker(false)}
-                    searchPlaceholder={t("chat.gifSearch")}
-                  />
-                )}
-                <form onSubmit={handleSendDirectMessage} className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowGifPicker((prev) => !prev)}
-                    className="px-2 py-2 text-xs font-bold text-[#4fdfff] border border-[#4fdfff]/40 rounded-lg hover:bg-[#4fdfff]/10 transition-colors flex-shrink-0"
-                    title={t("chat.gifTooltip")}
-                  >
-                    GIF
-                  </button>
-                  <input
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    placeholder={selectedConversation ? `Message @${selectedConversation.username}` : "Message"}
-                    className="flex-1 px-4 py-2.5 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white placeholder:text-white/40 outline-none focus:border-[#4fdfff] focus:bg-[rgba(20,20,20,0.95)] focus:shadow-[0_0_8px_rgba(79,223,255,0.3)] transition-all"
-                  />
-                  <Button type="submit" className="bg-[#4fdfff] text-black">
-                    Envoyer
-                  </Button>
-                </form>
-              </div>
+              <footer className="px-4 py-3 border-t border-[#4fdfff]/20 bg-[rgba(0,0,0,0.2)]">
+                  <div className="relative">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleWebFileChange}
+                      className="hidden"
+                      accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.md,.txt"
+                    />
+                    {showGifPicker && (
+                      <GifPicker
+                        onSelect={handleSendGif}
+                        onClose={() => setShowGifPicker(false)}
+                        searchPlaceholder={t("chat.gifSearch")}
+                      />
+                    )}
+                    <form onSubmit={handleSendDirectMessage} className="flex items-center gap-2">
+                       <button
+                        type="button"
+                        onClick={handleFileUpload}
+                        disabled={isUploading}
+                        className="px-2 py-2 text-white/40 hover:text-[#4fdfff] transition-colors flex-shrink-0 disabled:opacity-50"
+                        title={t("chat.uploadTooltip")}
+                      >
+                        {isUploading ? (
+                          <div className="w-5 h-5 border-2 border-[#4fdfff] border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowGifPicker(true)}
+                        className="px-2 py-2 text-xs font-bold text-[#4fdfff] border border-[#4fdfff]/40 rounded-lg hover:bg-[#4fdfff]/10 transition-colors flex-shrink-0"
+                        title={t("chat.gifTooltip")}
+                      >
+                        GIF
+                      </button>
+                      <div className="relative flex-1">
+                        <input
+                          value={messageInput}
+                          onChange={(e) => setMessageInput(e.target.value)}
+                          placeholder={`Message @${selectedConversation?.username}`}
+                          className="w-full pl-4 pr-12 py-2.5 bg-[rgba(20,20,20,0.8)] border border-[#4fdfff]/30 rounded-lg text-white placeholder:text-white/40 outline-none focus:border-[#4fdfff] focus:bg-[rgba(20,20,20,0.95)] transition-all"
+                        />
+                      </div>
+                    </form>
+                  </div>
+                </footer>
            </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-4">

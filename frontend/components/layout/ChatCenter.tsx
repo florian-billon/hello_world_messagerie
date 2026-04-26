@@ -8,6 +8,7 @@ import MessageReactions from "@/components/chat/MessageReactions";
 import GifPicker from "@/components/chat/GifPicker";
 import { useState, useRef } from "react";
 import { uploadFile } from "@/lib/api-client";
+import { isTauriWindow } from "@/lib/runtime";
 
 type Props = {
   selectedServer: Server | null;
@@ -56,36 +57,57 @@ export default function ChatCenter({
 
   const handleFileUpload = async () => {
     if (!selectedChannel) return;
-    
-    try {
-      // On utilise le dialogue natif de Tauri qui ne crashe pas !
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const { readFile } = await import("@tauri-apps/plugin-fs");
-      
-      const selected = await open({
-        multiple: false,
-        filters: [{
-          name: 'Files',
-          extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'md', 'txt']
-        }]
-      });
 
-      if (!selected) return;
-      
+    if (isTauriWindow()) {
+      try {
+        // On utilise le dialogue natif de Tauri (Desktop)
+        const { open } = await import("@tauri-apps/plugin-dialog");
+        const { readFile } = await import("@tauri-apps/plugin-fs");
+
+        const selected = await open({
+          multiple: false,
+          filters: [{
+            name: 'Files',
+            extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'md', 'txt']
+          }]
+        });
+
+        if (!selected) return;
+
+        setIsUploading(true);
+        const filePath = selected as string;
+        const fileData = await readFile(filePath);
+        const fileName = filePath.split('/').pop() || 'file';
+        const file = new File([fileData], fileName);
+
+        const res = await uploadFile(file);
+        await onSendMessage({ preventDefault: () => { } } as any);
+        await onSendGif(res.url);
+      } catch (err) {
+        console.error("Tauri upload failed", err);
+      } finally {
+        setIsUploading(false);
+      }
+    } else {
+      // On utilise l'input HTML classique (Web/Vercel)
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleWebFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedChannel) return;
+
+    try {
       setIsUploading(true);
-      const filePath = selected as string;
-      const fileData = await readFile(filePath);
-      const fileName = filePath.split('/').pop() || 'file';
-      
-      // Conversion pour l'upload
-      const file = new File([fileData], fileName);
-      
       const res = await uploadFile(file);
-      await onSendMessage({ preventDefault: () => {} } as any);
+      await onSendMessage({ preventDefault: () => { } } as any);
       await onSendGif(res.url);
+      
+      // Reset l'input pour pouvoir uploader le même fichier deux fois si besoin
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
-      console.error("Upload failed", err);
-      // alert(t("error.uploadFailed") || "Upload failed");
+      console.error("Web upload failed", err);
     } finally {
       setIsUploading(false);
     }
@@ -262,6 +284,13 @@ export default function ChatCenter({
             );
           })()}
           <div className="relative">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleWebFileChange}
+              className="hidden"
+              accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.md,.txt"
+            />
             {showGifPicker && (
               <GifPicker
                 onSelect={async (gifUrl) => { await onSendGif(gifUrl); }}
