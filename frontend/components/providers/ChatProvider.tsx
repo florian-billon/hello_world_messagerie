@@ -18,6 +18,7 @@ interface ChatContextType {
   selectServer: (server: Server | null) => void;
   createServer: (name: string) => Promise<any>;
   creatingServer: boolean;
+  updateServer: (serverId: string, name: string) => Promise<any>;
   leaveServer: (serverId: string) => Promise<boolean>;
   deleteServer: (serverId: string) => Promise<boolean>;
   transferOwnership: (serverId: string, newOwnerId: string) => Promise<any>;
@@ -29,6 +30,7 @@ interface ChatContextType {
   selectedChannel: Channel | null;
   selectChannel: (channel: Channel | null) => void;
   createChannel: (name: string) => Promise<any>;
+  updateChannel: (id: string, name: string) => Promise<any>;
   deleteChannel: (id: string) => Promise<boolean>;
   channelsLoading: boolean;
   channelsError: string | null;
@@ -72,6 +74,10 @@ interface ChatContextType {
   setShowInviteModal: (show: boolean) => void;
   showGifPicker: boolean;
   setShowGifPicker: (show: boolean | ((prev: boolean) => boolean)) => void;
+  showRenameServer: boolean;
+  setShowRenameServer: (show: boolean) => void;
+  showRenameChannel: boolean;
+  setShowRenameChannel: (show: boolean) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
