@@ -58,6 +58,7 @@
     "save": "Save",
     "addReaction": "React",
     "edited": "(edited)",
+    "editPlaceholder": "Edit message",
     "confirmDeleteTitle": "Delete Message",
     "confirmDeleteMessage": "Are you sure you want to delete this message? This action cannot be undone.",
     "gifTooltip": "Send a GIF",

@@ -58,6 +58,7 @@
     "save": "Enregistrer",
     "addReaction": "Réagir",
     "edited": "(modifié)",
+    "editPlaceholder": "Modifier le message",
     "confirmDeleteTitle": "Supprimer le message",
     "confirmDeleteMessage": "Es-tu sûr de vouloir supprimer ce message ? Cette action est irréversible.",
     "gifTooltip": "Envoyer un GIF",
