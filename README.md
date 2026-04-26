@@ -13,16 +13,9 @@
   <a href="https://www.mongodb.com/"><img src="https://img.shields.io/badge/MongoDB-7-47A248.svg?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB 7" /></a>
 </p>
 
-<p>
+<p align="center">
   <a href="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/actions/workflows/backend-ci.yml"><img src="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/actions/workflows/backend-ci.yml/badge.svg?branch=main" alt="Backend CI" /></a>
   <a href="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/actions/workflows/frontend-ci.yml"><img src="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/actions/workflows/frontend-ci.yml/badge.svg?branch=main" alt="Frontend CI" /></a>
-  <a href="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/releases"><img src="https://img.shields.io/github/v/release/EpitechMscProPromo2028/T-DEV-600-PAR_27?style=flat-square&color=blue" alt="Latest Release" /></a>
-</p>
-
-<p>
-  <a href="https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/releases/latest">
-    <strong>Télécharger la dernière version (v1.0.0)</strong>
-  </a>
 </p>
 
 </div>
@@ -31,7 +24,9 @@
 
 ## 1. Le projet
 
-**Hello World** est une application de messagerie temps réel inspirée de Discord avec un backend Rust (Axum) et un frontend Next.js/React. Les données relationnelles (utilisateurs, serveurs, canaux, membres, invitations, conversations privées) sont stockées dans PostgreSQL. Les historiques de messages sont stockés dans MongoDB.
+**Hello World** est une application de messagerie temps réel inspirée de Discord construite sur une architecture hybride (Backend Rust Axum / Frontend Next.js). Une version stable est disponible en téléchargement sur la page des [releases](https://github.com/EpitechMscProPromo2028/T-DEV-600-PAR_27/releases/latest).
+
+Les données relationnelles sont administrées via PostgreSQL, tandis que la persistence des historiques de messages est assurée par MongoDB pour garantir la scalabilité.
 
 Le frontend a été préparé pour une migration desktop : il fonctionne désormais sans runtime serveur Next obligatoire et peut être exporté en statique via `npm run build` (`frontend/out/`).
 
