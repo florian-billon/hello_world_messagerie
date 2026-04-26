@@ -9,7 +9,7 @@ import { UserStatus, getStatusColor, getStatusKey, normalizeStatus } from "@/lib
 import { useTranslation } from "@/lib/i18n";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import SmartImg from "@/components/SmartImg";
+import SmartImg from "@/components/ui/SmartImg";
 
 const AVATARS = Array.from({ length: 100 }, (_, i) =>
   `/avatars/avatar_${String(i + 1).padStart(3, '0')}.png`
