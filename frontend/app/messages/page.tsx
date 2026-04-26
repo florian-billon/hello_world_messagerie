@@ -404,12 +404,13 @@ function DirectMessagesPageContent() {
     try {
       const sentMessage = await sendDirectMessage(selectedConversationId, messageInput.trim());
       pendingScrollBehaviorRef.current = "smooth";
-      setMessages((prev) =>
-        sortDirectMessagesChronologically([
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === sentMessage.id)) return prev;
+        return sortDirectMessagesChronologically([
           ...prev,
           { ...sentMessage, reactions: sentMessage.reactions ?? [] },
-        ])
-      );
+        ]);
+      });
       setMessageInput("");
       setError(null);
     } catch (error) {
@@ -424,12 +425,13 @@ function DirectMessagesPageContent() {
     try {
       const sentMessage = await sendDirectMessage(selectedConversationId, gifUrl);
       pendingScrollBehaviorRef.current = "smooth";
-      setMessages((prev) =>
-        sortDirectMessagesChronologically([
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === sentMessage.id)) return prev;
+        return sortDirectMessagesChronologically([
           ...prev,
           { ...sentMessage, reactions: sentMessage.reactions ?? [] },
-        ])
-      );
+        ]);
+      });
       setError(null);
       setShowGifPicker(false);
     } catch (error) {
