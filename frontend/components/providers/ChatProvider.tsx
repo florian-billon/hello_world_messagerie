@@ -83,12 +83,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const {
     servers, selectedServer, selectServer, createServer, creatingServer,
-    leaveServer, deleteServer, transferOwnership,
+    updateServer, leaveServer, deleteServer, transferOwnership,
     loading: serversLoading, error: serversError,
   } = useServers(user?.id);
 
   const {
-    channels, selectedChannel, selectChannel, createChannel, deleteChannel,
+    channels, selectedChannel, selectChannel, createChannel, updateChannel, deleteChannel,
     loading: channelsLoading, error: channelsError,
   } = useChannels(selectedServer?.id ?? null);
 
@@ -110,6 +110,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [showDeleteChannelConfirm, setShowDeleteChannelConfirm] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
+  const [showRenameServer, setShowRenameServer] = useState(false);
+  const [showRenameChannel, setShowRenameChannel] = useState(false);
 
   const value = {
     user,
@@ -120,6 +122,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     selectServer,
     createServer,
     creatingServer,
+    updateServer,
     leaveServer,
     deleteServer,
     transferOwnership,
@@ -129,6 +132,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     selectedChannel,
     selectChannel,
     createChannel,
+    updateChannel,
     deleteChannel,
     channelsLoading,
     channelsError,
@@ -165,6 +169,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setShowInviteModal,
     showGifPicker,
     setShowGifPicker,
+    showRenameServer,
+    setShowRenameServer,
+    showRenameChannel,
+    setShowRenameChannel,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

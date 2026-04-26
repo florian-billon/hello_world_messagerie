@@ -870,14 +870,34 @@ function DirectMessagesPageContent() {
                               <button type="button" onClick={() => setEditingMessageId(null)} className="text-[10px] text-white/40 hover:underline font-bold uppercase">{t("common.cancel")}</button>
                             </div>
                           </form>
-                        ) : isGifMessage(message.content) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={message.content}
-                            alt="GIF"
-                            className="max-w-xs max-h-48 rounded-lg mt-1"
-                            loading="lazy"
-                          />
+                        ) : isGifMessage(message.content) || message.content.includes("/files/") ? (
+                          <div className="mt-1 relative group/file">
+                            {message.content.match(/\.(jpg|jpeg|png|gif|webp)$/i) || isGifMessage(message.content) ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={message.content.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL}${message.content}` : message.content}
+                                alt="Attachment"
+                                className="max-w-xs max-h-64 rounded-lg border border-white/10 hover:border-[#4fdfff]/50 transition-colors cursor-pointer"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <a
+                                href={message.content.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL}${message.content}` : message.content}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors w-fit"
+                              >
+                                <div className="w-10 h-10 bg-[#4fdfff]/10 rounded flex items-center justify-center">
+                                  <svg className="w-6 h-6 text-[#4fdfff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                </div>
+                                <span className="text-sm text-white/80 font-mono truncate max-w-[200px]">
+                                  {message.content.split("/").pop()}
+                                </span>
+                              </a>
+                            )}
+                          </div>
                         ) : (
                           <p className="text-white/90 leading-relaxed break-all whitespace-pre-wrap">
                             {message.content}

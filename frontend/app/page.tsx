@@ -20,6 +20,7 @@ import DeleteServerModal from "@/components/modals/DeleteServerModal";
 import LeaveServerModal from "@/components/modals/LeaveServerModal";
 import DeleteChannelModal from "@/components/modals/DeleteChannelModal";
 import DeleteMessageModal from "@/components/modals/DeleteMessageModal";
+import RenameModal from "@/components/modals/RenameModal";
 
 export default function Home() {
   const router = useRouter();
@@ -46,6 +47,9 @@ export default function Home() {
     showDeleteChannelConfirm, setShowDeleteChannelConfirm,
     showInviteModal, setShowInviteModal,
     showGifPicker, setShowGifPicker,
+    showRenameServer, setShowRenameServer,
+    showRenameChannel, setShowRenameChannel,
+    updateServer, updateChannel,
   } = useChat();
 
   const [newServerName, setNewServerName] = useState("");
@@ -56,6 +60,7 @@ export default function Home() {
   const [editContent, setEditContent] = useState("");
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [channelToDelete, setChannelToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [channelToRename, setChannelToRename] = useState<{ id: string; name: string } | null>(null);
   const [newOwnerIdForLeave, setNewOwnerIdForLeave] = useState("");
   const [leaveModalError, setLeaveModalError] = useState<string | null>(null);
   
@@ -210,6 +215,9 @@ export default function Home() {
         onCreateChannel={() => setShowCreateChannel(true)}
         onCreateServer={() => setShowCreateServer(true)}
         onDeleteChannel={handleDeleteChannel}
+        onEditChannel={(c) => { setChannelToRename(c); setShowRenameChannel(true); }}
+        onEditServer={() => setShowRenameServer(true)}
+        onDeleteServer={() => setShowDeleteConfirm(true)}
         onShowLeave={handleShowLeave}
       />
 
@@ -312,6 +320,26 @@ export default function Home() {
         onClose={() => setShowDeleteMessageConfirm(false)}
         onConfirm={confirmDeleteMessage}
       />
+
+      {selectedServer && (
+        <RenameModal
+          show={showRenameServer}
+          title={t("server.renameTitle")}
+          initialValue={selectedServer.name}
+          onClose={() => setShowRenameServer(false)}
+          onConfirm={async (newName) => { await updateServer(selectedServer.id, newName); }}
+        />
+      )}
+
+      {channelToRename && (
+        <RenameModal
+          show={showRenameChannel}
+          title={t("channel.renameTitle")}
+          initialValue={channelToRename.name}
+          onClose={() => { setShowRenameChannel(false); setChannelToRename(null); }}
+          onConfirm={async (newName) => { await updateChannel(channelToRename.id, newName); }}
+        />
+      )}
 
       {showProfile && user && (
         <ProfileCard user={user as User} onClose={() => setShowProfile(false)} />
