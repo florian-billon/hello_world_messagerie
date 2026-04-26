@@ -1,7 +1,7 @@
+use crate::error::Result;
+use crate::models::attachment::{Attachment, AttachmentCreate};
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::models::attachment::{Attachment, AttachmentCreate};
-use crate::error::Result;
 
 #[derive(Clone)]
 pub struct AttachmentRepository {
@@ -21,7 +21,7 @@ impl AttachmentRepository {
         let attachment = sqlx::query_as::<_, Attachment>(
             "INSERT INTO attachments (sender_id, filename, file_path, content_type, file_size) 
              VALUES ($1, $2, $3, $4, $5) 
-             RETURNING *"
+             RETURNING *",
         )
         .bind(data.sender_id)
         .bind(data.filename)
@@ -35,12 +35,10 @@ impl AttachmentRepository {
     }
 
     pub async fn get_by_id(&self, id: Uuid) -> Result<Attachment> {
-        let attachment = sqlx::query_as::<_, Attachment>(
-            "SELECT * FROM attachments WHERE id = $1"
-        )
-        .bind(id)
-        .fetch_one(&self.pool)
-        .await?;
+        let attachment = sqlx::query_as::<_, Attachment>("SELECT * FROM attachments WHERE id = $1")
+            .bind(id)
+            .fetch_one(&self.pool)
+            .await?;
 
         Ok(attachment)
     }

@@ -62,13 +62,16 @@ pub async fn upload_file(
             })?;
 
         // Stockage des métadonnées en base de données (PostgreSQL)
-        let _attachment = state.attachment_repo.create(AttachmentCreate {
-            sender_id: ctx.user_id(),
-            filename: original_name.clone(),
-            file_path: unique_name.clone(),
-            content_type,
-            file_size: Some(file_size),
-        }).await?;
+        let _attachment = state
+            .attachment_repo
+            .create(AttachmentCreate {
+                sender_id: ctx.user_id(),
+                filename: original_name.clone(),
+                file_path: unique_name.clone(),
+                content_type,
+                file_size: Some(file_size),
+            })
+            .await?;
 
         Ok(Json(UploadResponse {
             url: format!("/files/{}", unique_name),

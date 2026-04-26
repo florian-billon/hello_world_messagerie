@@ -16,4 +16,4 @@ pub use friendship::FriendshipRepository;
 pub use invite::InviteRepository;
 pub use message::MessageRepository;
 pub use server::ServerRepository;
-pub use user::UserRepository; 
+pub use user::UserRepository;

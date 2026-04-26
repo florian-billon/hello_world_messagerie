@@ -8,7 +8,7 @@ pub mod user;
 
 pub use attachment::*;
 pub use channel::*;
-#[allow(unused_imports)] 
+#[allow(unused_imports)]
 pub use dm::*;
 pub use invite::*;
 pub use message::*;

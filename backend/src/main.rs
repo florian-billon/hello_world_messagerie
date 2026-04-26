@@ -5,9 +5,9 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use tower_http::services::ServeDir;
 use mongodb::bson::doc;
 use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
 
 pub use self::error::{Error, Result};
 
@@ -25,8 +25,8 @@ mod services;
 mod web;
 
 use repositories::{
-    ChannelRepository, DirectMessageRepository, DmRepository, FriendshipRepository,
-    InviteRepository, MessageRepository, ServerRepository, UserRepository, AttachmentRepository
+    AttachmentRepository, ChannelRepository, DirectMessageRepository, DmRepository,
+    FriendshipRepository, InviteRepository, MessageRepository, ServerRepository, UserRepository,
 };
 use web::MetricsSnapshot;
 use web::{WsHub, WsMetrics};
