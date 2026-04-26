@@ -1,6 +1,6 @@
 {
   "productName": "hello-world",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "com.hello-world.app",
   "build": {
     "beforeDevCommand": "npm run dev -- -p 3002",
@@ -19,7 +19,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost https://*.giphy.com https://media.giphy.com https://flagcdn.com https://raw.githubusercontent.com data: blob:; connect-src 'self' https://*.giphy.com https://api.giphy.com ws://localhost:3002 ws://localhost:3005 http://localhost:3005;"
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost https://*.giphy.com https://media.giphy.com https://flagcdn.com https://raw.githubusercontent.com data: blob:; connect-src 'self' https://*.giphy.com https://api.giphy.com ws://localhost:3002 ws://localhost:3005 http://localhost:3005 https://hello-world-messagerie-d5p2.onrender.com wss://hello-world-messagerie-d5p2.onrender.com;"
     }
   },
   "bundle": {
