@@ -21,6 +21,10 @@
 
 </div>
 
+<p align="center">
+  <img src="frontend/public/preview.png" width="100%" alt="Hello World Interface" />
+</p>
+
 ---
 
 ## 1. Le projet
