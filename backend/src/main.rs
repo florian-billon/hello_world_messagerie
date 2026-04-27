@@ -105,7 +105,8 @@ fn parse_allowed_origins(raw_origins: &str) -> Vec<HeaderValue> {
 
             if sanitized_origin.is_empty()
                 || (!sanitized_origin.starts_with("http://")
-                    && !sanitized_origin.starts_with("https://"))
+                    && !sanitized_origin.starts_with("https://")
+                    && !sanitized_origin.starts_with("tauri://"))
             {
                 None
             } else {
@@ -318,9 +319,9 @@ mod tests {
     #[test]
     fn parses_allowed_origins_and_skips_invalid_values() {
         let origins = parse_allowed_origins(
-            r#""https://hello-world-messagerie-jfk7.vercel.app", invalid origin, http://localhost:3002"#,
+            r#""https://hello-world-messagerie-jfk7.vercel.app", invalid origin, http://localhost:3002, tauri://localhost"#,
         );
 
-        assert_eq!(origins.len(), 2);
+        assert_eq!(origins.len(), 3);
     }
 }
